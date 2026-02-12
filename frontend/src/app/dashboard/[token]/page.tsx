@@ -25,7 +25,9 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                             {patientName || 'Loading...'}
                             <span className="text-lg font-medium text-slate-500 ml-1">환자</span>
                         </h1>
-                        <p className="text-slate-500 font-medium">201호 | {checkInAt ? `${Math.floor((new Date().getTime() - new Date(checkInAt).getTime()) / (1000 * 60 * 60 * 24)) + 1}일차` : '...'}</p>
+                        <p className="text-slate-500 font-medium" suppressHydrationWarning>
+                            201호 | {checkInAt ? `${Math.floor((new Date().getTime() - new Date(checkInAt).getTime()) / (1000 * 60 * 60 * 24)) + 1}일차` : '...'}
+                        </p>
                     </div>
                     <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full" title={isConnected ? "실시간 연결됨" : "연결 끊김"}>
                         <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`}></div>
