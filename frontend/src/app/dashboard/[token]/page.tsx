@@ -33,14 +33,7 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                     <TemperatureGraph data={vitals} />
                 </div>
 
-                {/* IV Status */}
-                <IVStatusCard
-                    photoUrl="" // Placeholder for now, real implementation later
-                    dropsPerMin={20}
-                    lastChecked="오후 2:00"
-                />
-
-                {/* Actions */}
+                {/* Actions (Meals & Docs) - Moved up as per spec */}
                 <section className="grid grid-cols-2 gap-4">
                     <button className="flex items-center justify-center gap-3 h-16 bg-white rounded-2xl shadow-sm border border-slate-100 active:scale-95 transition-all hover:bg-orange-50 group">
                         <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 group-hover:bg-orange-200 transition-colors">
@@ -54,6 +47,32 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                         </div>
                         <span className="font-bold text-slate-700">서류 신청</span>
                     </button>
+                </section>
+
+                {/* IV Status - Updated Text */}
+                <IVStatusCard
+                    photoUrl="" // Placeholder
+                    dropsPerMin={20}
+                    lastChecked="오후 2:00"
+                />
+                <p className="text-center text-xs text-slate-400 -mt-4 mb-2">
+                    * 라인 확보 및 수액 속도 확인 완료
+                </p>
+
+                {/* Notices (New) */}
+                <section className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                    <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        <span className="text-lg">📢</span> 병동 공지사항
+                    </h3>
+                    <ul className="space-y-3">
+                        <li className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
+                            <span className="bg-teal-100 text-teal-700 text-xs font-bold px-2 py-0.5 rounded">회진</span>
+                            <div className="text-sm">
+                                <p className="font-medium text-slate-700">오전 회진 시간 안내</p>
+                                <p className="text-slate-500 text-xs mt-0.5">교수님 회진은 09:30 ~ 10:30 사이 예정입니다.</p>
+                            </div>
+                        </li>
+                    </ul>
                 </section>
             </main>
         </div>
