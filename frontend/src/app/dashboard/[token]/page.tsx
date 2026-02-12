@@ -11,7 +11,7 @@ import { DocumentRequestModal } from '@/components/DocumentRequestModal';
 
 export default function Dashboard({ params }: { params: { token: string } }) {
     const { token } = params;
-    const { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber } = useVitals(token); // checkInAt, roomNumber 추가
+    const { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber } = useVitals(token);
     const [isMealModalOpen, setIsMealModalOpen] = useState(false);
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
@@ -27,14 +27,14 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                         </h1>
                         <p className="text-slate-500 font-medium" suppressHydrationWarning>
                             {roomNumber ? `${roomNumber}` : '...'} | {checkInAt ? `${Math.floor((new Date().getTime() - new Date(checkInAt).getTime()) / (1000 * 60 * 60 * 24)) + 1}일차` : '...'}
-                        </p>
-                    </div>
+                        </p >
+                    </div >
                     <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full" title={isConnected ? "실시간 연결됨" : "연결 끊김"}>
                         <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`}></div>
                         <span className="text-xs text-slate-500 font-medium">{isConnected ? 'Live' : 'Offline'}</span>
                     </div>
-                </div>
-            </header>
+                </div >
+            </header >
 
             <main className="px-4 -mt-4 relative z-20 flex flex-col gap-6">
                 {/* Vitals Graph (Hero) */}
@@ -98,7 +98,7 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                 onClose={() => setIsDocModalOpen(false)}
                 admissionId={admissionId}
             />
-        </div>
+        </div >
     );
 }
 

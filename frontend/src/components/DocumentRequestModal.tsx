@@ -29,6 +29,13 @@ export function DocumentRequestModal({ isOpen, onClose, admissionId }: DocumentR
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<'SUCCESS' | 'ERROR' | null>(null);
 
+    React.useEffect(() => {
+        if (isOpen) {
+            setResult(null);
+            setSelectedItems([]);
+        }
+    }, [isOpen]);
+
     const toggleItem = (id: string) => {
         if (selectedItems.includes(id)) {
             setSelectedItems(prev => prev.filter(i => i !== id));
@@ -56,11 +63,7 @@ export function DocumentRequestModal({ isOpen, onClose, admissionId }: DocumentR
             if (!res.ok) throw new Error('Failed to request documents');
 
             setResult('SUCCESS');
-            setTimeout(() => {
-                onClose();
-                setResult(null);
-                setSelectedItems([]);
-            }, 2000);
+            // setResult('SUCCESS'); // Already set above
         } catch (error) {
             console.error(error);
             setResult('ERROR');

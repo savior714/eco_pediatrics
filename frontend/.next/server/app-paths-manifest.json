@@ -1,3 +1,4 @@
 {
+  "/station/page": "app/station/page.js",
   "/dashboard/[token]/page": "app/dashboard/[token]/page.js"
 }

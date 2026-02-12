@@ -21,6 +21,13 @@ export function MealRequestModal({ isOpen, onClose, admissionId }: MealRequestMo
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<'SUCCESS' | 'ERROR' | null>(null);
 
+    React.useEffect(() => {
+        if (isOpen) {
+            setResult(null);
+            setSelectedType(null);
+        }
+    }, [isOpen]);
+
     const handleSubmit = async () => {
         if (!selectedType || !admissionId) return;
 
@@ -40,11 +47,7 @@ export function MealRequestModal({ isOpen, onClose, admissionId }: MealRequestMo
             if (!res.ok) throw new Error('Failed to request meal');
 
             setResult('SUCCESS');
-            setTimeout(() => {
-                onClose();
-                setResult(null);
-                setSelectedType(null);
-            }, 1500);
+            // setResult('SUCCESS'); // Already set above
         } catch (error) {
             console.error(error);
             setResult('ERROR');

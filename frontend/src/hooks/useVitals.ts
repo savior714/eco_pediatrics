@@ -4,10 +4,7 @@ export interface VitalData {
     time: string;
     temperature: number;
     has_medication: boolean;
-<<<<<<< HEAD
     medication_type?: string;
-=======
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
     recorded_at: string;
 }
 
@@ -17,10 +14,7 @@ export function useVitals(token: string) {
     const [admissionId, setAdmissionId] = useState<string | null>(null);
     const [patientName, setPatientName] = useState<string>('');
     const [checkInAt, setCheckInAt] = useState<string | null>(null);
-<<<<<<< HEAD
     const [roomNumber, setRoomNumber] = useState<string>('');
-=======
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
 
     useEffect(() => {
         if (!token) return;
@@ -43,10 +37,7 @@ export function useVitals(token: string) {
                     setAdmissionId(data.admission.id);
                     setPatientName(data.admission.patient_name_masked);
                     setCheckInAt(data.admission.check_in_at);
-<<<<<<< HEAD
                     setRoomNumber(data.admission.room_number);
-=======
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
                 }
 
                 // Transform data for graph
@@ -54,10 +45,7 @@ export function useVitals(token: string) {
                     time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     temperature: v.temperature,
                     has_medication: v.has_medication,
-<<<<<<< HEAD
                     medication_type: v.medication_type,
-=======
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
                     recorded_at: v.recorded_at
                 })).reverse(); // Recharts often prefers chronological order
                 setVitals(formattedVitals);
@@ -100,10 +88,5 @@ export function useVitals(token: string) {
         };
     }, [token]);
 
-<<<<<<< HEAD
     return { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber };
-=======
-    return { vitals, isConnected, admissionId, patientName, checkInAt };
-    return { vitals, isConnected, admissionId, patientName, checkInAt };
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
 }

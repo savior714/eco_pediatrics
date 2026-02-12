@@ -5,17 +5,18 @@ import { PatientCard } from '@/components/PatientCard';
 import { Card } from '@/components/Card';
 import { Bell } from 'lucide-react';
 import { IVUploadForm } from '@/components/IVUploadForm';
+import { PatientDetailModal } from '@/components/PatientDetailModal';
 
 export default function Station() {
     // Use static initial state to prevent hydration mismatch
     const [beds, setBeds] = useState<any[]>([]);
-<<<<<<< HEAD
     const [notifications, setNotifications] = useState<any[]>([]);
+    const [selectedBed, setSelectedBed] = useState<any>(null);
 
     React.useEffect(() => {
-        // Initialize 29 beds as per user requirements
+        // Initialize 30 beds as per user requirements
         const roomNumbers = [
-            '301', '302', '303', '305', '306', '307', '308', '309',
+            '301', '302', '303', '304', '305', '306', '307', '308', '309',
             '310-1', '310-2',
             '311-1', '311-2', '311-3', '311-4',
             '312', '313', '314',
@@ -64,20 +65,6 @@ export default function Station() {
         };
 
         return () => ws.close();
-=======
-
-    React.useEffect(() => {
-        // Initialize random data only on the client
-        setBeds(Array.from({ length: 29 }, (_, i) => ({
-            id: `admission-uuid-${i}`,
-            room: 801 + i,
-            name: `Child ${i + 1}`,
-            temp: 36.5 + (Math.random() * 2),
-            drops: 20,
-            status: 'normal', // Will be calculated dynamically
-            showIVForm: false
-        })));
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
     }, []);
 
     const toggleIVForm = (index: number) => {
@@ -86,27 +73,33 @@ export default function Station() {
         setBeds(newBeds);
     };
 
-<<<<<<< HEAD
     const removeNotification = (id: string) => {
         setNotifications(prev => prev.filter(n => n.id !== id));
     };
 
-=======
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
+    const handleNotificationClick = (notif: any) => {
+        // Find the bed corresponding to the room number
+        const bed = beds.find(b => b.room === notif.room);
+        if (bed) {
+            setSelectedBed(bed);
+        } else {
+            // Fallback
+            if (window.confirm(`${notif.room}호 변동사항을 확인하시겠습니까? (환자 정보 없음)`)) {
+                removeNotification(notif.id);
+            }
+        }
+    };
+
     return (
         <div className="flex h-screen bg-slate-100 overflow-hidden">
             {/* Main Grid */}
             <main className="flex-1 p-6 overflow-y-auto">
                 <header className="flex justify-between items-center mb-6">
-<<<<<<< HEAD
                     <h1 className="text-2xl font-bold text-slate-800">Pediatric Ward Station (Unit 3/4)</h1>
-=======
-                    <h1 className="text-2xl font-bold text-slate-800">Pediatric Ward Station (Unit 8)</h1>
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
-                    <div className="text-slate-500">Total Patients: 29</div>
-                </header>
+                    <div className="text-slate-500">Total Patients: 30</div>
+                </header >
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                     {beds.map((bed: any, index: number) => {
                         // Dynamic status calculation
                         const isFever = bed.temp >= 38.0;
@@ -140,16 +133,15 @@ export default function Station() {
                         );
                     })}
                 </div>
-            </main>
+            </main >
 
             {/* Notification Sidebar */}
-            <aside className="w-80 bg-white border-l border-slate-200 p-4 flex flex-col gap-4">
+            < aside className="w-80 bg-white border-l border-slate-200 p-4 flex flex-col gap-4" >
                 <div className="flex items-center gap-2 mb-2 text-slate-800 font-semibold">
                     <Bell size={20} className="text-teal-500" />
                     <span>Recent Requests</span>
                 </div>
 
-<<<<<<< HEAD
                 <div className="flex flex-col gap-3 overflow-y-auto pr-1">
                     {notifications.length === 0 ? (
                         <div className="text-center py-10 text-slate-400 text-sm">
@@ -161,7 +153,7 @@ export default function Station() {
                                 key={notif.id}
                                 className={`border-l-4 cursor-pointer hover:bg-slate-50 transition-colors ${notif.type === 'meal' ? 'border-l-orange-500' : 'border-l-blue-500'
                                     }`}
-                                onClick={() => removeNotification(notif.id)}
+                                onClick={() => handleNotificationClick(notif)}
                             >
                                 <div className="flex justify-between items-start">
                                     <span className="font-bold text-slate-700">{notif.room}호</span>
@@ -172,25 +164,16 @@ export default function Station() {
                         ))
                     )}
                 </div>
-=======
-                {/* Mock Notifications */}
-                <Card className="border-l-4 border-l-teal-500">
-                    <div className="flex justify-between items-start">
-                        <span className="font-bold text-slate-700">802호</span>
-                        <span className="text-xs text-slate-400">2분 전</span>
-                    </div>
-                    <p className="text-sm text-slate-600 mt-1">식단 변경 요청 (일반식 → 죽)</p>
-                </Card>
+            </aside >
 
-                <Card className="border-l-4 border-l-blue-500">
-                    <div className="flex justify-between items-start">
-                        <span className="font-bold text-slate-700">805호</span>
-                        <span className="text-xs text-slate-400">10분 전</span>
-                    </div>
-                    <p className="text-sm text-slate-600 mt-1">입퇴원 확인서 신청</p>
-                </Card>
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
-            </aside>
-        </div>
+            {/* Detail Modal */}
+            <PatientDetailModal
+                isOpen={!!selectedBed}
+                onClose={() => setSelectedBed(null)}
+                bed={selectedBed}
+                notifications={notifications}
+                onCompleteRequest={removeNotification}
+            />
+        </div >
     );
 }

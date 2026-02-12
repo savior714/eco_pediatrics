@@ -1,9 +1,6 @@
 import os
 import asyncio
-<<<<<<< HEAD
 from datetime import datetime
-=======
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
@@ -25,7 +22,6 @@ async def seed():
     # 1. Create a Dummy Patient (Admission)
     print("   Creating dummy patient '이*원'...")
     try:
-<<<<<<< HEAD
         # Calculate start time (6 days ago at 09:00 AM)
         from datetime import timedelta
         base_time = datetime.now() - timedelta(days=6)
@@ -36,12 +32,6 @@ async def seed():
             "room_number": "310-1",
             "status": "IN_PROGRESS",
             "check_in_at": check_in_time.isoformat()
-=======
-        data, count = supabase.table("admissions").insert({
-            "patient_name_masked": "이*원",
-            "room_number": 201,
-            "status": "IN_PROGRESS"
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
         }).execute()
         
         admission_id = data[1][0]['id']
@@ -49,7 +39,6 @@ async def seed():
         
         print(f"   ✅ Patient created! ID: {admission_id}")
         
-<<<<<<< HEAD
         # 2. Add vital signs for 6 days with fever pattern
         print("   Adding fever pattern vital signs (6 days)...")
         vitals = []
@@ -87,28 +76,12 @@ async def seed():
 
         supabase.table("vital_signs").insert(vitals).execute()
         print(f"   ✅ {len(vitals)} vitals added!")
-=======
-        # 2. Add some vital signs
-        print("   Adding mock vital signs...")
-        supabase.table("vital_signs").insert([
-            {"admission_id": admission_id, "temperature": 37.8, "recorded_at": "2023-10-27T10:00:00Z"},
-            {"admission_id": admission_id, "temperature": 38.2, "recorded_at": "2023-10-27T11:00:00Z"},
-            {"admission_id": admission_id, "temperature": 38.5, "recorded_at": "2023-10-27T12:00:00Z"},
-            {"admission_id": admission_id, "temperature": 37.9, "has_medication": True, "recorded_at": "2023-10-27T13:00:00Z"},
-            {"admission_id": admission_id, "temperature": 37.2, "recorded_at": "2023-10-27T14:00:00Z"},
-        ]).execute()
-        print("   ✅ Vitals added!")
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
 
         # 3. Add IV Record
         print("   Adding mock IV record...")
         supabase.table("iv_records").insert({
             "admission_id": admission_id,
-<<<<<<< HEAD
             "infusion_rate": 40,
-=======
-            "infusion_rate": 60,
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
             "photo_url": "https://placehold.co/600x400/png?text=IV+Check" 
         }).execute()
         print("   ✅ IV record added!")
