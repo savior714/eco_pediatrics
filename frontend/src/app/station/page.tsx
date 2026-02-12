@@ -84,7 +84,7 @@ export default function Station() {
                         <span className="font-bold text-slate-700">802호</span>
                         <span className="text-xs text-slate-400">2분 전</span>
                     </div>
-                    <p className="text-sm text-slate-600 mt-1">식단 변경 요청 (일반식 -> 죽)</p>
+                    <p className="text-sm text-slate-600 mt-1">식단 변경 요청 (일반식 → 죽)</p>
                 </Card>
 
                 <Card className="border-l-4 border-l-blue-500">
