@@ -6,12 +6,12 @@ interface PatientCardProps {
     name: string;
     roomNumber: number;
     temperature: number;
-    dropsPerMin: number;
+    infusionRate: number;
     status: 'normal' | 'fever' | 'warning';
     onPrintQR: () => void;
 }
 
-export function PatientCard({ name, roomNumber, temperature, dropsPerMin, status, onPrintQR }: PatientCardProps) {
+export function PatientCard({ name, roomNumber, temperature, infusionRate, status, onPrintQR }: PatientCardProps) {
     const statusStyles = {
         fever: 'border-status-danger border-2 bg-red-100 shadow-sm shadow-red-200', // Darker background for visibility
         warning: 'border-status-warning border-2 bg-orange-50',
@@ -47,8 +47,8 @@ export function PatientCard({ name, roomNumber, temperature, dropsPerMin, status
                         <Droplet size={14} className="text-primary" /> 수액
                     </div>
                     <div className="flex items-baseline">
-                        <span className="text-lg font-bold text-slate-800">{dropsPerMin}</span>
-                        <span className="text-xs text-slate-400 ml-1">gtt</span>
+                        <span className="text-lg font-bold text-slate-800">{infusionRate}</span>
+                        <span className="text-xs text-slate-400 ml-1">cc/hr</span>
                     </div>
                 </div>
             </div>

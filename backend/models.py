@@ -22,7 +22,7 @@ class IVRecord(BaseModel):
     id: Optional[int] = None
     admission_id: str
     photo_url: Optional[str] = None
-    drops_per_min: Optional[int] = None
+    infusion_rate: Optional[int] = None
     created_at: Optional[datetime] = None
 
 class MealRequest(BaseModel):
@@ -49,3 +49,13 @@ class IVRecordCreate(BaseModel):
 class MealRequestCreate(BaseModel):
     admission_id: str
     request_type: str # GENERAL, SOFT, NPO
+
+class DocumentRequest(BaseModel):
+    id: Optional[int] = None
+    admission_id: str
+    request_items: list[str] # RECEIPT, DETAIL, CERT, DIAGNOSIS
+    status: str = "PENDING"
+
+class DocumentRequestCreate(BaseModel):
+    admission_id: str
+    request_items: list[str]
