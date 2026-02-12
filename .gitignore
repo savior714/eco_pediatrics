@@ -1,4 +1,6 @@
 node_modules/
+.env*
+.next/
 .env
 __pycache__/
 .venv/
