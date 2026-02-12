@@ -7,18 +7,21 @@ import { Bell } from 'lucide-react';
 import { IVUploadForm } from '@/components/IVUploadForm';
 
 export default function Station() {
-    // Mock data for 29 beds
-    // In a real app, fetch from /api/v1/admissions?status=IN_PROGRESS
-    const [beds, setBeds] = useState(Array.from({ length: 29 }, (_, i) => ({
-        id: `admission-uuid-${i}`, // Mock UUID
-        room: 801 + i,
-        name: `Child ${i + 1}`,
-        temp: 36.5 + (Math.random() * 2), // Random temp
-        drops: 20,
-        // Logic: Fever if temp >= 38.0
-        status: (36.5 + (Math.random() * 2)) >= 38.0 ? 'fever' : 'normal',
-        showIVForm: false
-    })));
+    // Use static initial state to prevent hydration mismatch
+    const [beds, setBeds] = useState<any[]>([]);
+
+    React.useEffect(() => {
+        // Initialize random data only on the client
+        setBeds(Array.from({ length: 29 }, (_, i) => ({
+            id: `admission-uuid-${i}`,
+            room: 801 + i,
+            name: `Child ${i + 1}`,
+            temp: 36.5 + (Math.random() * 2),
+            drops: 20,
+            status: 'normal', // Will be calculated dynamically
+            showIVForm: false
+        })));
+    }, []);
 
     const toggleIVForm = (index: number) => {
         const newBeds = [...beds];
