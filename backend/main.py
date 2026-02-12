@@ -80,7 +80,7 @@ def get_dashboard_data(token: str):
     # In a real app, we might parallelize or use join if easy, but separate queries are fine for now
     admission_id = admission['id']
     
-    vitals = supabase.table("vital_signs").select("*").eq("admission_id", admission_id).order("recorded_at", desc=True).limit(20).execute()
+    vitals = supabase.table("vital_signs").select("*").eq("admission_id", admission_id).order("recorded_at", desc=True).limit(100).execute()
     iv_records = supabase.table("iv_records").select("*").eq("admission_id", admission_id).order("created_at", desc=True).limit(5).execute()
     meals = supabase.table("meal_requests").select("*").eq("admission_id", admission_id).order("id", desc=True).limit(5).execute()
 
@@ -141,28 +141,52 @@ async def record_iv(iv: IVRecordCreate):
     return new_iv
 
 @app.post("/api/v1/meals/requests", response_model=MealRequest)
-def request_meal(request: MealRequestCreate):
+async def request_meal(request: MealRequestCreate):
     if not supabase:
         raise HTTPException(status_code=500, detail="DB not connected")
-
-    # Check NPO warning logic could be here or frontend.
-    # Check time limit (e.g. dinner deadline).
-    # For MVP, just insert.
 
     data = request.dict()
     response = supabase.table("meal_requests").insert(data).execute()
     new_request = response.data[0]
     
+    # Broadcast to station
+    adm_response = supabase.table("admissions").select("room_number").eq("id", request.admission_id).execute()
+    if adm_response.data:
+        room = adm_response.data[0]['room_number']
+        message = {
+            "type": "NEW_MEAL_REQUEST",
+            "data": {
+                "room": room,
+                "request_type": request.request_type,
+                "created_at": datetime.now().isoformat()
+            }
+        }
+        await manager.broadcast(json.dumps(message), "STATION")
+    
     return new_request
 
 @app.post("/api/v1/documents/requests", response_model=DocumentRequest)
-def request_document(request: DocumentRequestCreate):
+async def request_document(request: DocumentRequestCreate):
     if not supabase:
         raise HTTPException(status_code=500, detail="DB not connected")
 
     data = request.dict()
     response = supabase.table("document_requests").insert(data).execute()
     new_request = response.data[0]
+    
+    # Broadcast to station
+    adm_response = supabase.table("admissions").select("room_number").eq("id", request.admission_id).execute()
+    if adm_response.data:
+        room = adm_response.data[0]['room_number']
+        message = {
+            "type": "NEW_DOC_REQUEST",
+            "data": {
+                "room": room,
+                "request_items": request.request_items,
+                "created_at": datetime.now().isoformat()
+            }
+        }
+        await manager.broadcast(json.dumps(message), "STATION")
     
     return new_request
 

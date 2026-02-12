@@ -2,7 +2,7 @@
 CREATE TABLE admissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_name_masked TEXT NOT NULL,         -- 예: 이*원 (마스킹 필수)
-    room_number INTEGER NOT NULL,
+    room_number TEXT NOT NULL,
     access_token UUID DEFAULT gen_random_uuid() UNIQUE, -- QR 접속용 토큰
     status TEXT DEFAULT 'IN_PROGRESS',         -- IN_PROGRESS / DISCHARGED
     check_in_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

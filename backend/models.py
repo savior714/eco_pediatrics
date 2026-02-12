@@ -6,7 +6,7 @@ from datetime import datetime
 class Admission(BaseModel):
     id: Optional[str] = None
     patient_name_masked: str
-    room_number: int
+    room_number: str
     status: str = "IN_PROGRESS"
     check_in_at: Optional[datetime] = None
     discharged_at: Optional[datetime] = None
@@ -16,6 +16,7 @@ class VitalSign(BaseModel):
     admission_id: str
     temperature: float
     has_medication: bool = False
+    medication_type: Optional[str] = None # 'A' or 'I'
     recorded_at: Optional[datetime] = None
 
 class IVRecord(BaseModel):
@@ -34,12 +35,13 @@ class MealRequest(BaseModel):
 # DTOs
 class AdmissionCreate(BaseModel):
     patient_name: str  # Raw name, will be masked in logic
-    room_number: int
+    room_number: str
 
 class VitalSignCreate(BaseModel):
     admission_id: str
     temperature: float
     has_medication: bool = False
+    medication_type: Optional[str] = None
 
 class IVRecordCreate(BaseModel):
     admission_id: str
