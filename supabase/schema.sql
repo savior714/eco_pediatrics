@@ -65,8 +65,12 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- 보안 정책 (Policies) 설정
 -- 1. 백엔드 (service_role)는 모든 권한을 가짐 (기본적으로 적용됨)
--- 2. anon (클라이언트 직접 접근)은 기본적으로 모든 접근 차단 (정책을 명시하지 않으면 자동 차단됨)
--- 3. 필요한 경우에만 특정 정책 추가 (현재 백엔드에서 모든 로직을 처리하므로 추가 클라이언트 정책은 불필요)
+-- 2. anon (클라이언트 직접 접근)은 기본적으로 모든 접근 차단
+-- 3. 필요한 경우 정책 추가 (여기서는 모든 사용자의 삽입 권한을 명시적으로 허용)
 
--- 예시: 만약 클라이언트에서 특정 테이블을 읽어야 한다면 아래와 같은 형식으로 추가 가능
--- CREATE POLICY "Allow authenticated read access" ON public.vital_signs FOR SELECT USING (true);
+-- 식단 및 서류 신청에 대한 삽입 권한 허용
+CREATE POLICY "Enable insert for all users" ON public.meal_requests FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable insert for all users" ON public.document_requests FOR INSERT WITH CHECK (true);
+
+-- 감사 로그에 대한 삽입 권한 허용한
+CREATE POLICY "Enable insert for all users" ON public.audit_logs FOR INSERT WITH CHECK (true);
