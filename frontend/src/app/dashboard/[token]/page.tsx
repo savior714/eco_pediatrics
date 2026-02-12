@@ -11,11 +11,7 @@ import { DocumentRequestModal } from '@/components/DocumentRequestModal';
 
 export default function Dashboard({ params }: { params: { token: string } }) {
     const { token } = params;
-<<<<<<< HEAD
     const { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber } = useVitals(token); // checkInAt, roomNumber 추가
-=======
-    const { vitals, isConnected, admissionId, patientName, checkInAt } = useVitals(token); // checkInAt 추가
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
     const [isMealModalOpen, setIsMealModalOpen] = useState(false);
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
@@ -30,11 +26,7 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                             <span className="text-lg font-medium text-slate-500 ml-1">환자</span>
                         </h1>
                         <p className="text-slate-500 font-medium" suppressHydrationWarning>
-<<<<<<< HEAD
                             {roomNumber ? `${roomNumber}` : '...'} | {checkInAt ? `${Math.floor((new Date().getTime() - new Date(checkInAt).getTime()) / (1000 * 60 * 60 * 24)) + 1}일차` : '...'}
-=======
-                            201호 | {checkInAt ? `${Math.floor((new Date().getTime() - new Date(checkInAt).getTime()) / (1000 * 60 * 60 * 24)) + 1}일차` : '...'}
->>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
                         </p>
                     </div>
                     <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full" title={isConnected ? "실시간 연결됨" : "연결 끊김"}>
