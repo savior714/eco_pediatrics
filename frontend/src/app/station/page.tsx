@@ -47,7 +47,7 @@ export default function Station() {
                                     name={bed.name}
                                     roomNumber={bed.room}
                                     temperature={bed.temp.toFixed(1)}
-                                    dropsPerMin={bed.drops}
+                                    infusionRate={bed.drops}
                                     status={status}
                                     onPrintQR={() => toggleIVForm(index)}
                                 />

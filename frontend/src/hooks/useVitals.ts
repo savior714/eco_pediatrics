@@ -10,6 +10,9 @@ export interface VitalData {
 export function useVitals(token: string) {
     const [vitals, setVitals] = useState<VitalData[]>([]);
     const [isConnected, setIsConnected] = useState(false);
+    const [admissionId, setAdmissionId] = useState<string | null>(null);
+    const [patientName, setPatientName] = useState<string>('');
+    const [checkInAt, setCheckInAt] = useState<string | null>(null);
 
     useEffect(() => {
         if (!token) return;
@@ -26,6 +29,14 @@ export function useVitals(token: string) {
                     return;
                 }
                 const data = await res.json();
+
+                // Set Admission Info
+                if (data.admission) {
+                    setAdmissionId(data.admission.id);
+                    setPatientName(data.admission.patient_name_masked);
+                    setCheckInAt(data.admission.check_in_at);
+                }
+
                 // Transform data for graph
                 const formattedVitals = data.vitals.map((v: any) => ({
                     time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -73,5 +84,6 @@ export function useVitals(token: string) {
         };
     }, [token]);
 
-    return { vitals, isConnected };
+    return { vitals, isConnected, admissionId, patientName, checkInAt };
+    return { vitals, isConnected, admissionId, patientName, checkInAt };
 }

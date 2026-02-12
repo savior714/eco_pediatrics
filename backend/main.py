@@ -5,7 +5,7 @@ from datetime import datetime
 import json
 
 from database import supabase
-from models import Admission, VitalSign, IVRecord, MealRequest, AdmissionCreate, VitalSignCreate, IVRecordCreate, MealRequestCreate
+from models import Admission, VitalSign, IVRecord, MealRequest, DocumentRequest, AdmissionCreate, VitalSignCreate, IVRecordCreate, MealRequestCreate, DocumentRequestCreate
 from websocket_manager import manager
 
 app = FastAPI()
@@ -151,6 +151,17 @@ def request_meal(request: MealRequestCreate):
 
     data = request.dict()
     response = supabase.table("meal_requests").insert(data).execute()
+    new_request = response.data[0]
+    
+    return new_request
+
+@app.post("/api/v1/documents/requests", response_model=DocumentRequest)
+def request_document(request: DocumentRequestCreate):
+    if not supabase:
+        raise HTTPException(status_code=500, detail="DB not connected")
+
+    data = request.dict()
+    response = supabase.table("document_requests").insert(data).execute()
     new_request = response.data[0]
     
     return new_request

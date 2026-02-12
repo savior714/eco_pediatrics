@@ -1,36 +1,30 @@
 {
   "pages": {
-    "/_not-found": [
-      "static/chunks/webpack-6bc6e944462ae045.js",
-      "static/chunks/fd9d1056-d50f9ead98c37034.js",
-      "static/chunks/69-23f34c67604ea999.js",
-      "static/chunks/main-app-bcec2785faba4830.js",
-      "static/chunks/app/_not-found-74a1dd777e93dfa4.js"
+    "/global-error": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/global-error.js"
     ],
     "/layout": [
-      "static/chunks/webpack-6bc6e944462ae045.js",
-      "static/chunks/fd9d1056-d50f9ead98c37034.js",
-      "static/chunks/69-23f34c67604ea999.js",
-      "static/chunks/main-app-bcec2785faba4830.js",
-      "static/css/a5e9d3f1d3a3f938.css",
-      "static/chunks/app/layout-0eaae66684841469.js"
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/layout.css",
+      "static/chunks/app/layout.js"
+    ],
+    "/not-found": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/not-found.js"
     ],
     "/dashboard/[token]/page": [
-      "static/chunks/webpack-6bc6e944462ae045.js",
-      "static/chunks/fd9d1056-d50f9ead98c37034.js",
-      "static/chunks/69-23f34c67604ea999.js",
-      "static/chunks/main-app-bcec2785faba4830.js",
-      "static/chunks/537-e555cb9c01c4edbf.js",
-      "static/chunks/647-9ec7c1284c0f51f2.js",
-      "static/chunks/app/dashboard/[token]/page-a288e0d25b6a9846.js"
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/[token]/page.js"
     ],
     "/station/page": [
-      "static/chunks/webpack-6bc6e944462ae045.js",
-      "static/chunks/fd9d1056-d50f9ead98c37034.js",
-      "static/chunks/69-23f34c67604ea999.js",
-      "static/chunks/main-app-bcec2785faba4830.js",
-      "static/chunks/537-e555cb9c01c4edbf.js",
-      "static/chunks/app/station/page-39197e581cdc2749.js"
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/station/page.js"
     ]
   }
 }
