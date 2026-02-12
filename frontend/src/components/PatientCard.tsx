@@ -4,7 +4,11 @@ import { Thermometer, Droplet, Printer } from 'lucide-react';
 
 interface PatientCardProps {
     name: string;
+<<<<<<< HEAD
     roomNumber: string;
+=======
+    roomNumber: number;
+>>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
     temperature: number;
     infusionRate: number;
     status: 'normal' | 'fever' | 'warning';
@@ -22,7 +26,11 @@ export function PatientCard({ name, roomNumber, temperature, infusionRate, statu
         <Card className={`relative transition-all duration-300 ${statusStyles[status]}`}>
             <div className="flex justify-between items-start mb-2">
                 <div>
+<<<<<<< HEAD
                     <h4 className={`text-xl font-bold ${status === 'fever' ? 'text-red-700' : 'text-slate-800'}`}>{roomNumber}</h4>
+=======
+                    <h4 className={`text-xl font-bold ${status === 'fever' ? 'text-red-700' : 'text-slate-800'}`}>{roomNumber}호</h4>
+>>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
                     <p className={`${status === 'fever' ? 'text-red-900/70' : 'text-slate-600'} font-medium`}>{name}</p>
                 </div>
                 <button

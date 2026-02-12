@@ -11,8 +11,12 @@ import {
     ResponsiveContainer,
     ReferenceDot,
     ReferenceArea,
+<<<<<<< HEAD
     ReferenceLine,
     Label
+=======
+    ReferenceLine
+>>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
 } from 'recharts';
 import { Card } from './Card';
 import { clsx, type ClassValue } from 'clsx';
@@ -26,7 +30,10 @@ interface VitalData {
     time: string;
     temperature: number;
     has_medication: boolean;
+<<<<<<< HEAD
     medication_type?: string;
+=======
+>>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
     recorded_at: string;
 }
 
@@ -36,7 +43,10 @@ interface TemperatureGraphProps {
 }
 
 export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
+<<<<<<< HEAD
     // ... lines 37-160
+=======
+>>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
     // 1. Calculate hospital days logic
     const { chartData, totalWidthPercent, ticks } = useMemo(() => {
         if (!checkInAt || data.length === 0) return { chartData: data, totalWidthPercent: 100, ticks: [] };
@@ -74,6 +84,7 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
 
     const latestTemp = data.length > 0 ? data[data.length - 1].temperature : null;
 
+<<<<<<< HEAD
     // Calculate dynamic gradient offset for the fever threshold
     const feverOffset = useMemo(() => {
         if (data.length === 0) return "50%";
@@ -88,6 +99,8 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
         return `${offset}%`;
     }, [data]);
 
+=======
+>>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
     return (
         <Card className="w-full relative shadow-lg border-teal-100 overflow-hidden">
             {/* Header - Fixed */}
@@ -118,6 +131,7 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
                             data={chartData}
                             margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
                         >
+<<<<<<< HEAD
                             <defs>
                                 <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset={feverOffset} stopColor="#ef4444" />
@@ -125,6 +139,11 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f1f5f9" />
+=======
+                            <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f1f5f9" />
+                            {/* Normal Range Band */}
+                            <ReferenceArea y1={36.5} y2={37.5} fill="#bbf7d0" fillOpacity={0.3} />
+>>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
 
                             <XAxis
                                 dataKey="timestamp"
@@ -146,16 +165,24 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
                                 tick={{ dy: 10 }}
                             />
                             <YAxis
+<<<<<<< HEAD
                                 domain={[35.5, 41]}
+=======
+                                domain={[35, 40]}
+>>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
                                 stroke="#94a3b8"
                                 fontSize={11}
                                 tickLine={false}
                                 axisLine={false}
                                 width={30}
+<<<<<<< HEAD
                                 ticks={[36, 37, 38, 39, 40, 41]}
                             />
                             {/* Fever Threshold Line */}
                             <ReferenceLine y={38} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'right', value: '38°', fill: '#ef4444', fontSize: 10 }} />
+=======
+                            />
+>>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
                             <Tooltip
                                 labelFormatter={(label) => new Date(label).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 contentStyle={{
@@ -176,13 +203,18 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
                             <Line
                                 type="monotone"
                                 dataKey="temperature"
+<<<<<<< HEAD
                                 stroke="url(#lineGradient)"
+=======
+                                stroke="#14b8a6"
+>>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
                                 strokeWidth={3}
                                 dot={{ r: 4, fill: '#fff', stroke: '#14b8a6', strokeWidth: 2 }}
                                 activeDot={{ r: 6, fill: '#14b8a6', stroke: '#fff', strokeWidth: 2 }}
                                 connectNulls
                             />
 
+<<<<<<< HEAD
                             {/* Medication Labels - Rendered as a separate line for perfect alignment */}
                             <Line
                                 data={chartData}
@@ -235,6 +267,21 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
                                     );
                                 }}
                             />
+=======
+                            {chartData && chartData.map((entry: any, index: number) => (
+                                entry.has_medication && (
+                                    <ReferenceDot
+                                        key={index}
+                                        x={entry.timestamp}
+                                        y={entry.temperature}
+                                        r={5}
+                                        fill="#ef4444"
+                                        stroke="#fee2e2"
+                                        strokeWidth={2}
+                                    />
+                                )
+                            ))}
+>>>>>>> 2d3395dda678d838a441952b6c81dee17824df1e
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
