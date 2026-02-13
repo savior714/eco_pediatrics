@@ -96,12 +96,13 @@ export function DocumentRequestModal({ isOpen, onClose, admissionId }: DocumentR
                         {DOCUMENT_OPTIONS.map((option) => (
                             <button
                                 key={option.id}
+                                type="button"
                                 onClick={() => toggleItem(option.id)}
                                 className={cn(
-                                    "w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left",
+                                    "w-full flex items-center gap-3 p-4 min-h-[48px] rounded-xl border-2 transition-all text-left touch-manipulation active:scale-[0.99]",
                                     selectedItems.includes(option.id)
                                         ? "border-teal-500 bg-teal-50 text-teal-700"
-                                        : "border-slate-100 hover:border-slate-200 bg-white text-slate-600"
+                                        : "border-slate-100 active:border-slate-200 bg-white text-slate-600"
                                 )}
                             >
                                 <div className={cn(
@@ -130,10 +131,10 @@ export function DocumentRequestModal({ isOpen, onClose, admissionId }: DocumentR
                         disabled={selectedItems.length === 0 || isLoading}
                         onClick={handleSubmit}
                         className={cn(
-                            "w-full py-3.5 rounded-xl font-bold text-white transition-all mt-4",
+                            "w-full min-h-[48px] py-3.5 rounded-xl font-bold text-white transition-all mt-4 touch-manipulation",
                             selectedItems.length === 0 || isLoading
                                 ? "bg-slate-300 cursor-not-allowed"
-                                : "bg-teal-500 hover:bg-teal-600 active:scale-95 shadow-md shadow-teal-200"
+                                : "bg-teal-500 hover:bg-teal-600 active:scale-[0.98] shadow-md shadow-teal-200"
                         )}
                     >
                         {isLoading ? '전송 중...' : `${selectedItems.length}건 신청하기`}

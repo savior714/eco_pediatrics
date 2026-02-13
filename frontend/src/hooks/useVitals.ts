@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 export interface VitalData {
     time: string;
@@ -15,46 +15,40 @@ export function useVitals(token: string) {
     const [patientName, setPatientName] = useState<string>('');
     const [checkInAt, setCheckInAt] = useState<string | null>(null);
     const [roomNumber, setRoomNumber] = useState<string>('');
+    const [meals, setMeals] = useState<{ id: number; request_type: string; status: string }[]>([]);
+
+    const fetchDashboard = useCallback(async () => {
+        if (!token) return;
+        try {
+            const res = await fetch(`http://localhost:8000/api/v1/dashboard/${token}`);
+            if (!res.ok) {
+                if (res.status === 403) window.location.href = '/403';
+                return;
+            }
+            const data = await res.json();
+            if (data.admission) {
+                setAdmissionId(data.admission.id);
+                setPatientName(data.admission.patient_name_masked);
+                setCheckInAt(data.admission.check_in_at);
+                setRoomNumber(data.admission.room_number);
+            }
+            if (data.meals && Array.isArray(data.meals)) setMeals(data.meals);
+            const formattedVitals = (data.vitals || []).map((v: any) => ({
+                time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                temperature: v.temperature,
+                has_medication: v.has_medication,
+                medication_type: v.medication_type,
+                recorded_at: v.recorded_at
+            })).reverse();
+            setVitals(formattedVitals);
+        } catch (error) {
+            console.error("Failed to fetch dashboard", error);
+        }
+    }, [token]);
 
     useEffect(() => {
         if (!token) return;
-
-        // Initial Fetch
-        const fetchVitals = async () => {
-            try {
-                const res = await fetch(`http://localhost:8000/api/v1/dashboard/${token}`);
-                if (!res.ok) {
-                    if (res.status === 403) {
-                        // Handle discharge or invalid token
-                        window.location.href = '/403'; // Or handle error state
-                    }
-                    return;
-                }
-                const data = await res.json();
-
-                // Set Admission Info
-                if (data.admission) {
-                    setAdmissionId(data.admission.id);
-                    setPatientName(data.admission.patient_name_masked);
-                    setCheckInAt(data.admission.check_in_at);
-                    setRoomNumber(data.admission.room_number);
-                }
-
-                // Transform data for graph
-                const formattedVitals = data.vitals.map((v: any) => ({
-                    time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    temperature: v.temperature,
-                    has_medication: v.has_medication,
-                    medication_type: v.medication_type,
-                    recorded_at: v.recorded_at
-                })).reverse(); // Recharts often prefers chronological order
-                setVitals(formattedVitals);
-            } catch (error) {
-                console.error("Failed to fetch initial vitals", error);
-            }
-        };
-
-        fetchVitals();
+        fetchDashboard();
 
         // WebSocket Connection
         const ws = new WebSocket(`ws://localhost:8000/ws/${token}`);
@@ -83,10 +77,8 @@ export function useVitals(token: string) {
             setIsConnected(false);
         };
 
-        return () => {
-            ws.close();
-        };
-    }, [token]);
+        return () => ws.close();
+    }, [token, fetchDashboard]);
 
-    return { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber };
+    return { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, refetchDashboard: fetchDashboard };
 }

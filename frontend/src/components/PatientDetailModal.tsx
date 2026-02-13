@@ -1,31 +1,65 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { X, Check, Clock, AlertCircle } from 'lucide-react';
 import { Card } from './Card';
+import { IVUploadForm } from './IVUploadForm';
+import { TemperatureGraph } from './TemperatureGraph';
+
+interface VitalData {
+    time: string;
+    temperature: number;
+    has_medication: boolean;
+    medication_type?: string;
+    recorded_at: string;
+}
 
 interface PatientDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
-    bed: any; // Using any for now to match station page, ideally implicit Bed interface
+    bed: any;
     notifications: any[];
     onCompleteRequest: (id: string) => void;
+    onIVUploadSuccess?: () => void;
+    vitals?: VitalData[];
+    checkInAt?: string | null;
 }
 
-export function PatientDetailModal({ isOpen, onClose, bed, notifications, onCompleteRequest }: PatientDetailModalProps) {
+export function PatientDetailModal({ isOpen, onClose, bed, notifications, onCompleteRequest, onIVUploadSuccess, vitals: propVitals, checkInAt: propCheckInAt }: PatientDetailModalProps) {
     if (!isOpen || !bed) return null;
 
-    // Filter notifications for this specific room
     const roomNotifications = notifications.filter(n => n.room === bed.room);
+
+    // Chart data: use real vitals if provided, else mock from current temp for station view
+    const { chartVitals, chartCheckIn } = useMemo(() => {
+        if (propVitals && propVitals.length > 0) {
+            return { chartVitals: propVitals, chartCheckIn: propCheckInAt ?? null };
+        }
+        const base = new Date();
+        base.setDate(base.getDate() - 5);
+        const mock: VitalData[] = [];
+        for (let i = 0; i < 12; i++) {
+            const d = new Date(base);
+            d.setHours(d.getHours() + i * 10);
+            const t = bed.temp + (Math.sin(i * 0.5) * 0.8);
+            mock.push({
+                time: d.toISOString(),
+                temperature: Math.round(t * 10) / 10,
+                has_medication: i === 3 || i === 7,
+                medication_type: i === 3 ? 'A' : i === 7 ? 'I' : undefined,
+                recorded_at: d.toISOString()
+            });
+        }
+        return { chartVitals: mock, chartCheckIn: base.toISOString() };
+    }, [bed.temp, propVitals, propCheckInAt]);
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
                 onClick={onClose}
             />
 
-            {/* Modal Card */}
-            <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal: 가로 2배 확대 (max-w-4xl ≈ 56rem) */}
+            <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
                 <div className={`p-6 ${bed.status === 'fever' ? 'bg-red-50' : 'bg-slate-50'} border-b border-slate-100`}>
                     <div className="flex justify-between items-start">
@@ -63,13 +97,22 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                     </div>
                 </div>
 
-                {/* Body: Requests */}
-                <div className="p-6">
-                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        요청 사항 <span className="bg-slate-100 text-slate-600 px-1.5 rounded-md text-xs">{roomNotifications.length}</span>
-                    </h3>
-
-                    <div className="space-y-3 max-h-[40vh] overflow-y-auto">
+                {/* Body: 좌 = 체온 차트, 우 = IV + 요청 */}
+                <div className="p-6 flex gap-6">
+                    <div className="flex-1 min-w-0">
+                        <TemperatureGraph data={chartVitals} checkInAt={chartCheckIn} />
+                    </div>
+                    <div className="w-80 shrink-0 flex flex-col gap-6">
+                        <IVUploadForm
+                            admissionId={bed.id}
+                            patientName={bed.name}
+                            onUploadSuccess={() => onIVUploadSuccess?.()}
+                        />
+                        <div>
+                            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                요청 사항 <span className="bg-slate-100 text-slate-600 px-1.5 rounded-md text-xs">{roomNotifications.length}</span>
+                            </h3>
+                            <div className="space-y-3 max-h-[280px] overflow-y-auto">
                         {roomNotifications.length === 0 ? (
                             <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                                 <p className="text-slate-400 text-sm">현재 처리할 요청이 없습니다.</p>
@@ -108,6 +151,8 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                 </div>
                             ))
                         )}
+                            </div>
+                        </div>
                     </div>
                 </div>
 

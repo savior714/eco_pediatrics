@@ -12,11 +12,12 @@ interface MealRequestModalProps {
     isOpen: boolean;
     onClose: () => void;
     admissionId: string | null;
+    onSuccess?: () => void;
 }
 
 type MealType = 'GENERAL' | 'SOFT' | 'NPO';
 
-export function MealRequestModal({ isOpen, onClose, admissionId }: MealRequestModalProps) {
+export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: MealRequestModalProps) {
     const [selectedType, setSelectedType] = useState<MealType | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<'SUCCESS' | 'ERROR' | null>(null);
@@ -47,7 +48,7 @@ export function MealRequestModal({ isOpen, onClose, admissionId }: MealRequestMo
             if (!res.ok) throw new Error('Failed to request meal');
 
             setResult('SUCCESS');
-            // setResult('SUCCESS'); // Already set above
+            onSuccess?.();
         } catch (error) {
             console.error(error);
             setResult('ERROR');
@@ -106,10 +107,10 @@ export function MealRequestModal({ isOpen, onClose, admissionId }: MealRequestMo
                         disabled={!selectedType || isLoading}
                         onClick={handleSubmit}
                         className={cn(
-                            "w-full py-3.5 rounded-xl font-bold text-white transition-all mt-4",
+                            "w-full min-h-[48px] py-3.5 rounded-xl font-bold text-white transition-all mt-4 touch-manipulation",
                             !selectedType || isLoading
                                 ? "bg-slate-300 cursor-not-allowed"
-                                : "bg-teal-500 hover:bg-teal-600 active:scale-95 shadow-md shadow-teal-200"
+                                : "bg-teal-500 hover:bg-teal-600 active:scale-[0.98] shadow-md shadow-teal-200"
                         )}
                     >
                         {isLoading ? '전송 중...' : '신청하기'}
@@ -123,12 +124,13 @@ export function MealRequestModal({ isOpen, onClose, admissionId }: MealRequestMo
 function OptionButton({ label, active, onClick, icon, danger }: { label: string, active: boolean, onClick: () => void, icon: string, danger?: boolean }) {
     return (
         <button
+            type="button"
             onClick={onClick}
             className={cn(
-                "flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left",
+                "flex items-center gap-3 p-4 min-h-[52px] rounded-xl border-2 transition-all text-left w-full touch-manipulation active:scale-[0.99]",
                 active
                     ? danger ? "border-red-500 bg-red-50 text-red-700" : "border-teal-500 bg-teal-50 text-teal-700"
-                    : "border-slate-100 hover:border-slate-200 bg-white text-slate-600"
+                    : "border-slate-100 active:border-slate-200 bg-white text-slate-600"
             )}
         >
             <span className="text-2xl">{icon}</span>

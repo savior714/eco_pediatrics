@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { PatientCard } from '@/components/PatientCard';
 import { Card } from '@/components/Card';
 import { Bell } from 'lucide-react';
-import { IVUploadForm } from '@/components/IVUploadForm';
 import { PatientDetailModal } from '@/components/PatientDetailModal';
 
 export default function Station() {
@@ -31,8 +30,7 @@ export default function Station() {
             name: `환자 ${i + 1}`,
             temp: 36.5 + (Math.random() * 2),
             drops: 20,
-            status: 'normal',
-            showIVForm: false
+            status: 'normal'
         })));
 
         // WebSocket Connection for alerts
@@ -67,12 +65,6 @@ export default function Station() {
         return () => ws.close();
     }, []);
 
-    const toggleIVForm = (index: number) => {
-        const newBeds = [...beds];
-        newBeds[index].showIVForm = !newBeds[index].showIVForm;
-        setBeds(newBeds);
-    };
-
     const removeNotification = (id: string) => {
         setNotifications(prev => prev.filter(n => n.id !== id));
     };
@@ -106,30 +98,15 @@ export default function Station() {
                         const status = isFever ? 'fever' : 'normal';
 
                         return (
-                            <div key={bed.room} className="relative">
-                                <PatientCard
-                                    name={bed.name}
-                                    roomNumber={bed.room}
-                                    temperature={bed.temp.toFixed(1)}
-                                    infusionRate={bed.drops}
-                                    status={status}
-                                    onPrintQR={() => toggleIVForm(index)}
-                                />
-                                {/* Reusing QR button as "Action" button for MVP to show IV Form */}
-
-                                {bed.showIVForm && (
-                                    <div className="absolute top-full left-0 right-0 z-10 shadow-xl">
-                                        <IVUploadForm
-                                            admissionId={bed.id}
-                                            patientName={bed.name}
-                                            onUploadSuccess={() => {
-                                                toggleIVForm(index);
-                                                // Ideally, refresh data or update local state
-                                            }}
-                                        />
-                                    </div>
-                                )}
-                            </div>
+                            <PatientCard
+                                key={bed.room}
+                                name={bed.name}
+                                roomNumber={bed.room}
+                                temperature={bed.temp.toFixed(1)}
+                                infusionRate={bed.drops}
+                                status={status}
+                                onCardClick={() => setSelectedBed({ ...bed, status })}
+                            />
                         );
                     })}
                 </div>
