@@ -288,8 +288,10 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
     return unique_admissions
 
 
-@app.get("/api/v1/admissions/{admission_id}/dashboard")
-async def get_dashboard_data(admission_id: str, db: AsyncClient = Depends(get_supabase)):
+async def _fetch_dashboard_data(db: AsyncClient, admission_id: str):
+    """
+    Helper to fetch all related data for a given admission_id
+    """
     # 1. Info
     adm_res = await execute_with_retry_async(db.table("admissions").select("*").eq("id", admission_id))
     if not adm_res.data:
@@ -321,6 +323,28 @@ async def get_dashboard_data(admission_id: str, db: AsyncClient = Depends(get_su
         "meals": meals,
         "exam_schedules": exam_schedules
     }
+
+@app.get("/api/v1/admissions/{admission_id}/dashboard")
+async def get_dashboard_data_by_id(admission_id: str, db: AsyncClient = Depends(get_supabase)):
+    return await _fetch_dashboard_data(db, admission_id)
+
+@app.get("/api/v1/dashboard/{token}")
+async def get_dashboard_data_by_token(token: str, db: AsyncClient = Depends(get_supabase)):
+    """
+    Fetch dashboard data using an access_token (Guardian view)
+    """
+    res = await execute_with_retry_async(
+        db.table("admissions")
+        .select("id")
+        .eq("access_token", token)
+        .limit(1)
+    )
+    
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Invalid token")
+
+    admission_id = res.data[0]['id']
+    return await _fetch_dashboard_data(db, admission_id)
 
 @app.post("/api/v1/vitals", response_model=VitalSign)
 async def record_vital(vital: VitalSignCreate, db: AsyncClient = Depends(get_supabase)):

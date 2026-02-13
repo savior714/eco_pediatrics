@@ -17,6 +17,7 @@ import {
 import { Card } from './Card';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { calculateHospitalDay } from '@/utils/dateUtils';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -36,45 +37,83 @@ interface TemperatureGraphProps {
 }
 
 export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
-    // ... lines 37-160
     // 1. Calculate hospital days logic
-    const { chartData, totalWidthPercent, ticks } = useMemo(() => {
-        if (!checkInAt || data.length === 0) return { chartData: data, totalWidthPercent: 100, ticks: [] };
+    const { chartData, totalWidthPercent, ticks, yDomain } = useMemo(() => {
+        if (!checkInAt || data.length === 0) return { chartData: data, totalWidthPercent: 100, ticks: [], yDomain: [35.5, 41] };
 
         const startDate = new Date(checkInAt);
-        // Normalize start date to midnight for day calculation
-        const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        // Normalize start date to midnight of the check-in day for consistent day calculation
+        const startDayMidnight = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
 
-        // Process data to add 'hospitalDay' and relative time
+        // Calculate Y-axis domain based on data
+        let minTemp = 35.5;
+        let maxTemp = 41;
+        if (data.length > 0) {
+            const temps = data.map(d => d.temperature);
+            const minData = Math.min(...temps);
+            const maxData = Math.max(...temps);
+            if (minData < 35.5) minTemp = Math.floor(minData * 10) / 10 - 0.5;
+            if (maxData > 41) maxTemp = Math.ceil(maxData * 10) / 10 + 0.5;
+        }
+
+        // Process data to add 'hospitalDay' and precise timestamp
         const processed = data.map(d => {
             const date = new Date(d.recorded_at);
-            const diffTime = Math.abs(date.getTime() - startDay.getTime());
-            const dayNum = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // Day 1, 2, 3...
+            const currentTime = date.getTime();
+
             return {
                 ...d,
-                hospitalDay: dayNum,
-                timestamp: date.getTime()
+                hospitalDay: calculateHospitalDay(checkInAt, date),
+                timestamp: currentTime
             };
         });
 
-        // Determine range
-        const maxDay = Math.max(5, ...processed.map(d => d.hospitalDay), 5); // Minimum 5 days
-        const widthPercent = Math.max(100, maxDay * 20); // Each day 20% width
+        // Determine range for the X-axis
+        const lastDataPoint = processed[processed.length - 1];
+        const maxDayInData = lastDataPoint ? lastDataPoint.hospitalDay : 1;
+        const displayDays = Math.max(5, maxDayInData);
 
-        // Generate X-Axis ticks for each day (start of each day)
+        // Generate ticks for each hospital day (starting from the exact check-in day)
         const dayTicks = [];
-        for (let i = 0; i < maxDay; i++) {
-            const tickDate = new Date(startDay);
-            tickDate.setDate(startDay.getDate() + i);
-            dayTicks.push(tickDate.getTime());
+        for (let i = 0; i < displayDays; i++) {
+            dayTicks.push(startDayMidnight + (i * 24 * 60 * 60 * 1000));
         }
 
-        return { chartData: processed, totalWidthPercent: widthPercent, ticks: dayTicks };
+        // Horizontal scroll width calculation
+        const widthPercent = Math.max(100, displayDays * 20); // 20% width per day
+
+        return { chartData: processed, totalWidthPercent: widthPercent, ticks: dayTicks, yDomain: [minTemp, maxTemp] };
     }, [data, checkInAt]);
 
-    // 38도 기준 선 색상 변경을 위해 Gradient 사용, 데이터 분리 로직 제거
+    // Generate unique ID for the gradient to prevent conflicts when multiple charts are present
+    // Note: useId returns a string containing colons (e.g. ":r1:"), which are invalid in CSS usageUrl without escaping.
+    // We replace colons with dashes to ensure a valid ID.
+    const rawId = React.useId();
+    const gradientId = `tempColor-${rawId.replace(/:/g, '')}`;
 
     const latestTemp = data.length > 0 ? data[data.length - 1].temperature : null;
+
+    // Calculate gradient offset based on the actual DATA RANGE, because the linearGradient
+    // is applied to the Line path's bounding box, not the YAxis domain.
+    const gradientOffset = useMemo(() => {
+        if (chartData.length === 0) return 0;
+
+        const temps = chartData.map((d: any) => d.temperature);
+        const dataMax = Math.max(...temps);
+        const dataMin = Math.min(...temps);
+
+        // Case 1: Entire range is below 38 -> All Teal
+        if (dataMax <= 38) return 0;
+
+        // Case 2: Entire range is above 38 -> All Red
+        if (dataMin >= 38) return 1;
+
+        // Case 3: 38 is within range
+        // Recharts gradient: 0% is Top (Max), 100% is Bottom (Min).
+        // (dataMax - 38) gives the distance from top to the threshold
+        // (dataMax - dataMin) gives the total height of the line path
+        return (dataMax - 38) / (dataMax - dataMin);
+    }, [chartData, yDomain]); // Keep yDomain as dependency if needed, but mainly chartData
 
     return (
         <Card className="w-full relative overflow-hidden border-slate-200/80">
@@ -108,11 +147,11 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
                             <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f1f5f9" />
 
                             <defs>
-                                <linearGradient id="tempColor" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#ef4444" />
-                                    <stop offset={`${(41 - 38) / (41 - 35.5) * 100}%`} stopColor="#ef4444" />
-                                    <stop offset={`${(41 - 38) / (41 - 35.5) * 100}%`} stopColor="#14b8a6" />
-                                    <stop offset="100%" stopColor="#14b8a6" />
+                                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset={0} stopColor="#ef4444" />
+                                    <stop offset={gradientOffset} stopColor="#ef4444" />
+                                    <stop offset={gradientOffset} stopColor="#14b8a6" />
+                                    <stop offset={1} stopColor="#14b8a6" />
                                 </linearGradient>
                             </defs>
 
@@ -124,10 +163,7 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
                                 ticks={ticks}
                                 tickFormatter={(unixTime) => {
                                     if (!checkInAt) return '';
-                                    const date = new Date(unixTime);
-                                    const start = new Date(checkInAt);
-                                    const diff = Math.floor((date.getTime() - new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                                    return `${diff}일차`;
+                                    return `${calculateHospitalDay(checkInAt, new Date(unixTime))}일차`;
                                 }}
                                 stroke="#94a3b8"
                                 fontSize={12}
@@ -136,7 +172,7 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
                                 tick={{ dy: 10 }}
                             />
                             <YAxis
-                                domain={[35.5, 41]}
+                                domain={yDomain}
                                 stroke="#94a3b8"
                                 fontSize={11}
                                 tickLine={false}
@@ -170,7 +206,7 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
                             <Line
                                 type="monotone"
                                 dataKey="temperature"
-                                stroke="url(#tempColor)"
+                                stroke={`url(#${gradientId})`}
                                 strokeWidth={3}
                                 dot={(props: any) => {
                                     const { cx, cy, payload } = props;

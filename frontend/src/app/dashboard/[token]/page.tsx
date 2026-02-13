@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { TemperatureGraph } from '@/components/TemperatureGraph';
 import { IVStatusCard } from '@/components/IVStatusCard';
 import { Card } from '@/components/Card';
@@ -8,7 +9,7 @@ import { Utensils, FileText, CalendarCheck, Bell, Smartphone, Monitor } from 'lu
 import { useVitals } from '@/hooks/useVitals';
 import { MealRequestModal } from '@/components/MealRequestModal';
 import { DocumentRequestModal } from '@/components/DocumentRequestModal';
-import Image from 'next/image';
+import { calculateHospitalDay } from '@/utils/dateUtils';
 
 export default function Dashboard({ params }: { params: { token: string } }) {
     const { token } = params;
@@ -21,12 +22,14 @@ export default function Dashboard({ params }: { params: { token: string } }) {
     const STORAGE_KEY = 'dashboardViewMode';
     type ViewMode = 'mobile' | 'desktop';
     const [viewMode, setViewMode] = useState<ViewMode>('mobile');
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const v = localStorage.getItem(STORAGE_KEY);
             setViewMode(v === 'desktop' ? 'desktop' : 'mobile');
         }
     }, []);
+
     const setViewModeAndStore = (mode: ViewMode) => {
         setViewMode(mode);
         try { localStorage.setItem(STORAGE_KEY, mode); } catch (_) { }
@@ -62,11 +65,10 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                                 <span className="text-sm font-medium text-slate-500 ml-1">환자</span>
                             </h1>
                             <p className="text-slate-500 text-xs font-medium mt-0.5" suppressHydrationWarning>
-                                {roomNumber ? `${roomNumber}` : '...'} · {checkInAt ? `${Math.floor((new Date().getTime() - new Date(checkInAt).getTime()) / (1000 * 60 * 60 * 24)) + 1}일차` : '...'}
+                                {roomNumber ? `${roomNumber}` : '...'} · {checkInAt ? `${calculateHospitalDay(checkInAt)}일차` : '...'}
                             </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-
                             <div className="relative h-14 w-60">
                                 <Image
                                     src="/eco_logo.png"
@@ -92,26 +94,33 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                     </section>
 
                     <div className={isDesktop ? 'flex flex-col gap-6 md:col-span-1' : 'contents'}>
-                        {/* 현재 신청 식단 + 변경 */}
+                        {/* 아침, 점심, 저녁 식단 쪼개기 */}
                         <section className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
-                                        <Utensils size={20} />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-xs text-slate-500 font-medium">현재 신청된 식단</p>
-                                        <p className="font-bold text-slate-800 text-base truncate mt-0.5">
-                                            {currentMealLabel ?? '신청 내역 없음'}
-                                        </p>
-                                    </div>
-                                </div>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2.5">
+                                    <span className="w-9 h-9 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+                                        <Utensils size={18} />
+                                    </span>
+                                    오늘의 식단
+                                </h3>
                                 <button
                                     onClick={() => setIsMealModalOpen(true)}
-                                    className="shrink-0 min-h-[44px] min-w-[44px] px-5 py-2.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold rounded-xl text-sm transition-colors active:scale-[0.98] touch-manipulation"
+                                    className="shrink-0 h-9 px-4 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold rounded-xl text-sm transition-colors active:scale-[0.98] touch-manipulation"
                                 >
-                                    변경
+                                    식단 변경
                                 </button>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2">
+                                {['아침', '점심', '저녁'].map((label) => (
+                                    <div key={label} className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
+                                        <span className="text-[10px] text-slate-400 block mb-1 font-bold">{label}</span>
+                                        <span className="text-xs font-bold text-slate-600 truncate block">
+                                            {/* Since the current data doesn't distinguish by time, we show the latest request for the corresponding slots if it exists, or show common status */}
+                                            {currentMealLabel ?? '신청전'}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </section>
 
@@ -227,6 +236,7 @@ function formatExamDate(iso: string): string {
     const week = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
     return `${m.toString().padStart(2, '0')}.${day.toString().padStart(2, '0')} (${week})`;
 }
+
 function formatExamTime(iso: string): string {
     const d = new Date(iso);
     const h = d.getHours();

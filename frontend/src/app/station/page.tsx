@@ -6,6 +6,7 @@ import { Card } from '@/components/Card';
 import { Bell } from 'lucide-react';
 import { PatientDetailModal } from '@/components/PatientDetailModal';
 import Image from 'next/image';
+import { QrCodeModal } from '@/components/QrCodeModal';
 
 export default function Station() {
     // Use static initial state to prevent hydration mismatch
@@ -280,4 +281,4 @@ export default function Station() {
     );
 }
 
-import { QrCodeModal } from '@/components/QrCodeModal'; // Add import at the top
+
