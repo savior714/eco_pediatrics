@@ -39,3 +39,7 @@
 - [x] easy_start.bat: 스크립트 경로 고정, venv, 프론트 npm install, supabase 2.25.0 고정
 - [x] Next.js 14.2.35 보안 패치, .env.example 추가
 - [x] TemperatureGraph 타입 에러 수정 (Recharts dot null 반환 이슈)
+- [x] **UI/UX 개선**: 스테이션/대시보드 로고 적용, 레이아웃 정리, 모바일 뷰 토글 위치 변경
+- [x] **체온 차트 고도화**: 끊기는 선 대신 그라데이션 적용(38도 기준), 약물 아이콘(A/I/M) 정상 표시
+- [x] **통합 테스트 데이터 생성**: `/api/v1/seed/full-test-data` (입원+체온기록+검사일정 한번에 생성)
+- [x] **검사 일정 동기화 수정**: 삭제 시 실시간 반영 안되던 버그 수정 (웹소켓 브로드캐스트 타겟팅 보완)
