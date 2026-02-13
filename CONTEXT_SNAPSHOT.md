@@ -38,3 +38,4 @@
 - [x] **스테이션–입원 연동**: `GET /api/v1/admissions`로 병상별 실제 admission_id 사용. 개발용 `POST /api/v1/seed/station-admissions`로 30병상 더미 입원 생성
 - [x] easy_start.bat: 스크립트 경로 고정, venv, 프론트 npm install, supabase 2.25.0 고정
 - [x] Next.js 14.2.35 보안 패치, .env.example 추가
+- [x] TemperatureGraph 타입 에러 수정 (Recharts dot null 반환 이슈)

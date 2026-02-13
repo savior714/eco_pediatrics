@@ -45,7 +45,7 @@ echo(
 
 echo [3/5] Starting Backend Server...
 set "BACKEND_DIR=%~dp0backend"
-start "PID Backend" cmd /k "cd /d "%BACKEND_DIR%" && call .venv\Scripts\activate.bat && uvicorn main:app --reload"
+start "PID Backend" cmd /k "cd /d "%BACKEND_DIR%" && call .venv\Scripts\activate.bat && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
 cd /d "%~dp0"
 echo(
 

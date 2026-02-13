@@ -2,7 +2,9 @@
 
 import React, { useState } from 'react';
 import { Card } from './Card';
-import { Upload, Droplet, Check } from 'lucide-react';
+import { Upload, X, Check, Camera, Droplet } from 'lucide-react';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface IVUploadFormProps {
     admissionId: string; // Internal ID, or handle mapping in parent
@@ -26,7 +28,7 @@ export function IVUploadForm({ admissionId, patientName, onUploadSuccess }: IVUp
         if (photoUrl.trim()) body.photo_url = photoUrl.trim();
 
         try {
-            const res = await fetch('http://localhost:8000/api/v1/iv-records', {
+            const res = await fetch(`${API_BASE}/api/v1/iv-records`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)

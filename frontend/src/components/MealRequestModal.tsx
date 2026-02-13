@@ -36,7 +36,8 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
         setResult(null);
 
         try {
-            const res = await fetch('http://localhost:8000/api/v1/meals/requests', {
+            const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+            const res = await fetch(`${API_BASE}/api/v1/meals/requests`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

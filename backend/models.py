@@ -10,6 +10,7 @@ class Admission(BaseModel):
     status: str = "IN_PROGRESS"
     check_in_at: Optional[datetime] = None
     discharged_at: Optional[datetime] = None
+    access_token: Optional[str] = None # Added for QR generation
 
 class VitalSign(BaseModel):
     id: Optional[int] = None

@@ -19,6 +19,18 @@ supabase: Client = create_client(url, key)
 async def seed():
     print("🌱 Seeding data to Supabase...")
 
+    # Retry helper
+    import time
+    def run_with_retry(func, name, retries=3):
+        for i in range(retries):
+            try:
+                return func()
+            except Exception as e:
+                if i == retries - 1:
+                    raise e
+                print(f"   ⚠️ Warning: {name} failed, retrying ({i+1}/{retries})...")
+                time.sleep(2)
+
     # 1. Create a Dummy Patient (Admission)
     print("   Creating dummy patient '이*원'...")
     try:
@@ -27,12 +39,12 @@ async def seed():
         base_time = datetime.now() - timedelta(days=6)
         check_in_time = base_time.replace(hour=9, minute=0, second=0, microsecond=0)
 
-        data, count = supabase.table("admissions").insert({
+        data, count = run_with_retry(lambda: supabase.table("admissions").insert({
             "patient_name_masked": "김*아",
             "room_number": "310-1",
             "status": "IN_PROGRESS",
             "check_in_at": check_in_time.isoformat()
-        }).execute()
+        }).execute(), "Admission")
         
         admission_id = data[1][0]['id']
         token = data[1][0]['access_token']
@@ -74,16 +86,16 @@ async def seed():
                     "recorded_at": record_time.isoformat()
                 })
 
-        supabase.table("vital_signs").insert(vitals).execute()
+        run_with_retry(lambda: supabase.table("vital_signs").insert(vitals).execute(), "Vital Signs")
         print(f"   ✅ {len(vitals)} vitals added!")
 
         # 3. Add IV Record
         print("   Adding mock IV record...")
-        supabase.table("iv_records").insert({
+        run_with_retry(lambda: supabase.table("iv_records").insert({
             "admission_id": admission_id,
             "infusion_rate": 40,
             "photo_url": "https://placehold.co/600x400/png?text=IV+Check" 
-        }).execute()
+        }).execute(), "IV Record")
         print("   ✅ IV record added!")
         
         print("\n" + "="*50)

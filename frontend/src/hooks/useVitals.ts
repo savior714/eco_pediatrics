@@ -18,10 +18,13 @@ export function useVitals(token: string) {
     const [meals, setMeals] = useState<{ id: number; request_type: string; status: string }[]>([]);
     const [examSchedules, setExamSchedules] = useState<{ id: number; scheduled_at: string; name: string; note?: string }[]>([]);
 
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const WS_URL = API_URL.replace(/^http/, 'ws');
+
     const fetchDashboard = useCallback(async () => {
         if (!token) return;
         try {
-            const res = await fetch(`http://localhost:8000/api/v1/dashboard/${token}`);
+            const res = await fetch(`${API_URL}/api/v1/dashboard/${token}`);
             if (!res.ok) {
                 if (res.status === 403) window.location.href = '/403';
                 return;
@@ -53,7 +56,7 @@ export function useVitals(token: string) {
         fetchDashboard();
 
         // WebSocket Connection
-        const ws = new WebSocket(`ws://localhost:8000/ws/${token}`);
+        const ws = new WebSocket(`${WS_URL}/ws/${token}`);
 
         ws.onopen = () => {
             console.log('Connected to Vitals WS');
@@ -68,9 +71,14 @@ export function useVitals(token: string) {
                     time: new Date(newVital.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     temperature: newVital.temperature,
                     has_medication: newVital.has_medication,
+                    medication_type: newVital.medication_type,
                     recorded_at: newVital.recorded_at
                 };
                 setVitals((prev) => [...prev, formattedVital]);
+            } else if (message.type === 'NEW_EXAM_SCHEDULE') {
+                setExamSchedules(prev => [...prev, message.data].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
+            } else if (message.type === 'DELETE_EXAM_SCHEDULE') {
+                setExamSchedules(prev => prev.filter(ex => ex.id !== message.data.id));
             }
         };
 

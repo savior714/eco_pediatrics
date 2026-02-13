@@ -72,45 +72,7 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
         return { chartData: processed, totalWidthPercent: widthPercent, ticks: dayTicks };
     }, [data, checkInAt]);
 
-    // 38° 기준 구간 분리 + 경계에서 보간점 삽입해 선이 끊기지 않도록
-    const chartDataWithSegments = useMemo(() => {
-        const FEVER_THRESHOLD = 38;
-        const toSegment = (d: any) => ({
-            ...d,
-            tempNormal: d.temperature < FEVER_THRESHOLD ? d.temperature : null,
-            tempFever: d.temperature >= FEVER_THRESHOLD ? d.temperature : null
-        });
-        const crosses = (a: any, b: any) =>
-            (a.temperature < FEVER_THRESHOLD && b.temperature >= FEVER_THRESHOLD) ||
-            (a.temperature >= FEVER_THRESHOLD && b.temperature < FEVER_THRESHOLD);
-        const interpolate38 = (a: any, b: any) => {
-            const t1 = a.timestamp ?? new Date(a.recorded_at).getTime();
-            const t2 = b.timestamp ?? new Date(b.recorded_at).getTime();
-            const temp1 = a.temperature;
-            const temp2 = b.temperature;
-            const tCross = t1 + (t2 - t1) * (FEVER_THRESHOLD - temp1) / (temp2 - temp1);
-            return {
-                ...a,
-                timestamp: tCross,
-                recorded_at: new Date(tCross).toISOString(),
-                temperature: FEVER_THRESHOLD,
-                tempNormal: FEVER_THRESHOLD,
-                tempFever: FEVER_THRESHOLD,
-                has_medication: false,
-                medication_type: undefined,
-                isBridge: true
-            };
-        };
-
-        const result: any[] = [];
-        for (let i = 0; i < chartData.length; i++) {
-            result.push(toSegment(chartData[i]));
-            if (i < chartData.length - 1 && crosses(chartData[i], chartData[i + 1])) {
-                result.push(interpolate38(chartData[i], chartData[i + 1]));
-            }
-        }
-        return result;
-    }, [chartData]);
+    // 38도 기준 선 색상 변경을 위해 Gradient 사용, 데이터 분리 로직 제거
 
     const latestTemp = data.length > 0 ? data[data.length - 1].temperature : null;
 
@@ -140,10 +102,19 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
                 <div className="h-[260px] sm:h-[320px]" style={{ width: `${totalWidthPercent}%`, minWidth: '100%' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart
-                            data={chartDataWithSegments}
+                            data={chartData}
                             margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
                         >
                             <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f1f5f9" />
+
+                            <defs>
+                                <linearGradient id="tempColor" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#ef4444" />
+                                    <stop offset={`${(41 - 38) / (41 - 35.5) * 100}%`} stopColor="#ef4444" />
+                                    <stop offset={`${(41 - 38) / (41 - 35.5) * 100}%`} stopColor="#14b8a6" />
+                                    <stop offset="100%" stopColor="#14b8a6" />
+                                </linearGradient>
+                            </defs>
 
                             <XAxis
                                 dataKey="timestamp"
@@ -184,7 +155,7 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
                                             <p className="text-xs text-slate-500 mb-0.5">
                                                 {label != null && new Date(label).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                             </p>
-                                            <p className="text-slate-800 font-semibold">체온 {(p.temperature ?? p.tempNormal ?? p.tempFever)?.toFixed(1)}°C</p>
+                                            <p className="text-slate-800 font-semibold">체온 {p.temperature?.toFixed(1)}°C</p>
                                         </div>
                                     );
                                 }}
@@ -195,59 +166,48 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
                                 <ReferenceLine key={i} x={tick} stroke="#e2e8f0" strokeDasharray="3 3" />
                             ))}
 
-                            {/* 38° 미만: 청록, 38° 이상: 빨강. 애니메이션 없이 좌→우 한 번에 표시, 보간점은 점 생략 */}
+                            {/* Single Continuous Line with Gradient Stroke */}
                             <Line
                                 type="monotone"
-                                dataKey="tempNormal"
-                                stroke="#14b8a6"
+                                dataKey="temperature"
+                                stroke="url(#tempColor)"
                                 strokeWidth={3}
                                 dot={(props: any) => {
                                     const { cx, cy, payload } = props;
-                                    if (payload.tempNormal == null || payload.isBridge) return null;
+                                    const isFever = payload.temperature >= 38.0;
                                     return (
                                         <circle
-                                            key={`dot-n-${payload.recorded_at}`}
+                                            key={`dot-${payload.recorded_at}`}
                                             cx={cx}
                                             cy={cy}
                                             r={4}
                                             fill="#fff"
-                                            stroke="#14b8a6"
+                                            stroke={isFever ? '#ef4444' : '#14b8a6'}
                                             strokeWidth={2}
                                         />
                                     );
                                 }}
-                                activeDot={{ r: 6, fill: '#14b8a6', stroke: '#fff', strokeWidth: 2 }}
-                                connectNulls
-                                isAnimationActive={false}
-                            />
-                            <Line
-                                type="monotone"
-                                dataKey="tempFever"
-                                stroke="#ef4444"
-                                strokeWidth={3}
-                                dot={(props: any) => {
+                                activeDot={(props: any) => {
                                     const { cx, cy, payload } = props;
-                                    if (payload.tempFever == null || payload.isBridge) return null;
+                                    const isFever = payload.temperature >= 38.0;
                                     return (
                                         <circle
-                                            key={`dot-f-${payload.recorded_at}`}
                                             cx={cx}
                                             cy={cy}
-                                            r={4}
-                                            fill="#fff"
-                                            stroke="#ef4444"
+                                            r={6}
+                                            fill={isFever ? '#ef4444' : '#14b8a6'}
+                                            stroke="#fff"
                                             strokeWidth={2}
                                         />
                                     );
                                 }}
-                                activeDot={{ r: 6, fill: '#ef4444', stroke: '#fff', strokeWidth: 2 }}
                                 connectNulls
                                 isAnimationActive={false}
                             />
 
                             {/* Medication Labels */}
                             <Line
-                                data={chartDataWithSegments}
+                                data={chartData}
                                 dataKey={(d: any) => d.has_medication ? 40.7 : null}
                                 stroke="none"
                                 isAnimationActive={false}

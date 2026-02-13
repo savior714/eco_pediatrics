@@ -51,7 +51,8 @@ export function DocumentRequestModal({ isOpen, onClose, admissionId }: DocumentR
         setResult(null);
 
         try {
-            const res = await fetch('http://localhost:8000/api/v1/documents/requests', {
+            const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+            const res = await fetch(`${API_BASE}/api/v1/documents/requests`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

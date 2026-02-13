@@ -28,6 +28,7 @@ export function IVStatusCard({ photoUrl, infusionRate, lastChecked }: IVStatusCa
 
             <div className="w-full aspect-video bg-white rounded-xl border-2 border-dashed border-sky-200 flex flex-col items-center justify-center relative overflow-hidden min-h-[120px]">
                 {photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={photoUrl} alt="IV Controller" className="object-cover w-full h-full opacity-90" />
                 ) : (
                     <div className="text-center p-4">
