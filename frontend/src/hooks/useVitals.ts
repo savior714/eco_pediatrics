@@ -18,6 +18,8 @@ export function useVitals(token: string) {
     const [meals, setMeals] = useState<{ id: number; request_type: string; status: string }[]>([]);
     const [examSchedules, setExamSchedules] = useState<{ id: number; scheduled_at: string; name: string; note?: string }[]>([]);
 
+    const [ivRecords, setIvRecords] = useState<{ id: number; infusion_rate: number; photo_url: string; created_at: string }[]>([]);
+
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     const WS_URL = API_URL.replace(/^http/, 'ws');
 
@@ -27,6 +29,7 @@ export function useVitals(token: string) {
             const res = await fetch(`${API_URL}/api/v1/dashboard/${token}`);
             if (!res.ok) {
                 if (res.status === 403) window.location.href = '/403';
+                console.warn(`Dashboard fetch failed with status ${res.status}. Keeping existing state.`);
                 return;
             }
             const data = await res.json();
@@ -38,16 +41,20 @@ export function useVitals(token: string) {
             }
             if (data.meals && Array.isArray(data.meals)) setMeals(data.meals);
             if (data.exam_schedules && Array.isArray(data.exam_schedules)) setExamSchedules(data.exam_schedules);
-            const formattedVitals = (data.vitals || []).map((v: any) => ({
-                time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                temperature: v.temperature,
-                has_medication: v.has_medication,
-                medication_type: v.medication_type,
-                recorded_at: v.recorded_at
-            })).reverse();
-            setVitals(formattedVitals);
+            if (data.iv_records && Array.isArray(data.iv_records)) setIvRecords(data.iv_records);
+
+            if (data.vitals && Array.isArray(data.vitals)) {
+                const formattedVitals = data.vitals.map((v: any) => ({
+                    time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    temperature: v.temperature,
+                    has_medication: v.has_medication,
+                    medication_type: v.medication_type,
+                    recorded_at: v.recorded_at
+                })).reverse();
+                setVitals(formattedVitals);
+            }
         } catch (error) {
-            console.error("Failed to fetch dashboard", error);
+            console.error("Failed to fetch dashboard. Keeping existing state.", error);
         }
     }, [token]);
 
@@ -75,6 +82,8 @@ export function useVitals(token: string) {
                     recorded_at: newVital.recorded_at
                 };
                 setVitals((prev) => [...prev, formattedVital]);
+            } else if (message.type === 'NEW_IV') {
+                setIvRecords(prev => [message.data, ...prev]);
             } else if (message.type === 'NEW_EXAM_SCHEDULE') {
                 setExamSchedules(prev => [...prev, message.data].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
             } else if (message.type === 'DELETE_EXAM_SCHEDULE') {
@@ -90,5 +99,5 @@ export function useVitals(token: string) {
         return () => ws.close();
     }, [token, fetchDashboard]);
 
-    return { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, examSchedules, refetchDashboard: fetchDashboard };
+    return { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, examSchedules, ivRecords, refetchDashboard: fetchDashboard };
 }

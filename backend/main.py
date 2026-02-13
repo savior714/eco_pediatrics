@@ -1,14 +1,62 @@
-from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect, status
+from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect, status, File, UploadFile, Request
+from supabase._async.client import AsyncClient
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from typing import List, Optional
 from datetime import datetime
 import json
+import os
+import shutil
 
-from database import supabase
+from contextlib import asynccontextmanager
+import database
+from database import init_supabase
 from models import Admission, VitalSign, IVRecord, MealRequest, DocumentRequest, ExamSchedule, ExamScheduleCreate, AdmissionCreate, VitalSignCreate, IVRecordCreate, MealRequestCreate, DocumentRequestCreate
 from websocket_manager import manager
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize Supabase and store in app.state
+    client = await init_supabase()
+    app.state.supabase = client
+    print("[INIT] Supabase AsyncClient initialized and stored in app.state")
+    yield
+    # Cleanup: Close connections to prevent resource leaks
+    if app.state.supabase:
+        try:
+            # Supabase-py uses internal httpx clients. Closing them explicitly if possible.
+            if hasattr(app.state.supabase.auth, "aclose"): # Some versions
+                await app.state.supabase.auth.aclose()
+            elif hasattr(app.state.supabase.auth, "_client") and hasattr(app.state.supabase.auth._client, "aclose"):
+                await app.state.supabase.auth._client.aclose()
+            
+            if hasattr(app.state.supabase.postgrest, "aclose"):
+                await app.state.supabase.postgrest.aclose()
+                
+            print("[CLEANUP] Supabase AsyncClient connections closed.")
+        except Exception as e:
+            print(f"[CLEANUP] Warning: Error during client cleanup: {e}")
+
+app = FastAPI(lifespan=lifespan)
+
+# --- Dependency ---
+async def get_supabase(request: Request):
+    """
+    Dependency to provide the Supabase client from app.state
+    """
+    client = getattr(request.app.state, "supabase", None)
+    if not client:
+        # Fallback for safety during initialization or edge cases
+        from database import supabase as global_supabase
+        client = global_supabase
+    
+    if not client:
+        raise HTTPException(status_code=500, detail="Supabase client not initialized")
+    return client
+
+# Mount Static Files
+os.makedirs("uploads", exist_ok=True)
+app.mount("/static", StaticFiles(directory="uploads"), name="static")
 
 # CORS Configuration
 # origins = ["*"]  # Invalid with allow_credentials=True
@@ -28,28 +76,43 @@ def mask_name(name: str) -> str:
         return name
     return name[0] + "*" + name[2:] if len(name) > 2 else name[0] + "*"
 
-def create_audit_log(actor_type: str, action: str, target_id: str, ip_address: str = "0.0.0.0"):
-    if supabase:
-        supabase.table("audit_logs").insert({
-            "actor_type": actor_type,
-            "action": action,
-            "target_id": target_id,
-            "ip_address": ip_address
-        }).execute()
+async def create_audit_log(db: AsyncClient, actor_type: str, action: str, target_id: str, ip_address: str = "0.0.0.0"):
+    if db:
+        try:
+            await db.table("audit_logs").insert({
+                "actor_type": actor_type,
+                "action": action,
+                "target_id": target_id,
+                "ip_address": ip_address
+            }).execute()
+        except Exception as e:
+            print(f"[WARN] Audit log failed: {str(e)}")
+            pass # Audit logs should not crash the main flow
+
+async def execute_with_retry_async(query_builder):
+    """
+    Supabase (Async) 쿼리 실행 시 재시도 로직 적용
+    """
+    import asyncio
+    max_retries = 3
+    
+    for attempt in range(max_retries):
+        try:
+            return await query_builder.execute()
+        except Exception as e:
+            if attempt == max_retries - 1:
+                print(f"[CRITICAL] DB Async Execute failed after {max_retries} attempts: {str(e)}")
+                raise e
+            print(f"[RETRY] DB async execute attempt {attempt+1} failed: {str(e)}. Retrying...")
+            await asyncio.sleep(0.5 * (attempt + 1))
+
+# Removed old safe_db_call and synchronous execute_with_retry
 
 # --- Endpoints ---
 
 @app.get("/")
 def read_root():
     return {"message": "PID Backend is running"}
-
-@app.get("/api/v1/admissions", response_model=List[Admission])
-def list_admissions():
-    """스테이션용: 전체 입원 목록 (병상·검사 연동용)"""
-    if not supabase:
-        raise HTTPException(status_code=500, detail="DB not connected")
-    response = supabase.table("admissions").select("id, patient_name_masked, room_number, status, check_in_at, access_token").eq("status", "IN_PROGRESS").execute()
-    return response.data or []
 
 # 개발용: 스테이션 30병상에 맞는 입원 더미 생성 (한 번 호출 후 검사 일정 추가·연동 테스트 가능)
 STATION_ROOM_NUMBERS = [
@@ -60,35 +123,50 @@ STATION_ROOM_NUMBERS = [
 ]
 
 @app.post("/api/v1/seed/full-test-data")
-def seed_full_test_data():
+async def seed_full_test_data(force: bool = True, db: AsyncClient = Depends(get_supabase)):
     """
     [개발용] 통합 데이터 생성기
-    1. 30개 병상 입원 생성
-    2. 최근 2일치 체온 데이터 생성 (310-1, 302호 등 일부)
-    3. 미래 검사 일정 생성
+    force=True이면 기존 입원 정보를 모두 DISCHARGED로 처리하고 새로 생성하여 중복 방지
     """
-    if not supabase:
-        raise HTTPException(status_code=500, detail="DB not connected")
+    if force:
+        # 기존 IN_PROGRESS 입원을 모두 DISCHARGED으로 변경 (대청소)
+        print("[SEED] Force reset: Marking existing admissions as DISCHARGED")
+        await execute_with_retry_async(
+            db.table("admissions")
+            .update({"status": "DISCHARGED", "discharged_at": datetime.now().isoformat()})
+            .eq("status", "IN_PROGRESS")
+        )
     
-    # 1. Admissions
-    created_adms = 0
-    admissions_map = {} # room -> id
+    # 1. Admissions (Optimized)
+    res = await execute_with_retry_async(db.table("admissions").select("id, room_number").eq("status", "IN_PROGRESS"))
+    admissions_data = res.data or []
+    existing_map = {row['room_number']: row['id'] for row in admissions_data}
     
-    for i, room in enumerate(STATION_ROOM_NUMBERS):
-        existing = supabase.table("admissions").select("id").eq("room_number", room).eq("status", "IN_PROGRESS").execute()
-        if existing.data and len(existing.data) > 0:
-            admissions_map[room] = existing.data[0]['id']
-            continue
+    missing_rooms = [r for r in STATION_ROOM_NUMBERS if r not in existing_map]
+    
+    import uuid
+    import random
+    
+    if missing_rooms:
+        new_admissions = []
+        for room in missing_rooms:
+            idx = STATION_ROOM_NUMBERS.index(room)
+            access_token = str(uuid.uuid4())
+            new_admissions.append({
+                "patient_name_masked": f"환자{idx + 1}",
+                "room_number": room,
+                "status": "IN_PROGRESS",
+                "check_in_at": datetime.now().isoformat(),
+                "access_token": access_token
+            })
         
-        # 새 입원 생성
-        res = supabase.table("admissions").insert({
-            "patient_name_masked": f"환자{i + 1}",
-            "room_number": room,
-            "status": "IN_PROGRESS",
-            "check_in_at": datetime.now().isoformat() # 오늘 입원한 것으로 처리
-        }).execute()
-        admissions_map[room] = res.data[0]['id']
-        created_adms += 1
+        insert_res = await execute_with_retry_async(db.table("admissions").insert(new_admissions))
+        inserted_data = insert_res.data or []
+        for row in inserted_data:
+            existing_map[row['room_number']] = row['id']
+            
+    admissions_map = existing_map
+    created_adms = len(missing_rooms)
 
     # 2. Vitals (History) - 310-1호(김*아), 302호에 대해 지난 48시간 데이터 생성
     target_rooms = ["310-1", "302", "305"]
@@ -103,7 +181,7 @@ def seed_full_test_data():
         if not adm_id: continue
         
         # 이미 데이터가 있는지 확인 (중복 생성 방지)
-        check = supabase.table("vital_signs").select("id").eq("admission_id", adm_id).limit(1).execute()
+        check = await execute_with_retry_async(db.table("vital_signs").select("id").eq("admission_id", adm_id).limit(1))
         if check.data: continue
 
         # 48시간 전부터 4시간 간격으로 생성
@@ -117,14 +195,14 @@ def seed_full_test_data():
             if temp >= 38.0:
                 has_med = True
                 med_type = "A" # 해열제
-
-            supabase.table("vital_signs").insert({
+                
+            await execute_with_retry_async(db.table("vital_signs").insert({
                 "admission_id": adm_id,
                 "temperature": round(temp, 1),
                 "has_medication": has_med,
                 "medication_type": med_type,
                 "recorded_at": t.isoformat()
-            }).execute()
+            }))
             created_vitals += 1
 
     # 3. Exam Schedules - 내일, 모레 일정
@@ -133,25 +211,25 @@ def seed_full_test_data():
         adm_id = admissions_map.get(room)
         if not adm_id: continue
 
-        check = supabase.table("exam_schedules").select("id").eq("admission_id", adm_id).limit(1).execute()
+        check = await execute_with_retry_async(db.table("exam_schedules").select("id").eq("admission_id", adm_id).limit(1))
         if check.data: continue
         
         # 내일 오전 9시
         tomorrow_9am = (base_time + timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
-        supabase.table("exam_schedules").insert({
+        await execute_with_retry_async(db.table("exam_schedules").insert({
             "admission_id": adm_id,
             "scheduled_at": tomorrow_9am.isoformat(),
             "name": "혈액 검사",
             "note": "공복 유지 필요"
-        }).execute()
+        }))
         
         # 모레 오후 2시
         after_2pm = (base_time + timedelta(days=2)).replace(hour=14, minute=0, second=0, microsecond=0)
-        supabase.table("exam_schedules").insert({
+        await execute_with_retry_async(db.table("exam_schedules").insert({
             "admission_id": adm_id,
             "scheduled_at": after_2pm.isoformat(),
             "name": "흉부 X-Ray"
-        }).execute()
+        }))
         created_exams += 2
 
     return {
@@ -162,70 +240,98 @@ def seed_full_test_data():
     }
 
 @app.post("/api/v1/admissions", response_model=Admission)
-def create_admission(admission: AdmissionCreate):
+async def create_admission(admission: AdmissionCreate, db: AsyncClient = Depends(get_supabase)):
     masked_name = mask_name(admission.patient_name)
     data = {
         "patient_name_masked": masked_name,
         "room_number": admission.room_number,
         "status": "IN_PROGRESS"
     }
-    if supabase:
-        response = supabase.table("admissions").insert(data).execute()
-        new_admission = response.data[0]
-        create_audit_log("NURSE", "CREATE", new_admission['id'])
-        return new_admission
-    else:
-        raise HTTPException(status_code=500, detail="Database connection logic not implemented fully without supabase key")
+    response = await execute_with_retry_async(db.table("admissions").insert(data))
+    new_admission = response.data[0]
+    await create_audit_log(db, "NURSE", "CREATE", new_admission['id'])
+    return new_admission
 
-
-@app.get("/api/v1/dashboard/{token}")
-def get_dashboard_data(token: str):
-    if not supabase:
-        raise HTTPException(status_code=500, detail="DB not connected")
+@app.get("/api/v1/admissions")
+async def list_admissions(db: AsyncClient = Depends(get_supabase)):
+    # 1. Get active admissions with async retry
+    res = await execute_with_retry_async(db.table("admissions").select("*").in_("status", ["IN_PROGRESS", "OBSERVATION"]))
+    admissions = res.data or []
     
-    # 1. Validate Token & Check Status
-    response = supabase.table("admissions").select("*").eq("access_token", token).execute()
-    if not response.data:
-        raise HTTPException(status_code=403, detail="Invalid token")
+    # 2. Deduplicate: keep only the latest admission per room_number
+    unique_map = {}
+    for adm in admissions:
+        room = adm['room_number']
+        if room not in unique_map:
+            unique_map[room] = adm
+        else:
+            existing = unique_map[room]
+            if (adm['status'] == 'IN_PROGRESS' and existing['status'] != 'IN_PROGRESS') or \
+               (adm['id'] > existing['id']):
+                unique_map[room] = adm
+    unique_admissions = list(unique_map.values())
     
-    admission = response.data[0]
-    if admission['status'] == 'DISCHARGED':
-        raise HTTPException(status_code=403, detail="Patient discharged")
+    # 3. Enrich with latest IV rate
+    for adm in unique_admissions:
+        iv_res = await execute_with_retry_async(
+            db.table("iv_records")
+            .select("infusion_rate, photo_url") # Reverted to original select for photo_url
+            .eq("admission_id", adm['id'])
+            .order("created_at", desc=True)
+            .limit(1)
+        )
+        if iv_res.data:
+            adm['latest_iv'] = iv_res.data[0]
+        else:
+            adm['latest_iv'] = None
+            
+    return unique_admissions
 
-    # 2. Fetch related data (Vitals, IV, Meals) - Simplified for MVP
-    # In a real app, we might parallelize or use join if easy, but separate queries are fine for now
-    admission_id = admission['id']
+
+@app.get("/api/v1/admissions/{admission_id}/dashboard")
+async def get_dashboard_data(admission_id: str, db: AsyncClient = Depends(get_supabase)):
+    # 1. Info
+    adm_res = await execute_with_retry_async(db.table("admissions").select("*").eq("id", admission_id))
+    if not adm_res.data:
+        raise HTTPException(status_code=404, detail="Admission not found")
+    admission = adm_res.data[0]
     
-    vitals = supabase.table("vital_signs").select("*").eq("admission_id", admission_id).order("recorded_at", desc=True).limit(100).execute()
-    iv_records = supabase.table("iv_records").select("*").eq("admission_id", admission_id).order("created_at", desc=True).limit(5).execute()
-    meals = supabase.table("meal_requests").select("*").eq("admission_id", admission_id).order("id", desc=True).limit(5).execute()
-    exam_schedules = supabase.table("exam_schedules").select("*").eq("admission_id", admission_id).order("scheduled_at").execute()
+    # 2. Vitals
+    vitals_res = await execute_with_retry_async(db.table("vital_signs").select("*").eq("admission_id", admission_id).order("recorded_at", desc=True).limit(100))
+    vitals = vitals_res.data or []
+    
+    # 3. IV Records
+    iv_records_res = await execute_with_retry_async(db.table("iv_records").select("*").eq("admission_id", admission_id).order("created_at", desc=True).limit(50))
+    iv_records = iv_records_res.data or []
+    
+    # 4. Meals
+    meals_res = await execute_with_retry_async(db.table("meal_requests").select("*").eq("admission_id", admission_id).order("id", desc=True).limit(5))
+    meals = meals_res.data or []
 
-    create_audit_log("GUARDIAN", "VIEW", admission_id)
+    # 5. Exam Schedules
+    exam_schedules_res = await execute_with_retry_async(db.table("exam_schedules").select("*").eq("admission_id", admission_id).order("scheduled_at"))
+    exam_schedules = exam_schedules_res.data or []
+
+    await create_audit_log(db, "GUARDIAN", "VIEW", admission_id)
 
     return {
         "admission": admission,
-        "vitals": vitals.data,
-        "iv_records": iv_records.data,
-        "meals": meals.data,
-        "exam_schedules": exam_schedules.data or []
+        "vitals": vitals,
+        "iv_records": iv_records,
+        "meals": meals,
+        "exam_schedules": exam_schedules
     }
 
 @app.post("/api/v1/vitals", response_model=VitalSign)
-async def record_vital(vital: VitalSignCreate):
-    if not supabase:
-        raise HTTPException(status_code=500, detail="DB not connected")
-
+async def record_vital(vital: VitalSignCreate, db: AsyncClient = Depends(get_supabase)):
     data = vital.dict()
-    response = supabase.table("vital_signs").insert(data).execute()
+    response = await execute_with_retry_async(db.table("vital_signs").insert(data))
     new_vital = response.data[0]
 
-    create_audit_log("NURSE", "CREATE_VITAL", str(new_vital['id']))
+    await create_audit_log(db, "NURSE", "CREATE_VITAL", str(new_vital['id']))
 
     # Broadcast to dashboard
-    # Need to find the token for this admission to broadcast to the right channel
-    # Efficiency: Cache token map? For now, query is safer.
-    adm_response = supabase.table("admissions").select("access_token").eq("id", vital.admission_id).execute()
+    adm_response = await execute_with_retry_async(db.table("admissions").select("access_token").eq("id", vital.admission_id))
     if adm_response.data:
         token = adm_response.data[0]['access_token']
         message = {
@@ -237,38 +343,59 @@ async def record_vital(vital: VitalSignCreate):
     return new_vital
 
 @app.post("/api/v1/iv-records", response_model=IVRecord)
-async def record_iv(iv: IVRecordCreate):
-    if not supabase:
-        raise HTTPException(status_code=500, detail="DB not connected")
-        
-    data = iv.dict()
-    response = supabase.table("iv_records").insert(data).execute()
-    new_iv = response.data[0]
+async def record_iv(iv: IVRecordCreate, db: AsyncClient = Depends(get_supabase)):
+    try:
+        data = iv.dict()
+        response = await execute_with_retry_async(db.table("iv_records").insert(data))
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to save IV record")
+            
+        new_iv = response.data[0]
+        await create_audit_log(db, "NURSE", "CREATE_IV", str(new_iv['id']))
 
-    create_audit_log("NURSE", "CREATE_IV", str(new_iv['id']))
-
-    adm_response = supabase.table("admissions").select("access_token").eq("id", iv.admission_id).execute()
-    if adm_response.data:
-        token = adm_response.data[0]['access_token']
-        message = {
-            "type": "NEW_IV",
-            "data": new_iv
+        message_data = {
+            "id": new_iv.get('id'),
+            "infusion_rate": new_iv.get('infusion_rate'),
+            "photo_url": new_iv.get('photo_url'),
+            "created_at": str(new_iv.get('created_at')) if new_iv.get('created_at') else None,
+            "admission_id": iv.admission_id,
+            "room": None
         }
-        await manager.broadcast(json.dumps(message), token)
-    
-    return new_iv
+        
+        message_to_send = {
+            "type": "NEW_IV",
+            "data": message_data
+        }
+
+        # 1. Broadcast to Token channel (Guardian Dashboard)
+        adm_response = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", iv.admission_id))
+        if adm_response.data:
+            adm_info = adm_response.data[0]
+            token = adm_info.get('access_token')
+            room = adm_info.get('room_number')
+            
+            message_data["room"] = room
+            json_msg = json.dumps(message_to_send)
+            
+            if token:
+                await manager.broadcast(json_msg, token)
+            
+            # 2. Broadcast to Station channel
+            await manager.broadcast(json_msg, "STATION")
+        
+        return new_iv
+    except Exception as e:
+        print(f"[CRITICAL] Error in record_iv: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/v1/meals/requests", response_model=MealRequest)
-async def request_meal(request: MealRequestCreate):
-    if not supabase:
-        raise HTTPException(status_code=500, detail="DB not connected")
-
+async def request_meal(request: MealRequestCreate, db: AsyncClient = Depends(get_supabase)):
     data = request.dict()
-    response = supabase.table("meal_requests").insert(data).execute()
+    response = await execute_with_retry_async(db.table("meal_requests").insert(data))
     new_request = response.data[0]
     
     # Broadcast to station
-    adm_response = supabase.table("admissions").select("room_number").eq("id", request.admission_id).execute()
+    adm_response = await execute_with_retry_async(db.table("admissions").select("room_number").eq("id", request.admission_id))
     if adm_response.data:
         room = adm_response.data[0]['room_number']
         message = {
@@ -284,24 +411,20 @@ async def request_meal(request: MealRequestCreate):
     return new_request
 
 @app.get("/api/v1/admissions/{admission_id}/exam-schedules", response_model=List[ExamSchedule])
-def list_exam_schedules(admission_id: str):
-    if not supabase:
-        raise HTTPException(status_code=500, detail="DB not connected")
-    response = supabase.table("exam_schedules").select("*").eq("admission_id", admission_id).order("scheduled_at").execute()
+async def list_exam_schedules(admission_id: str, db: AsyncClient = Depends(get_supabase)):
+    response = await execute_with_retry_async(db.table("exam_schedules").select("*").eq("admission_id", admission_id).order("scheduled_at"))
     return response.data or []
 
 from fastapi.encoders import jsonable_encoder
 
 @app.post("/api/v1/exam-schedules", response_model=ExamSchedule)
-async def create_exam_schedule(schedule: ExamScheduleCreate):
-    if not supabase:
-        raise HTTPException(status_code=500, detail="DB not connected")
+async def create_exam_schedule(schedule: ExamScheduleCreate, db: AsyncClient = Depends(get_supabase)):
     data = jsonable_encoder(schedule)
-    response = supabase.table("exam_schedules").insert(data).execute()
+    response = await execute_with_retry_async(db.table("exam_schedules").insert(data))
     new_schedule = response.data[0]
 
     # Broadcast to guardian dashboard
-    adm_response = supabase.table("admissions").select("access_token").eq("id", schedule.admission_id).execute()
+    adm_response = await execute_with_retry_async(db.table("admissions").select("access_token").eq("id", schedule.admission_id))
     if adm_response.data:
         token = adm_response.data[0]['access_token']
         message = {
@@ -313,52 +436,42 @@ async def create_exam_schedule(schedule: ExamScheduleCreate):
     return new_schedule
 
 @app.delete("/api/v1/exam-schedules/{schedule_id}")
-async def delete_exam_schedule(schedule_id: int):
-    print(f"[DEBUG] DELETE request for schedule_id: {schedule_id}")
-    if not supabase:
-        print("[DEBUG] DB not connected")
-        raise HTTPException(status_code=500, detail="DB not connected")
-    
+async def delete_exam_schedule(schedule_id: int, db: AsyncClient = Depends(get_supabase)):
     # 1. Get schedule info before deleting (to find admission_id for broadcast)
-    res = supabase.table("exam_schedules").select("*").eq("id", schedule_id).execute()
+    res = await execute_with_retry_async(db.table("exam_schedules").select("*").eq("id", schedule_id))
     
     if not res.data:
-        print("[DEBUG] Schedule not found in DB")
         raise HTTPException(status_code=404, detail="Schedule not found")
     
     target = res.data[0]
     admission_id = target['admission_id']
-
+    
     # 2. Delete
-    supabase.table("exam_schedules").delete().eq("id", schedule_id).execute()
-
+    await execute_with_retry_async(db.table("exam_schedules").delete().eq("id", schedule_id))
+    
     # 3. Log
-    create_audit_log("NURSE", "DELETE_EXAM", str(schedule_id))
+    await create_audit_log(db, "NURSE", "DELETE_EXAM", str(schedule_id))
 
-    # 4. Broadcast DELETE event to dashboard
-    adm_response = supabase.table("admissions").select("access_token").eq("id", admission_id).execute()
-    if adm_response.data:
-        token = adm_response.data[0]['access_token']
+    # 4. Broadcast removal to guardian dashboard
+    adm_res = await execute_with_retry_async(db.table("admissions").select("access_token").eq("id", admission_id))
+    if adm_res.data:
+        token = adm_res.data[0]['access_token']
         message = {
             "type": "DELETE_EXAM_SCHEDULE",
-            "data": { "id": schedule_id }
+            "data": {"id": schedule_id}
         }
-        print(f"[DEBUG] Broadcasting DELETE to token: {token}")
         await manager.broadcast(json.dumps(message), token)
-
+    
     return {"message": "Deleted successfully"}
 
 @app.post("/api/v1/documents/requests", response_model=DocumentRequest)
-async def request_document(request: DocumentRequestCreate):
-    if not supabase:
-        raise HTTPException(status_code=500, detail="DB not connected")
-
+async def request_document(request: DocumentRequestCreate, db: AsyncClient = Depends(get_supabase)):
     data = request.dict()
-    response = supabase.table("document_requests").insert(data).execute()
+    response = await execute_with_retry_async(db.table("document_requests").insert(data))
     new_request = response.data[0]
     
     # Broadcast to station
-    adm_response = supabase.table("admissions").select("room_number").eq("id", request.admission_id).execute()
+    adm_response = await execute_with_retry_async(db.table("admissions").select("room_number").eq("id", request.admission_id))
     if adm_response.data:
         room = adm_response.data[0]['room_number']
         message = {
@@ -371,6 +484,43 @@ async def request_document(request: DocumentRequestCreate):
         }
         await manager.broadcast(json.dumps(message), "STATION")
     return new_request
+
+@app.post("/api/v1/upload/image")
+async def upload_image(file: UploadFile = File(...), token: str = None, db: AsyncClient = Depends(get_supabase)):
+    """
+    모바일에서 사진 업로드 -> 서버 저장 -> 해당 토큰의 스테이션(웹소켓)으로 URL 전송
+    """
+    if not token:
+        raise HTTPException(status_code=400, detail="Token required")
+
+    file_ext = file.filename.split(".")[-1]
+    filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{token[:8]}.{file_ext}"
+    file_path = f"uploads/{filename}"
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    image_url = f"/static/{filename}" # Relative URL for frontend to use with API_BASE
+    
+    # Get admission info by token to know which room this is
+    res = await execute_with_retry_async(db.table("admissions").select("id, room_number").eq("access_token", token))
+    if res.data:
+        adm = res.data[0]
+        message = {
+            "type": "IV_PHOTO_UPLOADED",
+            "data": {
+                "admission_id": adm['id'],
+                "room_number": adm['room_number'],
+                "photo_url": image_url
+            }
+        }
+        # Broadcast to STATION channel so nurses see it
+        await manager.broadcast(json.dumps(message), "STATION")
+        
+        # Also broadcast to the specific token channel if needed (e.g. for guardian dashboard confirmation)
+        await manager.broadcast(json.dumps(message), token)
+
+    return {"url": image_url}
 
 @app.websocket("/ws/{token}")
 async def websocket_endpoint(websocket: WebSocket, token: str):

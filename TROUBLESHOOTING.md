@@ -50,3 +50,16 @@
   1. `useVitals.ts` 등에서 웹소켓 연결(`ws://.../ws/{token}`)이 정상적으로 유지되는지 확인 (로그 확인).
   2. 백엔드 `manager.broadcast` 호출 전, 해당 `admission_id`의 `access_token`을 정확히 조회하여 타겟팅하는지 확인.
   3. **테스트 데이터(Seed)**를 사용하여 입원-토큰 관계가 명확한 상태에서 테스트 권장.
+
+## 9. Windows 환경 `WinError 10035` (Blocking IO)
+- **문제**: 백엔드 API 호출 시 `WinError 10035`가 발생하며 요청이 중단됨.
+- **원인**: 동기식(Sync) Supabase 클라이언트 사용 시 Windows의 비차단(non-blocking) 소켓 동작과 충돌.
+- **해결**: 백엔드를 `AsyncClient` 기반의 비동기 구조로 리팩토링하여 해결. `lifespan`을 통해 클라이언트를 한 번 초기화한 뒤 모든 엔드포인트에서 `Depends`로 주입받아 사용.
+
+## 10. `WinError 10013`, `10048` (포트 액세스 거부/충돌)
+- **문제**: 서버 시작 시 `액세스 권한에 의해 숨겨진 소켓에 액세스를 시도했습니다` 또는 `각 소켓 주소는 하나만 사용할 수 있습니다` 에러 발생.
+- **원인**: 이전 프로세스가 비정상 종료되거나 좀비 프로세스로 남아 8000 포트를 점유 중.
+- **해결**: 
+  1. `netstat -ano | findstr :8000`으로 PID 확인.
+  2. `taskkill /F /PID <PID> /T`로 해당 프로세스 강제 종료 후 재시작.
+  3. 모든 Python/Uvicorn 프로세스를 정리하려면 `taskkill /F /IM python.exe /T` (주의: 다른 파이썬 프로세스도 종료됨) 실행.

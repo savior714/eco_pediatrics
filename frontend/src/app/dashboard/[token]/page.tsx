@@ -12,9 +12,11 @@ import Image from 'next/image';
 
 export default function Dashboard({ params }: { params: { token: string } }) {
     const { token } = params;
-    const { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, examSchedules, refetchDashboard } = useVitals(token);
+    const { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, examSchedules, ivRecords, refetchDashboard } = useVitals(token);
     const [isMealModalOpen, setIsMealModalOpen] = useState(false);
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+
+    const latestIv = ivRecords.length > 0 ? ivRecords[0] : null;
 
     const STORAGE_KEY = 'dashboardViewMode';
     type ViewMode = 'mobile' | 'desktop';
@@ -141,7 +143,11 @@ export default function Dashboard({ params }: { params: { token: string } }) {
 
                         {/* 수액 안전 모니터링 */}
                         <section>
-                            <IVStatusCard photoUrl="" infusionRate={60} lastChecked="오후 2:00" />
+                            <IVStatusCard
+                                photoUrl={latestIv?.photo_url || ""}
+                                infusionRate={latestIv?.infusion_rate || 0}
+                                lastChecked={latestIv ? new Date(latestIv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}
+                            />
                             <p className="text-center text-xs text-slate-400 mt-2">라인 확보 및 수액 속도 확인 완료</p>
                         </section>
 

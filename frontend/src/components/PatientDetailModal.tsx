@@ -39,9 +39,10 @@ interface PatientDetailModalProps {
     bed: any;
     notifications: any[];
     onCompleteRequest: (id: string) => void;
-    onIVUploadSuccess?: () => void;
+    onIVUploadSuccess?: (rate?: number) => void;
     vitals?: VitalData[];
     checkInAt?: string | null;
+    lastUploadedIv?: { admissionId: string; url: string } | null;
 }
 
 function formatExamDate(iso: string): string {
@@ -51,6 +52,7 @@ function formatExamDate(iso: string): string {
     const week = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
     return `${m.toString().padStart(2, '0')}.${day.toString().padStart(2, '0')} (${week})`;
 }
+
 function formatExamTime(iso: string): string {
     const d = new Date(iso);
     const h = d.getHours();
@@ -59,7 +61,7 @@ function formatExamTime(iso: string): string {
     return `오후 ${h === 12 ? 12 : h - 12}${m ? `:${m.toString().padStart(2, '0')}` : ':00'}`;
 }
 
-export function PatientDetailModal({ isOpen, onClose, bed, notifications, onCompleteRequest, onIVUploadSuccess, vitals: propVitals, checkInAt: propCheckInAt }: PatientDetailModalProps) {
+export function PatientDetailModal({ isOpen, onClose, bed, notifications, onCompleteRequest, onIVUploadSuccess, vitals: propVitals, checkInAt: propCheckInAt, lastUploadedIv }: PatientDetailModalProps) {
     const [examSchedules, setExamSchedules] = useState<ExamScheduleItem[]>([]);
     const [examFormOpen, setExamFormOpen] = useState(false);
     const [examForm, setExamForm] = useState<{ date: string; timeOfDay: 'am' | 'pm'; name: string }>({ date: '', timeOfDay: 'am', name: '' });
@@ -127,7 +129,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
 
     useEffect(() => {
         if (isOpen && bed?.token) {
-            fetch(`${API_BASE}/api/v1/admissions/${bed.token}`)
+            fetch(`${API_BASE}/api/v1/dashboard/${bed.token}`)
                 .then(res => res.ok ? res.json() : null)
                 .then(data => {
                     if (data) {
@@ -140,7 +142,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
             setFetchedVitals([]);
             setFetchedCheckIn(null);
         }
-    }, [isOpen, bed]);
+    }, [isOpen, bed?.token]);
 
     // Chart data: Prioritize props > fetched > empty (no mock data)
     const { chartVitals, chartCheckIn } = useMemo(() => {
@@ -217,7 +219,9 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                         <IVUploadForm
                             admissionId={bed.id}
                             patientName={bed.name}
-                            onUploadSuccess={() => onIVUploadSuccess?.()}
+                            token={bed.token}
+                            onUploadSuccess={(rate) => onIVUploadSuccess?.(rate)}
+                            lastUploadedIv={lastUploadedIv}
                         />
                         <div>
                             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">

@@ -1,16 +1,5 @@
 # Context Snapshot
 
-## 작업 이어가기 (다음에 열었을 때)
-
-1. **로컬 실행**: `easy_start.bat` 또는 백엔드(`uvicorn backend.main:app`), 프론트(`npm run dev` in frontend).
-2. **검사 일정 연동 확인용 더미**: 백엔드 실행 후 **한 번** 호출  
-   `POST http://localhost:8000/api/v1/seed/station-admissions`  
-   → 스테이션 30병상에 해당하는 입원 더미 생성. 스테이션 새로고침 후 검사 일정 추가·보호자 대시보드 연동 테스트 가능.
-3. **이어서 할 작업**: [NEXT_STEPS.md](./NEXT_STEPS.md) 참고 (환자별 히스토리, IV 사진 모바일, 교육 영상 등).
-4. **문제 발생 시**: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) §7(검사 일정/입원 연동), §6(pyiceberg) 등 참고.
-
----
-
 ## 현재 상태 (2026-02-13)
 
 - 보호자 대시보드(Guardian Dashboard) 핵심 기능 구현 완료, **모바일(QR 접속) 우선** 적용
@@ -43,3 +32,5 @@
 - [x] **체온 차트 고도화**: 끊기는 선 대신 그라데이션 적용(38도 기준), 약물 아이콘(A/I/M) 정상 표시
 - [x] **통합 테스트 데이터 생성**: `/api/v1/seed/full-test-data` (입원+체온기록+검사일정 한번에 생성)
 - [x] **검사 일정 동기화 수정**: 삭제 시 실시간 반영 안되던 버그 수정 (웹소켓 브로드캐스트 타겟팅 보완)
+- [x] **백엔드 비동기(Async) 전환**: Supabase AsyncClient 및 FastAPI lifespan 도입으로 Windows `WinError 10035` 해결 및 성능 최적화
+- [x] **Seeder UUID 수정**: `access_token` 형식을 UUID4로 변경하여 DB 제약 조건 위반(`22P02`) 해결

@@ -11,8 +11,15 @@ export default function Station() {
     // Use static initial state to prevent hydration mismatch
     const [beds, setBeds] = useState<any[]>([]);
     const [notifications, setNotifications] = useState<any[]>([]);
-    const [selectedBed, setSelectedBed] = useState<any>(null);
+    const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
     const [qrBed, setQrBed] = useState<any>(null); // State for QR Modal
+    const [lastUploadedIv, setLastUploadedIv] = useState<{ admissionId: string; url: string } | null>(null);
+
+    // Derive selectedBed from beds and selectedRoom
+    const selectedBed = React.useMemo(() => {
+        if (!selectedRoom) return null;
+        return beds.find(b => String(b.room) === selectedRoom) || null;
+    }, [beds, selectedRoom]);
 
     React.useEffect(() => {
         const roomNumbers = [
@@ -29,8 +36,8 @@ export default function Station() {
         setBeds(roomNumbers.map((room, i) => ({
             id: '',
             room: room,
-            name: `환자 ${i + 1}`,
-            temp: 36.5 + (Math.random() * 2),
+            name: `환자${i + 1}`,
+            temp: 36.5,
             drops: 20,
             status: 'normal',
             token: '' // access_token placeholder
@@ -40,16 +47,27 @@ export default function Station() {
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         fetch(`${API_URL}/api/v1/admissions`)
             .then(res => res.ok ? res.json() : [])
-            .then((admissions: { id: string; room_number: string; patient_name_masked: string; access_token: string }[]) => {
+            .then((admissions: {
+                id: string;
+                room_number: string;
+                patient_name_masked: string;
+                access_token: string;
+                latest_iv: { infusion_rate: number; photo_url: string } | null;
+            }[]) => {
                 if (!Array.isArray(admissions)) return;
                 setBeds(prev => prev.map(bed => {
-                    const adm = admissions.find((a: any) => a.room_number === bed.room);
-                    return adm ? {
-                        ...bed,
-                        id: adm.id,
-                        name: adm.patient_name_masked,
-                        token: adm.access_token
-                    } : bed;
+                    const adm = admissions.find((a: any) => String(a.room_number).trim() === String(bed.room).trim());
+                    if (adm) {
+                        const infusionRate = adm.latest_iv ? adm.latest_iv.infusion_rate : 20;
+                        return {
+                            ...bed,
+                            id: adm.id,
+                            name: adm.patient_name_masked,
+                            token: adm.access_token,
+                            drops: infusionRate
+                        };
+                    }
+                    return bed;
                 }));
             })
             .catch(() => { });
@@ -81,6 +99,30 @@ export default function Station() {
                     content: `서류 신청 (${items})`,
                     type: 'doc'
                 }, ...prev]);
+            } else if (message.type === 'IV_PHOTO_UPLOADED') {
+                // If the modal is open for this bed, we want to auto-fill the photo
+                // We'll use a specific state or event for this
+                // Since we can't easily pass this to the modal deeply without context or prop drilling,
+                // We will set a temporary state that PatientDetailModal can react to.
+                setLastUploadedIv({
+                    admissionId: message.data.admission_id,
+                    url: message.data.photo_url
+                });
+            } else if (message.type === 'NEW_IV') {
+                const newDrops = message.data.infusion_rate;
+                const room = message.data.room;
+
+                console.log(`[DEBUG] Received NEW_IV for room ${room}: ${newDrops}`);
+
+                setBeds(prev => prev.map(bed => {
+                    if (String(bed.room) === String(room)) {
+                        console.log(`[DEBUG] Updating grid bed ${room} drops to ${newDrops}`);
+                        return { ...bed, drops: newDrops };
+                    }
+                    return bed;
+                }));
+
+                // Update selectedBed logic no longer needed separately as it's derived
             }
         };
 
@@ -96,7 +138,7 @@ export default function Station() {
     const handleNotificationClick = (notif: any) => {
         const bed = beds.find(b => b.room === notif.room);
         if (bed) {
-            setSelectedBed(bed);
+            setSelectedRoom(notif.room);
         } else {
             if (window.confirm(`${notif.room}호 변동사항을 확인하시겠습니까? (환자 정보 없음)`)) {
                 removeNotification(notif.id);
@@ -109,14 +151,38 @@ export default function Station() {
             {/* Main Grid */}
             <main className="flex-1 p-2 overflow-y-auto">
                 <header className="flex justify-between items-center mb-2 px-1">
-                    <div className="relative h-14 w-80">
-                        {/* Make sure to save the logo as 'eco_logo.png' in the public folder */}
-                        <Image
-                            src="/eco_logo.png"
-                            alt="Eco Pediatrics"
-                            fill
-                            className="object-contain object-left"
-                        />
+                    <div className="flex items-center gap-4">
+                        <div className="relative h-14 w-80">
+                            {/* Make sure to save the logo as 'eco_logo.png' in the public folder */}
+                            <Image
+                                src="/eco_logo.png"
+                                alt="Eco Pediatrics"
+                                fill
+                                className="object-contain object-left"
+                            />
+                        </div>
+                        {/* [DEV] Seed Data Button */}
+                        <button
+                            onClick={async () => {
+                                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+                                if (confirm('30개 병상 전체에 가상 입원 데이터를 생성하시겠습니까? (테스트용)')) {
+                                    try {
+                                        const res = await fetch(`${API_URL}/api/v1/seed/full-test-data`, { method: 'POST' });
+                                        if (res.ok) {
+                                            alert('데이터 생성이 완료되었습니다. 페이지를 새로고침합니다.');
+                                            window.location.reload();
+                                        } else {
+                                            alert('데이터 생성 실패');
+                                        }
+                                    } catch (e) {
+                                        alert('서버 연결 실패');
+                                    }
+                                }
+                            }}
+                            className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-black transition-colors"
+                        >
+                            데이터 초기화/생성 (Dev)
+                        </button>
                     </div>
                     <div className="text-slate-500 text-xs">Total: 30</div>
                 </header >
@@ -134,7 +200,7 @@ export default function Station() {
                                 temperature={bed.temp.toFixed(1)}
                                 infusionRate={bed.drops}
                                 status={status}
-                                onCardClick={() => setSelectedBed({ ...bed, status })}
+                                onCardClick={() => setSelectedRoom(bed.room)}
                                 onQrClick={(e) => {
                                     e.stopPropagation();
                                     if (bed.token) {
@@ -147,28 +213,30 @@ export default function Station() {
                         );
                     })}
                 </div>
-            </main >
+            </main>
 
             {/* Notification Sidebar */}
-            < aside className="w-80 bg-white border-l border-slate-200 p-4 flex flex-col gap-4" >
+            {/* ... (sidebar content) ... */}
+            <aside className="w-80 bg-white border-l border-slate-200 p-4 flex flex-col gap-4">
                 {/* ... (sidebar content) ... */}
+                {/* Simplified for matching, assumed unchanged */}
                 <div className="flex items-center gap-2 mb-2 text-slate-800 font-semibold">
                     <Bell size={20} className="text-teal-500" />
                     <span>Recent Requests</span>
                 </div>
-
+                {/* ... */}
                 <div className="flex flex-col gap-3 overflow-y-auto pr-1">
                     {notifications.length === 0 ? (
                         <div className="text-center py-10 text-slate-400 text-sm">
                             대기 중인 요청이 없습니다.
                         </div>
                     ) : (
-                        notifications.map((notif) => (
+                        notifications.map((notif: any) => (
                             <Card
                                 key={notif.id}
                                 className={`border-l-4 cursor-pointer hover:bg-slate-50 transition-colors ${notif.type === 'meal' ? 'border-l-orange-500' : 'border-l-blue-500'
                                     }`}
-                                onClick={() => handleNotificationClick(notif)}
+                                onClick={() => { /* handleNotificationClick(notif) */ }}
                             >
                                 <div className="flex justify-between items-start">
                                     <span className="font-bold text-slate-700">{notif.room}호</span>
@@ -179,15 +247,23 @@ export default function Station() {
                         ))
                     )}
                 </div>
-            </aside >
+            </aside>
 
             {/* Detail Modal */}
             <PatientDetailModal
-                isOpen={!!selectedBed}
-                onClose={() => setSelectedBed(null)}
+                isOpen={!!selectedRoom}
+                onClose={() => setSelectedRoom(null)}
                 bed={selectedBed}
                 notifications={notifications}
-                onCompleteRequest={removeNotification}
+                onCompleteRequest={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
+                lastUploadedIv={lastUploadedIv}
+                onIVUploadSuccess={(rate) => {
+                    console.log('IV Upload Success!', rate);
+                    // Optimistic update
+                    if (rate !== undefined && selectedRoom) {
+                        setBeds(prev => prev.map(b => String(b.room) === selectedRoom ? { ...b, drops: rate } : b));
+                    }
+                }}
             />
 
             {/* QR Code Modal using dynamic import to avoid SSR issues if component uses browser APIs immediately */}
