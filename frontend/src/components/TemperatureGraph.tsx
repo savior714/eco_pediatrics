@@ -115,12 +115,11 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
     const latestTemp = data.length > 0 ? data[data.length - 1].temperature : null;
 
     return (
-        <Card className="w-full relative shadow-lg border-teal-100 overflow-hidden">
-            {/* Header - Fixed */}
-            <div className="flex justify-between items-start mb-2 px-1 p-4 pb-0 bg-white z-10 relative">
+        <Card className="w-full relative overflow-hidden border-slate-200/80">
+            <div className="flex justify-between items-start gap-3 pb-3 bg-white z-10 relative">
                 <div>
-                    <h3 className="text-lg font-bold text-slate-800">체온 차트</h3>
-                    <p className="text-xs text-slate-400">입원 기간 전체</p>
+                    <h3 className="text-base font-bold text-slate-800">체온 차트</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">입원 기간 전체</p>
                 </div>
                 <div className="text-right">
                     <span className={cn(
