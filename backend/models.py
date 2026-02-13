@@ -61,3 +61,16 @@ class DocumentRequest(BaseModel):
 class DocumentRequestCreate(BaseModel):
     admission_id: str
     request_items: list[str]
+
+class ExamSchedule(BaseModel):
+    id: Optional[int] = None
+    admission_id: str
+    scheduled_at: datetime
+    name: str
+    note: Optional[str] = ""
+
+class ExamScheduleCreate(BaseModel):
+    admission_id: str
+    scheduled_at: datetime
+    name: str
+    note: Optional[str] = ""

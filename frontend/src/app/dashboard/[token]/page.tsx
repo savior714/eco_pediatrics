@@ -11,7 +11,7 @@ import { DocumentRequestModal } from '@/components/DocumentRequestModal';
 
 export default function Dashboard({ params }: { params: { token: string } }) {
     const { token } = params;
-    const { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, refetchDashboard } = useVitals(token);
+    const { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, examSchedules, refetchDashboard } = useVitals(token);
     const [isMealModalOpen, setIsMealModalOpen] = useState(false);
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
@@ -149,9 +149,19 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                         앞으로의 검사 일정
                     </h3>
                     <div className="space-y-2">
-                        <ExamScheduleItem date="05.14 (수)" time="오전 9:00" name="혈액 검사" note="공복" />
-                        <ExamScheduleItem date="05.15 (목)" time="오후 2:00" name="흉부 X-ray" note="" />
-                        <ExamScheduleItem date="05.16 (금)" time="오전 10:30" name="소변 검사" note="" />
+                        {examSchedules.length === 0 ? (
+                            <p className="text-slate-400 text-sm py-2">등록된 검사 일정이 없습니다.</p>
+                        ) : (
+                            examSchedules.map((ex: { id: number; scheduled_at: string; name: string; note?: string }) => (
+                                <ExamScheduleItem
+                                    key={ex.id}
+                                    date={formatExamDate(ex.scheduled_at)}
+                                    time={formatExamTime(ex.scheduled_at)}
+                                    name={ex.name}
+                                    note={ex.note || ''}
+                                />
+                            ))
+                        )}
                     </div>
                     <p className="text-xs text-slate-400 mt-3">* 일정은 변동될 수 있으며, 담당 코너에서 안내해 드립니다.</p>
                 </section>
@@ -193,6 +203,21 @@ export default function Dashboard({ params }: { params: { token: string } }) {
             </div>
         </div>
     );
+}
+
+function formatExamDate(iso: string): string {
+    const d = new Date(iso);
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    const week = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+    return `${m.toString().padStart(2, '0')}.${day.toString().padStart(2, '0')} (${week})`;
+}
+function formatExamTime(iso: string): string {
+    const d = new Date(iso);
+    const h = d.getHours();
+    const m = d.getMinutes();
+    if (h < 12) return `오전 ${h === 0 ? 12 : h}${m ? `:${m.toString().padStart(2, '0')}` : ':00'}`;
+    return `오후 ${h === 12 ? 12 : h - 12}${m ? `:${m.toString().padStart(2, '0')}` : ':00'}`;
 }
 
 function NoticeItem({ text, date }: { text: string; date: string }) {

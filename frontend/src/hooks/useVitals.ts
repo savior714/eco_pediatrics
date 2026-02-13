@@ -16,6 +16,7 @@ export function useVitals(token: string) {
     const [checkInAt, setCheckInAt] = useState<string | null>(null);
     const [roomNumber, setRoomNumber] = useState<string>('');
     const [meals, setMeals] = useState<{ id: number; request_type: string; status: string }[]>([]);
+    const [examSchedules, setExamSchedules] = useState<{ id: number; scheduled_at: string; name: string; note?: string }[]>([]);
 
     const fetchDashboard = useCallback(async () => {
         if (!token) return;
@@ -33,6 +34,7 @@ export function useVitals(token: string) {
                 setRoomNumber(data.admission.room_number);
             }
             if (data.meals && Array.isArray(data.meals)) setMeals(data.meals);
+            if (data.exam_schedules && Array.isArray(data.exam_schedules)) setExamSchedules(data.exam_schedules);
             const formattedVitals = (data.vitals || []).map((v: any) => ({
                 time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 temperature: v.temperature,
@@ -80,5 +82,5 @@ export function useVitals(token: string) {
         return () => ws.close();
     }, [token, fetchDashboard]);
 
-    return { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, refetchDashboard: fetchDashboard };
+    return { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, examSchedules, refetchDashboard: fetchDashboard };
 }

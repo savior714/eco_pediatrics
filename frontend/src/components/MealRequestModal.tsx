@@ -48,7 +48,7 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
             if (!res.ok) throw new Error('Failed to request meal');
 
             setResult('SUCCESS');
-            onSuccess?.();
+            // 완료 화면을 보여준 뒤 확인/자동으로 onSuccess 호출 (모달 닫기 + refetch)
         } catch (error) {
             console.error(error);
             setResult('ERROR');
@@ -60,13 +60,7 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="식단 변경 신청">
             {result === 'SUCCESS' ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in zoom-in duration-300">
-                    <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-4">
-                        <CheckCircle size={32} />
-                    </div>
-                    <h3 className="text-xl font-bold text-slate-800">신청 완료!</h3>
-                    <p className="text-slate-500 mt-2">간호사 스테이션으로 전송되었습니다.</p>
-                </div>
+                <SuccessView onConfirm={() => { onSuccess?.(); }} />
             ) : (
                 <div className="space-y-4">
                     <p className="text-sm text-slate-500">
@@ -118,6 +112,25 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
                 </div>
             )}
         </Modal>
+    );
+}
+
+function SuccessView({ onConfirm }: { onConfirm: () => void }) {
+    return (
+        <div className="flex flex-col items-center justify-center py-6 pb-2 text-center animate-in fade-in zoom-in duration-300">
+            <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800">신청 완료!</h3>
+            <p className="text-slate-500 mt-2">간호사 스테이션으로 전송되었습니다.</p>
+            <button
+                type="button"
+                onClick={onConfirm}
+                className="mt-6 w-full min-h-[48px] py-3 rounded-xl font-bold text-white bg-teal-500 hover:bg-teal-600 active:scale-[0.98] touch-manipulation"
+            >
+                확인
+            </button>
+        </div>
     );
 }
 

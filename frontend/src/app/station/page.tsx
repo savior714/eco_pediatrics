@@ -12,26 +12,38 @@ export default function Station() {
     const [notifications, setNotifications] = useState<any[]>([]);
     const [selectedBed, setSelectedBed] = useState<any>(null);
 
-    React.useEffect(() => {
-        // Initialize 30 beds as per user requirements
-        const roomNumbers = [
-            '301', '302', '303', '304', '305', '306', '307', '308', '309',
-            '310-1', '310-2',
-            '311-1', '311-2', '311-3', '311-4',
-            '312', '313', '314',
-            '315-1', '315-2', '315-3', '315-4',
-            '401-1', '401-2', '401-3', '401-4',
-            '402-1', '402-2', '402-3', '402-4'
-        ];
+    const roomNumbers = [
+        '301', '302', '303', '304', '305', '306', '307', '308', '309',
+        '310-1', '310-2',
+        '311-1', '311-2', '311-3', '311-4',
+        '312', '313', '314',
+        '315-1', '315-2', '315-3', '315-4',
+        '401-1', '401-2', '401-3', '401-4',
+        '402-1', '402-2', '402-3', '402-4'
+    ];
 
+    React.useEffect(() => {
+        // 초기 30 병상 (실제 입원 ID는 아래에서 연동)
         setBeds(roomNumbers.map((room, i) => ({
-            id: `admission-uuid-${i}`,
+            id: '',
             room: room,
             name: `환자 ${i + 1}`,
             temp: 36.5 + (Math.random() * 2),
             drops: 20,
             status: 'normal'
         })));
+
+        // 실제 입원 목록 연동 (검사 일정 등에서 사용하는 admission_id)
+        fetch('http://localhost:8000/api/v1/admissions')
+            .then(res => res.ok ? res.json() : [])
+            .then((admissions: { id: string; room_number: string; patient_name_masked: string }[]) => {
+                if (!Array.isArray(admissions)) return;
+                setBeds(prev => prev.map(bed => {
+                    const adm = admissions.find((a: any) => a.room_number === bed.room);
+                    return adm ? { ...bed, id: adm.id, name: adm.patient_name_masked } : bed;
+                }));
+            })
+            .catch(() => {});
 
         // WebSocket Connection for alerts
         const ws = new WebSocket('ws://localhost:8000/ws/STATION');

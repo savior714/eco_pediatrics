@@ -5,7 +5,7 @@ from datetime import datetime
 import json
 
 from database import supabase
-from models import Admission, VitalSign, IVRecord, MealRequest, DocumentRequest, AdmissionCreate, VitalSignCreate, IVRecordCreate, MealRequestCreate, DocumentRequestCreate
+from models import Admission, VitalSign, IVRecord, MealRequest, DocumentRequest, ExamSchedule, ExamScheduleCreate, AdmissionCreate, VitalSignCreate, IVRecordCreate, MealRequestCreate, DocumentRequestCreate
 from websocket_manager import manager
 
 app = FastAPI()
@@ -45,6 +45,40 @@ def create_audit_log(actor_type: str, action: str, target_id: str, ip_address: s
 def read_root():
     return {"message": "PID Backend is running"}
 
+@app.get("/api/v1/admissions", response_model=List[Admission])
+def list_admissions():
+    """스테이션용: 전체 입원 목록 (병상·검사 연동용)"""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="DB not connected")
+    response = supabase.table("admissions").select("id, patient_name_masked, room_number, status, check_in_at").eq("status", "IN_PROGRESS").execute()
+    return response.data or []
+
+# 개발용: 스테이션 30병상에 맞는 입원 더미 생성 (한 번 호출 후 검사 일정 추가·연동 테스트 가능)
+STATION_ROOM_NUMBERS = [
+    "301", "302", "303", "304", "305", "306", "307", "308", "309",
+    "310-1", "310-2", "311-1", "311-2", "311-3", "311-4",
+    "312", "313", "314", "315-1", "315-2", "315-3", "315-4",
+    "401-1", "401-2", "401-3", "401-4", "402-1", "402-2", "402-3", "402-4",
+]
+
+@app.post("/api/v1/seed/station-admissions")
+def seed_station_admissions():
+    """개발 시 스테이션 병상 수만큼 입원 더미 생성. 이미 해당 병실에 입원이 있으면 건너뜀."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="DB not connected")
+    created = 0
+    for i, room in enumerate(STATION_ROOM_NUMBERS):
+        existing = supabase.table("admissions").select("id").eq("room_number", room).eq("status", "IN_PROGRESS").execute()
+        if existing.data and len(existing.data) > 0:
+            continue
+        supabase.table("admissions").insert({
+            "patient_name_masked": f"환자{i + 1}",
+            "room_number": room,
+            "status": "IN_PROGRESS",
+        }).execute()
+        created += 1
+    return {"message": f"입원 더미 생성 완료 (신규 {created}건, 기존 병실 건너뜀)"}
+
 @app.post("/api/v1/admissions", response_model=Admission)
 def create_admission(admission: AdmissionCreate):
     masked_name = mask_name(admission.patient_name)
@@ -83,6 +117,7 @@ def get_dashboard_data(token: str):
     vitals = supabase.table("vital_signs").select("*").eq("admission_id", admission_id).order("recorded_at", desc=True).limit(100).execute()
     iv_records = supabase.table("iv_records").select("*").eq("admission_id", admission_id).order("created_at", desc=True).limit(5).execute()
     meals = supabase.table("meal_requests").select("*").eq("admission_id", admission_id).order("id", desc=True).limit(5).execute()
+    exam_schedules = supabase.table("exam_schedules").select("*").eq("admission_id", admission_id).order("scheduled_at").execute()
 
     create_audit_log("GUARDIAN", "VIEW", admission_id)
 
@@ -90,7 +125,8 @@ def get_dashboard_data(token: str):
         "admission": admission,
         "vitals": vitals.data,
         "iv_records": iv_records.data,
-        "meals": meals.data
+        "meals": meals.data,
+        "exam_schedules": exam_schedules.data or []
     }
 
 @app.post("/api/v1/vitals", response_model=VitalSign)
@@ -164,6 +200,21 @@ async def request_meal(request: MealRequestCreate):
         await manager.broadcast(json.dumps(message), "STATION")
     
     return new_request
+
+@app.get("/api/v1/admissions/{admission_id}/exam-schedules", response_model=List[ExamSchedule])
+def list_exam_schedules(admission_id: str):
+    if not supabase:
+        raise HTTPException(status_code=500, detail="DB not connected")
+    response = supabase.table("exam_schedules").select("*").eq("admission_id", admission_id).order("scheduled_at").execute()
+    return response.data or []
+
+@app.post("/api/v1/exam-schedules", response_model=ExamSchedule)
+def create_exam_schedule(schedule: ExamScheduleCreate):
+    if not supabase:
+        raise HTTPException(status_code=500, detail="DB not connected")
+    data = schedule.dict()
+    response = supabase.table("exam_schedules").insert(data).execute()
+    return response.data[0]
 
 @app.post("/api/v1/documents/requests", response_model=DocumentRequest)
 async def request_document(request: DocumentRequestCreate):
