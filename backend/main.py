@@ -141,7 +141,6 @@ async def record_iv(iv: IVRecordCreate):
     return new_iv
 
 @app.post("/api/v1/meals/requests", response_model=MealRequest)
-@app.post("/api/v1/meals/requests", response_model=MealRequest)
 async def request_meal(request: MealRequestCreate):
     if not supabase:
         raise HTTPException(status_code=500, detail="DB not connected")

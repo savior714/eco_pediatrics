@@ -45,8 +45,8 @@ class VitalSignCreate(BaseModel):
 
 class IVRecordCreate(BaseModel):
     admission_id: str
-    photo_url: str
-    drops_per_min: int
+    photo_url: Optional[str] = None
+    infusion_rate: int  # cc/hr
 
 class MealRequestCreate(BaseModel):
     admission_id: str

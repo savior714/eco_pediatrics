@@ -12,24 +12,24 @@ interface IVUploadFormProps {
 
 export function IVUploadForm({ admissionId, patientName, onUploadSuccess }: IVUploadFormProps) {
     const [rate, setRate] = useState<number>(60);
+    const [photoUrl, setPhotoUrl] = useState<string>(''); // optional, 따로 입력
     const [isUploading, setIsUploading] = useState(false);
     const [success, setSuccess] = useState(false);
 
     const handleUpload = async () => {
         setIsUploading(true);
-        // In a real app, upload file to storage (AWS S3/Supabase Storage) first, get URL.
-        // Here we simulate it with a placeholder.
-        const mockPhotoUrl = "https://placehold.co/400x400/png?text=IV+Photo";
+        // 사진 없이 rate만으로 기록 가능. 사진은 선택 시에만 포함.
+        const body: { admission_id: string; infusion_rate: number; photo_url?: string } = {
+            admission_id: admissionId,
+            infusion_rate: rate
+        };
+        if (photoUrl.trim()) body.photo_url = photoUrl.trim();
 
         try {
             const res = await fetch('http://localhost:8000/api/v1/iv-records', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    admission_id: admissionId, // Note: In real app, ensure this matches DB UUID
-                    photo_url: mockPhotoUrl,
-                    infusion_rate: rate
-                })
+                body: JSON.stringify(body)
             });
 
             if (res.ok) {
@@ -64,6 +64,17 @@ export function IVUploadForm({ admissionId, patientName, onUploadSuccess }: IVUp
                         value={rate}
                         onChange={(e) => setRate(Number(e.target.value))}
                         className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
+                    />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium text-slate-500">사진 URL (선택)</label>
+                    <input
+                        type="url"
+                        placeholder="사진 없이 기록 가능, 나중에 따로 입력 가능"
+                        value={photoUrl}
+                        onChange={(e) => setPhotoUrl(e.target.value)}
+                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
                     />
                 </div>
 
