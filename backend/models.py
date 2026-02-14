@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 
 # DB Models
 class Admission(BaseModel):
@@ -34,7 +34,10 @@ class MealRequest(BaseModel):
     pediatric_meal_type: Optional[str] = None
     guardian_meal_type: Optional[str] = None
     room_note: Optional[str] = None
+    meal_date: Optional[date] = None
+    meal_time: Optional[str] = None
     status: str = "PENDING"
+    created_at: Optional[datetime] = None
 
 # DTOs
 class AdmissionCreate(BaseModel):
@@ -54,10 +57,12 @@ class IVRecordCreate(BaseModel):
 
 class MealRequestCreate(BaseModel):
     admission_id: str
-    request_type: str # OLD: GENERAL, etc. Keeping for backward compat logic if needed
+    request_type: str = "STATION_UPDATE"
     pediatric_meal_type: Optional[str] = None
     guardian_meal_type: Optional[str] = None
     room_note: Optional[str] = None
+    meal_date: date
+    meal_time: str
 
 class DocumentRequest(BaseModel):
     id: Optional[int] = None

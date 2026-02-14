@@ -2,13 +2,14 @@ export interface Bed {
     id: string;
     room: string;
     name: string;
-    temp: number;
-    drops: number;
+    temp: number | null;
+    drops: number | null;
     status: 'normal' | 'fever';
     token: string;
     latest_temp?: number;
     had_fever_in_6h?: boolean;
     latest_meal?: MealRequest;
+    last_vital_at?: string;
 }
 
 export interface Notification {
@@ -58,6 +59,7 @@ export interface AdmissionSummary {
     latest_temp?: number;
     had_fever_in_6h?: boolean;
     latest_meal?: MealRequest;
+    last_vital_at?: string;
 }
 
 export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL';
@@ -85,6 +87,8 @@ export interface MealRequest {
     guardian_meal_type?: string;
     room_note?: string;
     created_at: string;
+    meal_date?: string;
+    meal_time?: string;
 }
 
 export interface DocumentRequest {

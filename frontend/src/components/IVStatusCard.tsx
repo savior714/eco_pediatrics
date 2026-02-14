@@ -41,7 +41,7 @@ export function IVStatusCard({ photoUrl, infusionRate, lastChecked }: IVStatusCa
             <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-sky-200/80">
                 <span className="text-slate-500 text-sm font-medium">현재 주입 속도</span>
                 <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold text-slate-800">{infusionRate || 0}</span>
+                    <span className="text-2xl font-bold text-slate-800">{infusionRate ?? '-'}</span>
                     <span className="text-slate-500 font-medium">cc/hr</span>
                 </div>
             </div>

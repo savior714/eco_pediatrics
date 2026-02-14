@@ -28,8 +28,8 @@ export function useStation(): UseStationReturn {
             id: '',
             room: room,
             name: `환자${i + 1}`,
-            temp: 36.5,
-            drops: 20,
+            temp: null,
+            drops: null,
             status: 'normal',
             token: ''
         })));
@@ -41,8 +41,8 @@ export function useStation(): UseStationReturn {
                 setBeds(prev => prev.map(bed => {
                     const adm = admissions.find((a) => String(a.room_number).trim() === String(bed.room).trim());
                     if (adm) {
-                        const infusionRate = adm.latest_iv ? adm.latest_iv.infusion_rate : 20;
-                        const temp = adm.latest_temp ?? 36.5;
+                        const infusionRate = adm.latest_iv ? adm.latest_iv.infusion_rate : null;
+                        const temp = adm.latest_temp ?? null;
 
                         return {
                             ...bed,
@@ -52,8 +52,9 @@ export function useStation(): UseStationReturn {
                             drops: infusionRate,
                             temp: temp,
                             had_fever_in_6h: adm.had_fever_in_6h,
-                            status: (temp >= 38.0 || adm.had_fever_in_6h) ? 'fever' : 'normal',
-                            latest_meal: adm.latest_meal
+                            status: ((temp !== null && temp >= 38.0) || adm.had_fever_in_6h) ? 'fever' : 'normal',
+                            latest_meal: adm.latest_meal,
+                            last_vital_at: adm.last_vital_at
                         };
                     }
                     return bed;
@@ -84,6 +85,7 @@ export function useStation(): UseStationReturn {
 
                 switch (message.type) {
                     case 'NEW_MEAL_REQUEST':
+                        if (message.data.request_type === 'STATION_UPDATE') break;
                         setNotifications(prev => [{
                             id,
                             room: message.data.room,

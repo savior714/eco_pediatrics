@@ -40,4 +40,12 @@ class ConnectionManager:
         else:
             logger.debug(f"No active connections for token: {token}. Skipping broadcast.")
 
+    async def broadcast_all(self, message: str):
+        for token, connections in self.active_connections.items():
+            for connection in connections:
+                try:
+                    await connection.send_text(message)
+                except Exception:
+                    pass
+
 manager = ConnectionManager()

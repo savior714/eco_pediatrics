@@ -37,7 +37,11 @@ export default function Dashboard({ params }: { params: { token: string } }) {
 
     const mealLabel: Record<string, string> = { GENERAL: '일반식', SOFT: '죽', NPO: '금식' };
     const currentMeal = meals.length > 0 ? meals[0] : null;
-    const currentMealLabel = currentMeal ? (mealLabel[currentMeal.request_type] ?? currentMeal.request_type) : null;
+    const currentMealLabel = currentMeal
+        ? (currentMeal.request_type === 'STATION_UPDATE'
+            ? (currentMeal.pediatric_meal_type || '일반식')
+            : (mealLabel[currentMeal.request_type] ?? currentMeal.request_type))
+        : null;
     const docLabel: Record<string, string> = { RECEIPT: '진료비 계산서(영수증)', DETAIL: '진료비 세부내역서', CERT: '입퇴원확인서', DIAGNOSIS: '진단서', INITIAL: '초진기록지' };
     const latestDocRequest = documentRequests.length > 0 ? documentRequests[0] : null;
     const currentDocLabels = latestDocRequest?.request_items?.map((id: string) => docLabel[id] || id) ?? [];

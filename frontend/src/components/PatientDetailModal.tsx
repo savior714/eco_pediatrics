@@ -8,6 +8,7 @@ import { Bed, Notification, ExamScheduleItem, VitalData, LastUploadedIv } from '
 import { MEAL_MAP, DOC_MAP, EXAM_TYPE_OPTIONS } from '@/constants/mappings';
 import { api } from '@/lib/api';
 import { TransferModal } from './TransferModal';
+import { VitalModal } from './VitalModal';
 import { useVitals } from '@/hooks/useVitals';
 
 interface PatientDetailModalProps {
@@ -18,6 +19,7 @@ interface PatientDetailModalProps {
     onCompleteRequest: (id: string) => void;
     lastUploadedIv?: LastUploadedIv | null;
     onIVUploadSuccess?: (rate?: number) => void;
+    onVitalUpdate?: (temp: number) => void;
     lastUpdated?: number;
     vitals?: VitalData[];
     checkInAt?: string | null;
@@ -39,7 +41,7 @@ function formatExamTime(iso: string): string {
     return `오후 ${h === 12 ? 12 : h - 12}${m ? `:${m.toString().padStart(2, '0')}` : ':00'}`;
 }
 
-export function PatientDetailModal({ isOpen, onClose, bed, notifications, onCompleteRequest, onIVUploadSuccess, vitals: propVitals, checkInAt: propCheckInAt, lastUploadedIv, lastUpdated }: PatientDetailModalProps) {
+export function PatientDetailModal({ isOpen, onClose, bed, notifications, onCompleteRequest, onIVUploadSuccess, onVitalUpdate, vitals: propVitals, checkInAt: propCheckInAt, lastUploadedIv, lastUpdated }: PatientDetailModalProps) {
     const [examSchedules, setExamSchedules] = useState<ExamScheduleItem[]>([]);
     const [examFormOpen, setExamFormOpen] = useState(false);
     const [examForm, setExamForm] = useState<{ date: string; timeOfDay: 'am' | 'pm'; name: string }>({ date: '', timeOfDay: 'am', name: '' });
@@ -47,14 +49,19 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
     const [examAddError, setExamAddError] = useState<string | null>(null);
     const [deletingExamId, setDeletingExamId] = useState<number | null>(null);
     const [transferModalOpen, setTransferModalOpen] = useState(false);
+    const [vitalModalOpen, setVitalModalOpen] = useState(false);
 
     const handleTransfer = async (targetRoom: string) => {
         if (!bed?.id) return;
-        await api.post(`/api/v1/admissions/${bed.id}/transfer`, { target_room: targetRoom });
-        alert('전실 완료');
-        setTransferModalOpen(false);
-        onClose();
-        window.location.reload();
+        try {
+            await api.post(`/api/v1/admissions/${bed.id}/transfer`, { target_room: targetRoom });
+            alert('전실 완료');
+            setTransferModalOpen(false);
+            onClose();
+            window.location.reload();
+        } catch (e) {
+            alert('전실 실패: 이미 사용 중인 병실이거나 오류가 발생했습니다.');
+        }
     };
 
     // Derived state (safe access)
@@ -130,7 +137,12 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         }
     }, [isOpen, roomNotifications.length, lastUpdated, fetchDashboardData]);
 
-    const currentMealLabelModal = fetchedMeals.length > 0 ? (MEAL_MAP[fetchedMeals[0].request_type] ?? fetchedMeals[0].request_type) : null;
+    const latestMeal = fetchedMeals.length > 0 ? fetchedMeals[0] : null;
+    const currentMealLabelModal = latestMeal
+        ? (latestMeal.request_type === 'STATION_UPDATE'
+            ? (latestMeal.pediatric_meal_type || '일반식')
+            : (MEAL_MAP[latestMeal.request_type] ?? latestMeal.request_type))
+        : null;
     const latestDocRequest = fetchedDocRequests.length > 0 ? fetchedDocRequests[0] : null;
     const currentDocLabelsModal = latestDocRequest?.request_items?.map((id: string) => DOC_MAP[id] || id) ?? [];
 
@@ -151,6 +163,19 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         // 3. No data - return empty to avoid misleading sine wave
         return { chartVitals: [], chartCheckIn: fetchedCheckIn || propCheckInAt || null };
     }, [bed, propVitals, propCheckInAt, fetchedVitals, fetchedCheckIn]);
+
+    // Derived: Latest Vital for Header Display
+    const latestVital = fetchedVitals.length > 0 ? fetchedVitals[fetchedVitals.length - 1] : null;
+    const displayTemp = latestVital ? latestVital.temperature : bed.temp;
+    const displayVitalTime = latestVital ? latestVital.recorded_at : bed.last_vital_at;
+
+    const getTempBorderColor = () => {
+        if (!displayVitalTime) return 'border-slate-200';
+        const hours = (Date.now() - new Date(displayVitalTime).getTime()) / (1000 * 60 * 60);
+        if (hours >= 4) return 'border-red-500 ring-4 ring-red-100'; // 4h+ Red
+        if (hours >= 2) return 'border-orange-400 ring-4 ring-orange-100'; // 2h+ Orange
+        return 'border-slate-200';
+    };
 
     if (!isOpen || !bed) return null;
 
@@ -193,60 +218,73 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                     </div>
 
                     {/* Quick Vitals Summary + Meal Status + IV Check Top */}
-                    <div className="flex gap-3 mt-3">
-                        <div className="flex-[7] flex gap-0 overflow-x-auto scrollbar-hide">
-                            {/* 1. Vitals */}
-                            <div className="bg-white px-3 rounded-xl border-[1.5px] border-slate-600 shadow-sm inline-flex flex-col justify-center min-w-[100px] shrink-0 z-10">
-                                <span className="text-[10px] text-slate-400 block mb-0 font-bold uppercase tracking-tight">현재 체온</span>
-                                <span className={`text-base font-bold ${bed.status === 'fever' ? 'text-red-500' : 'text-slate-700'}`}>
-                                    {bed.temp.toFixed(1)}°C
-                                </span>
-                            </div>
-                            <div className="bg-white px-3 rounded-xl border-[1.5px] border-slate-600 shadow-sm inline-flex flex-col justify-center min-w-[100px] shrink-0 -ml-[1.5px] z-0">
-                                <span className="text-[10px] text-slate-400 block mb-0 font-bold uppercase tracking-tight">수액 속도</span>
-                                <span className="text-base font-bold text-slate-700">{bed.drops} <span className="text-xs font-normal text-slate-400">cc/hr</span></span>
-                            </div>
+                    {/* Quick Vitals Summary + Meal Status + IV Check Top */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 mt-6">
+                        {/* Left Group: Vitals & Meals (7 Cols) -> 5 Sub-cols */}
+                        <div className="lg:col-span-7">
+                            <div className="grid grid-cols-5 gap-2 h-full">
+                                {/* 1. Temp (Clickable) */}
+                                <button
+                                    onClick={() => setVitalModalOpen(true)}
+                                    className={`col-span-1 bg-white rounded-[1.2rem] border-[1.5px] ${displayVitalTime && (Date.now() - new Date(displayVitalTime).getTime()) / 3600000 >= 2 ? getTempBorderColor() : 'border-slate-200'} shadow-sm flex flex-col justify-center items-center hover:bg-slate-50 transition-all py-3 px-1`}
+                                >
+                                    <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-tight">체온</span>
+                                    <div className="flex items-center gap-0.5">
+                                        <span className={`text-lg font-bold ${displayTemp !== null && displayTemp >= 38.0 ? 'text-red-500' : 'text-slate-700'}`}>
+                                            {displayTemp !== null ? displayTemp.toFixed(1) : '-'}
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 font-bold mt-1">°C</span>
+                                    </div>
+                                </button>
 
-                            {/* Divider line (optional, or just gap) */}
-                            <div className="w-px bg-slate-200 mx-1 shrink-0 my-2" />
-
-                            {/* 2. Meals - 다음 3끼 (오늘 점심, 오늘 저녁, 내일 아침 등) */}
-                            {getNextThreeMealSlots().map(({ label }) => (
-                                <div key={label} className="bg-white px-3 rounded-xl border-[1.5px] border-slate-600 shadow-sm w-[110px] shrink-0 text-center font-bold flex flex-col justify-center relative group/meal -ml-[1.5px]">
-                                    <button
-                                        className="absolute top-1 right-1 p-1 text-slate-300 hover:text-slate-500 rounded-full hover:bg-slate-50 transition-colors opacity-100"
-                                        title={`${label} 식사 수정`}
-                                    >
-                                        <Edit2 size={10} />
-                                    </button>
-                                    <span className="text-[9px] text-slate-400 block mb-0 uppercase">{label}</span>
-                                    <span className="text-xs text-slate-600 line-clamp-1">
-                                        {currentMealLabelModal ?? '신청전'}
-                                    </span>
+                                {/* 2. Drops */}
+                                <div className="col-span-1 bg-white rounded-[1.2rem] border-[1.5px] border-slate-200 shadow-sm flex flex-col justify-center items-center py-3 px-1">
+                                    <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-tight">속도</span>
+                                    <div className="flex items-center gap-0.5">
+                                        <span className="text-lg font-bold text-slate-700">{bed.drops ?? '-'}</span>
+                                        <span className="text-[10px] text-slate-400 font-bold mt-1">cc/hr</span>
+                                    </div>
                                 </div>
-                            ))}
+
+                                {/* 3,4,5. Meals */}
+                                {getNextThreeMealSlots().map(({ label }) => (
+                                    <div key={label} className="col-span-1 bg-white rounded-[1.2rem] border-[1.5px] border-slate-200 shadow-sm flex flex-col justify-center items-center relative group/meal py-3 px-1">
+                                        <button
+                                            className="absolute top-1 right-1 p-1 text-slate-300 hover:text-slate-500 rounded-full hover:bg-slate-50 transition-colors opacity-0 group-hover/meal:opacity-100"
+                                            title={`${label} 식사 수정`}
+                                        >
+                                            <Edit2 size={10} />
+                                        </button>
+                                        <span className="text-[9px] text-slate-400 block mb-0.5 uppercase tracking-tight">{label}</span>
+                                        <span className="text-sm font-bold text-slate-700 line-clamp-1 break-keep text-center leading-tight px-1">
+                                            {currentMealLabelModal ?? '신청전'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
 
-                        {/* Divider */}
-                        <div className="w-px bg-slate-200 mx-1 shrink-0 my-2" />
-
-                        {/* IV Upload Form moved to TOP - More compact design (3 Ratio) */}
-                        <div className="flex-[3] bg-white p-3 rounded-[1.5rem] border-[1.5px] border-slate-600 shadow-sm relative group/iv">
-                            <div className="flex items-center justify-between mb-2 px-1">
-                                <div className="flex items-center gap-1.5">
-                                    <Droplets size={12} className="text-sky-500" />
-                                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                                        IV 수액 속도 (cc/hr)
-                                    </h3>
+                        {/* Right Group: IV Form (5 Cols) */}
+                        <div className="lg:col-span-5 h-full">
+                            <div className="bg-white px-5 py-4 rounded-[1.5rem] border-[1.5px] border-slate-600 shadow-sm relative group/iv h-full flex flex-col justify-center">
+                                <div className="flex items-center justify-between mb-2 px-1">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 bg-sky-50 text-sky-500 rounded-full">
+                                            <Droplets size={14} />
+                                        </div>
+                                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-tight">
+                                            IV 수액 속도 기록
+                                        </h3>
+                                    </div>
                                 </div>
+                                <IVUploadForm
+                                    admissionId={bed.id}
+                                    patientName={bed.name}
+                                    token={bed.token}
+                                    onUploadSuccess={(rate) => onIVUploadSuccess?.(rate)}
+                                    lastUploadedIv={lastUploadedIv}
+                                />
                             </div>
-                            <IVUploadForm
-                                admissionId={bed.id}
-                                patientName={bed.name}
-                                token={bed.token}
-                                onUploadSuccess={(rate) => onIVUploadSuccess?.(rate)}
-                                lastUploadedIv={lastUploadedIv}
-                            />
                         </div>
                     </div>
                 </div>
@@ -382,6 +420,27 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                     </button>
                 </div>
             </div>
+
+            {transferModalOpen && (
+                <TransferModal
+                    isOpen={transferModalOpen}
+                    onClose={() => setTransferModalOpen(false)}
+                    onTransfer={handleTransfer}
+                    currentRoom={bed.room}
+                />
+            )}
+
+            {vitalModalOpen && (
+                <VitalModal
+                    isOpen={vitalModalOpen}
+                    onClose={() => setVitalModalOpen(false)}
+                    admissionId={bed.id}
+                    onSuccess={(temp) => {
+                        fetchDashboardData();
+                        onVitalUpdate?.(temp);
+                    }}
+                />
+            )}
         </div>
     );
 }

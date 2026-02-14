@@ -70,3 +70,44 @@ async def upsert_patient_override(
         db.table("patient_meal_overrides").upsert(data, on_conflict="admission_id,date,meal_time")
     )
     return
+
+# 3. Station Meal Requests (Spreadsheet)
+
+@router.post("/requests", status_code=204)
+async def upsert_meal_request(
+    req: MealRequestCreate,
+    db: AsyncClient = Depends(get_supabase)
+):
+    # Upsert based on (admission_id, meal_date, meal_time)
+    data = req.model_dump(mode='json')
+    
+    # Using the unique index we created in Migration 003
+    await execute_with_retry_async(
+        db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time")
+    )
+    
+    # Broadcast update
+    # Broadcast update
+    msg = json.dumps({
+        "type": "NEW_MEAL_REQUEST",
+        "data": {
+            "request_type": req.request_type,
+            "meal_date": str(req.meal_date),
+            "meal_time": req.meal_time
+        }
+    })
+    await manager.broadcast_all(msg)
+    return
+
+@router.get("/matrix", response_model=List[MealRequest])
+async def get_meal_matrix(
+    target_date: date,
+    db: AsyncClient = Depends(get_supabase)
+):
+    # Fetch all meal requests for the given date
+    res = await execute_with_retry_async(
+        db.table("meal_requests")
+        .select("*")
+        .eq("meal_date", target_date.isoformat())
+    )
+    return res.data or []

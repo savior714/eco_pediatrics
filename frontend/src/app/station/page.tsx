@@ -130,21 +130,21 @@ export default function Station() {
                                             onClick={() => setAdmitRoom(bed.room)}
                                             className="px-3 py-1.5 bg-teal-600 text-white text-xs font-bold rounded-lg hover:bg-teal-700"
                                         >
-                                            입원 수속
+                                            입원
                                         </button>
                                     </div>
                                 );
                             }
 
-                            const isFever = bed.had_fever_in_6h || bed.temp >= 38.0;
+                            const isFever = bed.had_fever_in_6h || (bed.temp !== null && bed.temp >= 38.0);
                             const status = isFever ? 'fever' : 'normal';
                             return (
                                 <PatientCard
                                     key={bed.room}
                                     name={bed.name}
                                     roomNumber={bed.room}
-                                    temperature={bed.temp.toFixed(1)}
-                                    infusionRate={bed.drops}
+                                    temperature={bed.temp !== null ? bed.temp.toFixed(1) : '-'}
+                                    infusionRate={bed.drops ?? '-'}
                                     status={status}
                                     onCardClick={() => setSelectedRoom(bed.room)}
                                     onQrClick={(e) => {
@@ -160,7 +160,7 @@ export default function Station() {
 
                 {activeTab === 'meals' && (
                     <div className="flex-1 overflow-hidden p-1">
-                        <MealGrid beds={beds} setBeds={setBeds} />
+                        <MealGrid beds={beds} />
                     </div>
                 )}
             </main>
@@ -201,6 +201,16 @@ export default function Station() {
                     onIVUploadSuccess={(rate) => {
                         if (rate !== undefined && selectedRoom) {
                             setBeds(prev => prev.map(b => String(b.room) === selectedRoom ? { ...b, drops: rate } : b));
+                        }
+                    }}
+                    onVitalUpdate={(temp) => {
+                        if (selectedRoom) {
+                            setBeds(prev => prev.map(b => String(b.room) === selectedRoom ? {
+                                ...b,
+                                temp: temp,
+                                last_vital_at: new Date().toISOString(),
+                                status: (temp >= 38.0 || b.had_fever_in_6h) ? 'fever' : 'normal'
+                            } : b));
                         }
                     }}
                     lastUpdated={lastUpdated}

@@ -6,7 +6,7 @@ interface PatientCardProps {
     name: string;
     roomNumber: string;
     temperature: string | number;
-    infusionRate: number;
+    infusionRate: number | string | null;
     status: 'normal' | 'fever' | 'warning';
     onCardClick?: () => void;
     onQrClick?: (e: React.MouseEvent) => void;
@@ -54,7 +54,7 @@ export function PatientCard({ name, roomNumber, temperature, infusionRate, statu
                         <Droplet size={12} className="text-primary" /> 수액
                     </div>
                     <div className="flex items-baseline gap-0.5">
-                        <span className="text-base font-bold text-slate-800">{infusionRate}</span>
+                        <span className="text-base font-bold text-slate-800">{infusionRate ?? '-'}</span>
                         <span className="text-[10px] text-slate-400">cc/hr</span>
                     </div>
                 </div>
