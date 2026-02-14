@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { Bed, Notification, LastUploadedIv, AdmissionSummary, WsMessage } from '@/types/domain';
 import { ROOM_NUMBERS, MEAL_MAP, DOC_MAP } from '@/constants/mappings';
@@ -63,12 +63,10 @@ export function useStation(): UseStationReturn {
         const ws = new WebSocket(`${WS_URL}/ws/STATION`);
 
         ws.onopen = () => {
-            console.log('Connected to Station WS');
             setIsConnected(true);
         };
 
         ws.onclose = () => {
-            console.log('Disconnected from Station WS');
             setIsConnected(false);
         };
 

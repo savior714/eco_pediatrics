@@ -17,6 +17,20 @@ export default function MobileIVUpload({ params }: { params: { token: string } }
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
         if (selectedFile) {
+            // Validation
+            if (!selectedFile.type.startsWith('image/')) {
+                setError('이미지 파일만 업로드 가능합니다.');
+                setFile(null);
+                setPreview(null);
+                return;
+            }
+            if (selectedFile.size > 10 * 1024 * 1024) {
+                setError('파일 크기는 10MB를 초과할 수 없습니다.');
+                setFile(null);
+                setPreview(null);
+                return;
+            }
+
             setFile(selectedFile);
             setPreview(URL.createObjectURL(selectedFile));
             setError(null);
@@ -105,10 +119,10 @@ export default function MobileIVUpload({ params }: { params: { token: string } }
                         onClick={handleUpload}
                         disabled={!file || uploading}
                         className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all ${!file
-                                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                : uploading
-                                    ? 'bg-slate-400 text-white cursor-wait'
-                                    : 'bg-teal-600 text-white hover:bg-teal-700 active:scale-95'
+                            ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                            : uploading
+                                ? 'bg-slate-400 text-white cursor-wait'
+                                : 'bg-teal-600 text-white hover:bg-teal-700 active:scale-95'
                             }`}
                     >
                         {uploading ? '전송 중...' : '스테이션으로 전송'}

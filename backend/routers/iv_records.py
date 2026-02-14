@@ -67,6 +67,18 @@ async def upload_image(file: UploadFile = File(...), token: str = None, db: Asyn
     if not token:
         raise HTTPException(status_code=400, detail="Token required")
 
+    # 1. Validation
+    if file.content_type not in ["image/jpeg", "image/png", "image/gif", "image/webp"]:
+        raise HTTPException(status_code=400, detail="Only images are allowed")
+    
+    # Check size (10MB limit)
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(0)
+    
+    if size > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (Max 10MB)")
+
     file_ext = file.filename.split(".")[-1]
     filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{token[:8]}.{file_ext}"
     file_path = f"uploads/{filename}"
@@ -83,6 +95,10 @@ async def upload_image(file: UploadFile = File(...), token: str = None, db: Asyn
     res = await execute_with_retry_async(db.table("admissions").select("id, room_number").eq("access_token", token))
     if res.data:
         adm = res.data[0]
+        
+        # Log the upload
+        await create_audit_log(db, "MOBILE_USER", "UPLOAD_PHOTO", adm['id'])
+
         message = {
             "type": "IV_PHOTO_UPLOADED",
             "data": {

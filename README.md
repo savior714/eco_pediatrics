@@ -15,7 +15,6 @@
 ## 기술 스택
 - **Frontend**: Next.js (App Router), Tailwind CSS v4, Lucide React, Recharts
 - **Backend**: FastAPI, Python 3.x, WebSockets
-- **Backend**: FastAPI, Python 3.x, WebSockets
 - **Database**: Supabase (PostgreSQL)
 
 ## 아키텍처 (Refactoring 2026-02-14)

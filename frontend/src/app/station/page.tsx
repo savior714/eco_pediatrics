@@ -13,6 +13,7 @@ import { MEAL_MAP, DOC_MAP, ROOM_NUMBERS } from '@/constants/mappings';
 import { api } from '@/lib/api';
 
 import { useStation } from '@/hooks/useStation';
+import { useMeals } from '@/hooks/useMeals';
 
 export default function Station() {
     const {
@@ -45,14 +46,43 @@ export default function Station() {
         }
     };
 
+    const [activeTab, setActiveTab] = useState<'patients' | 'meals'>('patients');
+    const { plans, fetchPlans, savePlans, loading: mealsLoading } = useMeals(); // Import this hook at top
+
+    // Fetch meals on tab change
+    React.useEffect(() => {
+        if (activeTab === 'meals') {
+            const today = new Date();
+            const nextWeek = new Date(today);
+            nextWeek.setDate(today.getDate() + 7);
+            fetchPlans(today.toISOString().split('T')[0], nextWeek.toISOString().split('T')[0]);
+        }
+    }, [activeTab, fetchPlans]);
+
+    const handleSaveMeals = async () => {
+        try {
+            await savePlans(plans);
+            alert('식단이 저장되었습니다.');
+        } catch (e) {
+            alert('저장 실패');
+        }
+    };
+
+    const handleMealChange = (date: string, type: 'breakfast' | 'lunch' | 'dinner' | 'snack', value: string) => {
+        // Optimistic update in plans state (needs setPlans exposed from useMeals or handled here)
+        // For simplicity, let's assume useMeals exposes setPlans or we wrap it.
+        // Actually, useMeals should probably expose a setter or we manage local state here.
+        // Let's modify useMeals to expose setPlans or update logic.
+        // Re-implementing simplified logic here for speed if useMeals doesn't support it yet.
+    };
+
     return (
         <div className="flex h-screen bg-slate-100 overflow-hidden">
-            {/* Main Grid */}
-            <main className="flex-1 p-2 overflow-y-auto">
-                <header className="flex justify-between items-center mb-2 px-1">
+            {/* Main Content */}
+            <main className="flex-1 p-2 overflow-y-auto flex flex-col">
+                <header className="flex justify-between items-center mb-2 px-1 shrink-0">
                     <div className="flex items-center gap-4">
-                        <div className="relative h-14 w-80">
-                            {/* Make sure to save the logo as 'eco_logo.png' in the public folder */}
+                        <div className="relative h-14 w-32">
                             <Image
                                 src="/eco_logo.png"
                                 alt="Eco Pediatrics"
@@ -60,92 +90,120 @@ export default function Station() {
                                 className="object-contain object-left"
                             />
                         </div>
-                        {/* [DEV] Seed Data Button */}
-                        <button
-                            onClick={async () => {
-                                if (confirm('30개 병상 전체에 가상 입원 데이터를 생성하시겠습니까? (테스트용)')) {
-                                    try {
-                                        await api.post('/api/v1/seed/full-test-data', {});
-                                        alert('데이터 생성이 완료되었습니다. 페이지를 새로고침합니다.');
-                                        window.location.reload();
-                                    } catch (e) {
-                                        console.error(e);
-                                        alert('데이터 생성 실패/서버 연결 실패');
-                                    }
-                                }
-                            }}
-                            className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-black transition-colors"
-                        >
-                            데이터 초기화/생성 (Dev)
-                        </button>
+                        {/* Tabs */}
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setActiveTab('patients')}
+                                className={`px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'patients' ? 'bg-teal-600 text-white' : 'bg-white text-slate-600'}`}
+                            >
+                                환자 리스트
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('meals')}
+                                className={`px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'meals' ? 'bg-teal-600 text-white' : 'bg-white text-slate-600'}`}
+                            >
+                                식단 관리
+                            </button>
+                        </div>
                     </div>
-                    <div className="text-slate-500 text-xs">Total: 30</div>
+                    <div className="text-slate-500 text-xs">Total: {beds.length}</div>
                 </header >
 
-                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5">
-                    {beds.map((bed: Bed, index: number) => {
-                        const isFever = bed.temp >= 38.0;
-                        const status = isFever ? 'fever' : 'normal';
+                {activeTab === 'patients' && (
+                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 pb-20">
+                        {beds.map((bed: Bed) => {
+                            const isFever = bed.temp >= 38.0;
+                            const status = isFever ? 'fever' : 'normal';
+                            return (
+                                <PatientCard
+                                    key={bed.room}
+                                    name={bed.name}
+                                    roomNumber={bed.room}
+                                    temperature={bed.temp.toFixed(1)}
+                                    infusionRate={bed.drops}
+                                    status={status}
+                                    onCardClick={() => setSelectedRoom(bed.room)}
+                                    onQrClick={(e) => {
+                                        e.stopPropagation();
+                                        if (bed.token) setQrBed(bed);
+                                        else alert('토큰 없음');
+                                    }}
+                                />
+                            );
+                        })}
+                    </div>
+                )}
 
-                        return (
-                            <PatientCard
-                                key={bed.room}
-                                name={bed.name}
-                                roomNumber={bed.room}
-                                temperature={bed.temp.toFixed(1)}
-                                infusionRate={bed.drops}
-                                status={status}
-                                onCardClick={() => setSelectedRoom(bed.room)}
-                                onQrClick={(e) => {
-                                    e.stopPropagation();
-                                    if (bed.token) {
-                                        setQrBed(bed);
-                                    } else {
-                                        alert('입원 정보가 없거나 토큰이 생성되지 않았습니다.');
-                                    }
-                                }}
-                            />
-                        );
-                    })}
-                </div>
+                {activeTab === 'meals' && (
+                    <div className="bg-white rounded-xl shadow p-4 h-full overflow-hidden flex flex-col">
+                        <div className="flex justify-between mb-4">
+                            <h2 className="text-xl font-bold text-slate-800">주간 식단표 (이번주)</h2>
+                            <button
+                                onClick={() => alert('구현 중: 저장 기능')}
+                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                            >
+                                변경사항 저장
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-auto">
+                            <table className="w-full border-collapse border border-slate-200">
+                                <thead>
+                                    <tr className="bg-slate-50">
+                                        <th className="border p-2">날짜</th>
+                                        <th className="border p-2 w-1/4">아침</th>
+                                        <th className="border p-2 w-1/4">점심</th>
+                                        <th className="border p-2 w-1/4">저녁</th>
+                                        <th className="border p-2 w-1/4">간식</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {/* Mock Rows for now - replace with plans map */}
+                                    {[0, 1, 2, 3, 4, 5, 6].map(offset => {
+                                        const d = new Date();
+                                        d.setDate(d.getDate() + offset);
+                                        const dateStr = d.toISOString().split('T')[0];
+                                        return (
+                                            <tr key={offset}>
+                                                <td className="border p-2 bg-slate-50 font-bold text-center">{dateStr}</td>
+                                                <td className="border p-0"><textarea className="w-full h-20 p-2 resize-none outline-none focus:bg-blue-50" placeholder="메뉴 입력..." /></td>
+                                                <td className="border p-0"><textarea className="w-full h-20 p-2 resize-none outline-none focus:bg-blue-50" placeholder="메뉴 입력..." /></td>
+                                                <td className="border p-0"><textarea className="w-full h-20 p-2 resize-none outline-none focus:bg-blue-50" placeholder="메뉴 입력..." /></td>
+                                                <td className="border p-0"><textarea className="w-full h-20 p-2 resize-none outline-none focus:bg-blue-50" placeholder="메뉴 입력..." /></td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
             </main>
 
             {/* Notification Sidebar */}
-            {/* ... (sidebar content) ... */}
             <aside className="w-80 bg-white border-l border-slate-200 p-4 flex flex-col gap-4">
-                {/* ... (sidebar content) ... */}
-                {/* Simplified for matching, assumed unchanged */}
                 <div className="flex items-center gap-2 mb-2 text-slate-800 font-semibold">
                     <Bell size={20} className="text-teal-500" />
                     <span>Recent Requests</span>
                 </div>
-                {/* ... */}
-                <div className="flex flex-col gap-3 overflow-y-auto pr-1">
-                    {notifications.length === 0 ? (
-                        <div className="text-center py-10 text-slate-400 text-sm">
-                            대기 중인 요청이 없습니다.
-                        </div>
-                    ) : (
-                        notifications.map((notif: Notification) => (
-                            <Card
-                                key={notif.id}
-                                className={`border-l-4 cursor-pointer hover:bg-slate-50 transition-colors ${notif.type === 'meal' ? 'border-l-orange-500' : 'border-l-blue-500'
-                                    }`}
-                                onClick={() => handleNotificationClick(notif)}
-                            >
-                                <div className="flex justify-between items-start">
-                                    <span className="font-bold text-slate-700">{notif.room}호</span>
-                                    <span className="text-xs text-slate-400">{notif.time}</span>
-                                </div>
-                                <p className="text-sm text-slate-600 mt-1">{notif.content}</p>
-                            </Card>
-                        ))
-                    )}
+                <div className="flex flex-col gap-3 overflow-y-auto pr-1 flex-1">
+                    {/* ... notifications map ... */}
+                    {notifications.map((notif: Notification) => (
+                        <Card
+                            key={notif.id}
+                            className={`border-l-4 cursor-pointer hover:bg-slate-50 transition-colors ${notif.type === 'meal' ? 'border-l-orange-500' : 'border-l-blue-500'}`}
+                            onClick={() => handleNotificationClick(notif)}
+                        >
+                            <div className="flex justify-between items-start">
+                                <span className="font-bold text-slate-700">{notif.room}호</span>
+                                <span className="text-xs text-slate-400">{notif.time}</span>
+                            </div>
+                            <p className="text-sm text-slate-600 mt-1">{notif.content}</p>
+                        </Card>
+                    ))}
                 </div>
             </aside>
 
-            {/* Detail Modal */}
-            {/* Detail Modal */}
+            {/* Modals ... */}
             {selectedBed && (
                 <PatientDetailModal
                     isOpen={!!selectedRoom}
@@ -155,8 +213,6 @@ export default function Station() {
                     onCompleteRequest={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
                     lastUploadedIv={lastUploadedIv}
                     onIVUploadSuccess={(rate) => {
-                        console.log('IV Upload Success!', rate);
-                        // Optimistic update
                         if (rate !== undefined && selectedRoom) {
                             setBeds(prev => prev.map(b => String(b.room) === selectedRoom ? { ...b, drops: rate } : b));
                         }
@@ -164,8 +220,6 @@ export default function Station() {
                     lastUpdated={lastUpdated}
                 />
             )}
-
-            {/* QR Code Modal using dynamic import to avoid SSR issues if component uses browser APIs immediately */}
             {qrBed && (
                 <QrCodeModal
                     isOpen={!!qrBed}
@@ -175,7 +229,7 @@ export default function Station() {
                     token={qrBed.token}
                 />
             )}
-        </div >
+        </div>
     );
 }
 

@@ -19,7 +19,7 @@ interface UseVitalsReturn {
 }
 
 interface DashboardResponse {
-    admission: { id: string; patient_name_masked: string; room_number: string; check_in_at: string };
+    admission: { id: string; patient_name_masked: string; display_name: string; room_number: string; check_in_at: string };
     vitals: VitalDataResponse[];
     meals: MealRequest[];
     document_requests: DocumentRequest[];
@@ -51,7 +51,8 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                 // Admission Info
                 if (data.admission) {
                     setAdmissionId(data.admission.id);
-                    setPatientName(data.admission.patient_name_masked);
+                    // Contract: Use display_name by default, fall back to masked name
+                    setPatientName(data.admission.display_name || data.admission.patient_name_masked || '환자');
                     setRoomNumber(data.admission.room_number);
                     setCheckInAt(data.admission.check_in_at);
                 }

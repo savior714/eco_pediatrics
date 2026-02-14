@@ -16,3 +16,8 @@ frontend/env.local
 node_modules/.cache/
 
 .DS_Store
+
+# Build artifacts & logs
+*.log
+tsc_output.txt
+*.tsbuildinfo

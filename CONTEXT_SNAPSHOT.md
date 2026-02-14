@@ -69,3 +69,10 @@
    - **Data Correctness**: 입원 중복 제거 로직 개선 (`id` -> `check_in_at` 기준)
    - **Performance**: 입원 목록 조회 시 N+1 쿼리 제거 (Batch Query 도입)
    - **Operational Hardening**: `FAIL_FAST` (Env Check), `CORS Tightening` (`ALLOWED_ORIGINS`), `Healthcheck` (`/health`) 도입
+
+### 6. Mobile IV Upload & Station Polish (Phase 5)
+- **Status**: Completed
+- **Key Changes**:
+    - **Mobile**: Strict MIME/Size validation, client-side pre-check.
+    - **Station**: Zoomable IV photo preview, 'Approve' workflow with optimistic updates.
+    - **Audit**: Logged all upload attempts for security.

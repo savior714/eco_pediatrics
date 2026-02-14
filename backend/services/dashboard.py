@@ -12,6 +12,11 @@ async def fetch_dashboard_data(db: AsyncClient, admission_id: str):
         raise HTTPException(status_code=404, detail="Admission not found")
     admission = adm_res.data[0]
     
+    # Contract: Ensure display_name is populated
+    # Currently defaults to patient_name_masked, but allows for future overrides (e.g. nickname)
+    if "display_name" not in admission or not admission["display_name"]:
+         admission["display_name"] = admission.get("patient_name_masked", "환자")
+    
     # 2. Vitals
     vitals_res = await execute_with_retry_async(db.table("vital_signs").select("*").eq("admission_id", admission_id).order("recorded_at", desc=True).limit(100))
     vitals = vitals_res.data or []

@@ -17,6 +17,7 @@ def test_dashboard_response_schema():
         "admission": {
             "id": "adm_123",
             "patient_name_masked": "김*수",
+            "display_name": "김*수", # Added for Phase 2 Contract
             "room_number": "301",
             "check_in_at": datetime.now(),
             "discharged_at": None,
@@ -48,7 +49,8 @@ def test_dashboard_response_schema():
         
         # Verify patient_name_masked is present
         assert model.admission.patient_name_masked == "김*수"
-        print("SUCCESS: patient_name_masked verified")
+        assert model.admission.display_name == "김*수"
+        print("SUCCESS: patient_name_masked and display_name verified")
         
     except Exception as e:
         print(f"FAILURE: Validation error: {e}")
