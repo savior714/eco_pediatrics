@@ -45,6 +45,9 @@ async def request_meal(request: MealRequestCreate, db: AsyncClient = Depends(get
             "data": {
                 "room": room,
                 "request_type": request.request_type,
+                "pediatric_meal_type": request.pediatric_meal_type,
+                "guardian_meal_type": request.guardian_meal_type,
+                "room_note": request.room_note,
                 "created_at": datetime.now().isoformat()
             }
         }

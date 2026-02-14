@@ -91,9 +91,9 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
         # Fetch vitals
         vitals_res = await execute_with_retry_async(
             db.table("vital_signs")
-            .select("admission_id, temperature, created_at")
+            .select("admission_id, temperature, recorded_at")
             .in_("admission_id", admission_ids)
-            .order("created_at", desc=True)
+            .order("recorded_at", desc=True)
         )
         all_vitals = vitals_res.data or []
         
@@ -107,15 +107,31 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
             if aid not in vital_map:
                 vital_map[aid] = {
                     'latest_temp': v['temperature'],
-                    'last_vital_at': v['created_at'],
+                    'last_vital_at': v['recorded_at'],
                     'had_fever_in_6h': False
                 }
             
             # Check fever (if not already found)
             if not vital_map[aid]['had_fever_in_6h']:
                 # Compare string ISO directly
-                if v['temperature'] >= 38.0 and v['created_at'] >= six_hours_ago_iso:
+                rec_at = v.get('recorded_at')
+                if rec_at and v['temperature'] >= 38.0 and rec_at >= six_hours_ago_iso:
                     vital_map[aid]['had_fever_in_6h'] = True
+
+    # 5. Enrich with Latest Meal Request
+    meal_map = {}
+    if admission_ids:
+        meal_res = await execute_with_retry_async(
+            db.table("meal_requests")
+            .select("admission_id, request_type, pediatric_meal_type, guardian_meal_type, room_note, created_at")
+            .in_("admission_id", admission_ids)
+            .order("created_at", desc=True)
+        )
+        all_meals = meal_res.data or []
+        for m in all_meals:
+            aid = m['admission_id']
+            if aid not in meal_map:
+                meal_map[aid] = m
 
     for adm in unique_admissions:
         adm['latest_iv'] = iv_map.get(adm['id'])
@@ -130,6 +146,8 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
             adm['latest_temp'] = None
             adm['last_vital_at'] = None
             adm['had_fever_in_6h'] = False
+            
+        adm['latest_meal'] = meal_map.get(adm['id'])
             
     return unique_admissions
 

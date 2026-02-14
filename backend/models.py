@@ -31,6 +31,9 @@ class MealRequest(BaseModel):
     id: Optional[int] = None
     admission_id: str
     request_type: str
+    pediatric_meal_type: Optional[str] = None
+    guardian_meal_type: Optional[str] = None
+    room_note: Optional[str] = None
     status: str = "PENDING"
 
 # DTOs
@@ -51,7 +54,10 @@ class IVRecordCreate(BaseModel):
 
 class MealRequestCreate(BaseModel):
     admission_id: str
-    request_type: str # GENERAL, SOFT, NPO
+    request_type: str # OLD: GENERAL, etc. Keeping for backward compat logic if needed
+    pediatric_meal_type: Optional[str] = None
+    guardian_meal_type: Optional[str] = None
+    room_note: Optional[str] = None
 
 class DocumentRequest(BaseModel):
     id: Optional[int] = None

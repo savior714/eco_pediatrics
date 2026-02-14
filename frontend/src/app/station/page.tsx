@@ -14,6 +14,7 @@ import { api } from '@/lib/api';
 
 import { useStation } from '@/hooks/useStation';
 import { useMeals } from '@/hooks/useMeals';
+import { MealGrid } from '@/components/MealGrid';
 
 export default function Station() {
     const {
@@ -177,46 +178,8 @@ export default function Station() {
                 )}
 
                 {activeTab === 'meals' && (
-                    <div className="bg-white rounded-xl shadow p-4 h-full overflow-hidden flex flex-col">
-                        <div className="flex justify-between mb-4">
-                            <h2 className="text-xl font-bold text-slate-800">주간 식단표 (이번주)</h2>
-                            <button
-                                onClick={() => alert('구현 중: 저장 기능')}
-                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                            >
-                                변경사항 저장
-                            </button>
-                        </div>
-                        <div className="flex-1 overflow-auto">
-                            <table className="w-full border-collapse border border-slate-200">
-                                <thead>
-                                    <tr className="bg-slate-50">
-                                        <th className="border p-2">날짜</th>
-                                        <th className="border p-2 w-1/4">아침</th>
-                                        <th className="border p-2 w-1/4">점심</th>
-                                        <th className="border p-2 w-1/4">저녁</th>
-                                        <th className="border p-2 w-1/4">간식</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {/* Mock Rows for now - replace with plans map */}
-                                    {[0, 1, 2, 3, 4, 5, 6].map(offset => {
-                                        const d = new Date();
-                                        d.setDate(d.getDate() + offset);
-                                        const dateStr = d.toISOString().split('T')[0];
-                                        return (
-                                            <tr key={offset}>
-                                                <td className="border p-2 bg-slate-50 font-bold text-center">{dateStr}</td>
-                                                <td className="border p-0"><textarea className="w-full h-20 p-2 resize-none outline-none focus:bg-blue-50" placeholder="메뉴 입력..." /></td>
-                                                <td className="border p-0"><textarea className="w-full h-20 p-2 resize-none outline-none focus:bg-blue-50" placeholder="메뉴 입력..." /></td>
-                                                <td className="border p-0"><textarea className="w-full h-20 p-2 resize-none outline-none focus:bg-blue-50" placeholder="메뉴 입력..." /></td>
-                                                <td className="border p-0"><textarea className="w-full h-20 p-2 resize-none outline-none focus:bg-blue-50" placeholder="메뉴 입력..." /></td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div className="flex-1 overflow-hidden p-1">
+                        <MealGrid />
                     </div>
                 )}
             </main>

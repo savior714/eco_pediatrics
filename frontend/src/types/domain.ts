@@ -8,6 +8,7 @@ export interface Bed {
     token: string;
     latest_temp?: number;
     had_fever_in_6h?: boolean;
+    latest_meal?: MealRequest;
 }
 
 export interface Notification {
@@ -56,6 +57,7 @@ export interface AdmissionSummary {
     };
     latest_temp?: number;
     had_fever_in_6h?: boolean;
+    latest_meal?: MealRequest;
 }
 
 export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL';
@@ -79,6 +81,9 @@ export interface MealRequest {
     id: number;
     admission_id: string;
     request_type: string;
+    pediatric_meal_type?: string;
+    guardian_meal_type?: string;
+    room_note?: string;
     created_at: string;
 }
 

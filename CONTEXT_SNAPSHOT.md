@@ -77,3 +77,4 @@
 - **Phase C (Station Expansion)**: Fever indication (`had_fever_in_6h` logic), `DEV: Discharge All` tool.
 - **Phase D (Empty Bed)**: Empty bed cards with `AdmitSubModal` (Immediate admission).
 - **Phase E (Transfer)**: Patient Transfer (`POST /transfer`, `TransferModal`, Audit Log).
+- **Phase F (Meal)**: Expanded Meal Request (Pediatric/Guardian types, Note) & Station Grid.

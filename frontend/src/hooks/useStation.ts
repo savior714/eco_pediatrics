@@ -52,7 +52,8 @@ export function useStation(): UseStationReturn {
                             drops: infusionRate,
                             temp: temp,
                             had_fever_in_6h: adm.had_fever_in_6h,
-                            status: (temp >= 38.0 || adm.had_fever_in_6h) ? 'fever' : 'normal'
+                            status: (temp >= 38.0 || adm.had_fever_in_6h) ? 'fever' : 'normal',
+                            latest_meal: adm.latest_meal
                         };
                     }
                     return bed;
