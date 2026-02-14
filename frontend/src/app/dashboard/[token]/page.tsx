@@ -60,7 +60,7 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                         marginLeft: 'max(1rem, env(safe-area-inset-left))',
                         marginRight: 'max(1rem, env(safe-area-inset-right))',
                         paddingBottom: '1rem',
-                        paddingLeft: '1.75rem',
+                        paddingLeft: '1.25rem',
                         paddingRight: '1rem',
                     }}
                 >
