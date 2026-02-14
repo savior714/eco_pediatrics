@@ -62,3 +62,10 @@
    - **Backend**: `lifespan` 중복 초기화 방지 및 `iv_records.py` Import 정리
    - **Frontend**: `any` 타입 제로화(`VitalDataResponse` 도입) 및 Lint Warning(의존성 배열) 해결
    - **Build**: `compileall` 및 `npm run lint` 통과 확인 (Quality Gate 준수)
+
+5. **Code Review Refactoring (Phase 1-4)**:
+   - **WebSocket Hotfix**: `station_connections` 버그 수정 및 `active_connections` 로직 통일
+   - **Contract Stabilization**: `DashboardResponse` DTO(Pydantic) 정의 및 Frontend와 `patient_name_masked` 필드 일치
+   - **Data Correctness**: 입원 중복 제거 로직 개선 (`id` -> `check_in_at` 기준)
+   - **Performance**: 입원 목록 조회 시 N+1 쿼리 제거 (Batch Query 도입)
+   - **Operational Hardening**: `FAIL_FAST` (Env Check), `CORS Tightening` (`ALLOWED_ORIGINS`), `Healthcheck` (`/health`) 도입

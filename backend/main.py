@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from database import init_supabase
 from websocket_manager import manager
 from logger import logger
+from utils import execute_with_retry_async
 
 # Import routers
 from routers import admissions, station, iv_records, vitals, exams, dev
@@ -70,9 +71,11 @@ os.makedirs("uploads", exist_ok=True)
 app.mount("/static", StaticFiles(directory="uploads"), name="static")
 
 # CORS Configuration
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex="https?://.*", # Allow all http/https origins with credentials
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -100,6 +103,20 @@ app.include_router(vitals.router, prefix="/api/v1/vitals", tags=["Vitals"])
 app.include_router(exams.router, prefix="/api/v1", tags=["Exams"]) 
 app.include_router(dev.router, prefix="/api/v1", tags=["Dev"])
 
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint to verify DB connection"""
+    if not hasattr(app.state, "supabase") or not app.state.supabase:
+        return JSONResponse(status_code=503, content={"status": "unavailable", "detail": "Database not initialized"})
+    
+    try:
+        # Lightweight query to verify connection
+        await execute_with_retry_async(app.state.supabase.table("admissions").select("id", count="exact").limit(1))
+        return {"status": "ok"}
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return JSONResponse(status_code=503, content={"status": "unhealthy", "detail": str(e)})
 
 @app.get("/")
 def read_root():

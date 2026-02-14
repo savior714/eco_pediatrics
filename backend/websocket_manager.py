@@ -24,20 +24,8 @@ class ConnectionManager:
                 del self.active_connections[token]
 
     async def broadcast(self, message: str, token: str):
-        if token == "STATION":
-            # Broadcast to all station connections
-            to_remove = []
-            for connection in self.station_connections:
-                try:
-                    await connection.send_text(message)
-                except Exception:
-                    to_remove.append(connection)
-            
-            for dead_conn in to_remove:
-                self.station_connections.remove(dead_conn)
-                
-        elif token in self.active_connections:
-            # Broadcast to specific token connections
+        if token in self.active_connections:
+            # Broadcast to specific token connections (including STATION)
             to_remove = []
             for connection in self.active_connections[token]:
                 try:
