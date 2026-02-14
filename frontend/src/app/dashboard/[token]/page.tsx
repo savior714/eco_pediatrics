@@ -67,13 +67,16 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                 >
                     <div className="flex justify-between items-center gap-3">
                         <div className="min-w-0">
-                            <h1 className="text-lg font-bold text-slate-900 truncate">
-                                {patientName || 'Loading...'}
-                                <span className="text-sm font-medium text-slate-500 ml-1">환자</span>
-                            </h1>
-                            <p className="text-slate-500 text-xs font-medium mt-0.5" suppressHydrationWarning>
-                                {roomNumber ? `${roomNumber}` : '...'} · {checkInAt ? `${calculateHospitalDay(checkInAt)}일차` : '...'}
-                            </p>
+                            <div className="flex items-baseline gap-2 md:gap-3">
+                                <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight shrink-0">
+                                    {patientName || 'Loading...'}
+                                </h1>
+                                <p className="text-slate-500 text-sm md:text-base font-bold flex items-center gap-2 whitespace-nowrap" suppressHydrationWarning>
+                                    <span className="text-slate-400">{roomNumber || '...'}</span>
+                                    <span className="w-1 md:w-1.5 h-1 md:h-1.5 bg-slate-200 rounded-full shrink-0" />
+                                    <span className="text-teal-600 font-extrabold">{checkInAt ? `${calculateHospitalDay(checkInAt)}일차` : '...'}</span>
+                                </p>
+                            </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                             <div className="relative h-14 w-60">
