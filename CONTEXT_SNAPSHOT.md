@@ -70,11 +70,12 @@
    - **Performance**: 입원 목록 조회 시 N+1 쿼리 제거 (Batch Query 도입)
    - **Operational Hardening**: `FAIL_FAST` (Env Check), `CORS Tightening` (`ALLOWED_ORIGINS`), `Healthcheck` (`/health`) 도입
 
-### 7. Production Hardening & Features (Phases A-E)
-- **Status**: Completed (2026-02-14)
-- **Phase A (Hotfixes)**: WebSocket broadcast fixed, Unified `display_name` for patients.
-- **Phase B (Optimization)**: Admissions deduplication refactored (Sort+Dict), N+1 check passed.
-- **Phase C (Station Expansion)**: Fever indication (`had_fever_in_6h` logic), `DEV: Discharge All` tool.
-- **Phase D (Empty Bed)**: Empty bed cards with `AdmitSubModal` (Immediate admission).
-- **Phase E (Transfer)**: Patient Transfer (`POST /transfer`, `TransferModal`, Audit Log).
-- **Phase F (Meal)**: Expanded Meal Request (Pediatric/Guardian types, Note) & Station Grid.
+- [x] **Produiction Hardening (Phases A-E)**: WebSocket broadcast, Batch queries, Empty Bed admission, Transfer functionality.
+- [x] **Expanded Meal Domain (Phase F)**: Pediatric/Guardian meal types and station grid summary.
+- [x] **Guardian Dashboard Refinement (Phases S-Y)**:
+    - Early morning meal sync fix (00:00-05:59).
+    - Exam registration moved to sub-modal.
+    - Balanced 2-column grid for meal options.
+    - Modernized 1-line patient header with responsive design & indentation.
+    - Standardized card headers with w-9 h-9 icon backgrounds across all components.
+    - PC layout optimization (Left: Medical/IV, Right: Admin/Notices).
