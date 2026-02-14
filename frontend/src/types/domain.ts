@@ -65,11 +65,13 @@ export interface AdmissionSummary {
 export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL';
 
 export type WsMessage =
-    | { type: 'NEW_MEAL_REQUEST'; data: { room: string; request_type: string; admission_id?: string } }
-    | { type: 'NEW_DOC_REQUEST'; data: { room: string; request_items: string[] } }
+    | { type: 'NEW_MEAL_REQUEST'; data: { room: string; request_type: string; admission_id: string; meal_date: string; meal_time: string } }
+    | { type: 'NEW_DOC_REQUEST'; data: { room: string; request_items: string[]; created_at?: string } }
     | { type: 'IV_PHOTO_UPLOADED'; data: { admission_id: string; room_number: string; photo_url: string } }
-    | { type: 'NEW_IV'; data: { infusion_rate: number; room: string } }
-    | { type: 'NEW_VITAL'; data: VitalDataResponse };
+    | { type: 'NEW_IV'; data: { id: number; infusion_rate: number; room: string | null; admission_id: string; photo_url?: string; created_at?: string } }
+    | { type: 'NEW_VITAL'; data: { id: number; admission_id: string; temperature: number; has_medication: boolean; medication_type?: string; recorded_at: string; room?: string } }
+    | { type: 'NEW_EXAM_SCHEDULE'; data: ExamScheduleItem }
+    | { type: 'DELETE_EXAM_SCHEDULE'; data: { id: number } };
 
 export interface IVRecord {
     id: number;
