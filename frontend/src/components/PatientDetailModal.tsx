@@ -1,47 +1,21 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { X, Check, Clock, AlertCircle, CalendarCheck, Plus, Thermometer, Droplets, Calendar, Bell, Edit2, Trash2, FileText, RefreshCw } from 'lucide-react';
 import { Card } from './Card';
 import { IVUploadForm } from './IVUploadForm';
 import { TemperatureGraph } from './TemperatureGraph';
 import { getNextThreeMealSlots } from '@/utils/dateUtils';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-const EXAM_TYPE_OPTIONS = [
-    '흉부 X-Ray',
-    '복부 X-Ray',
-    '초음파',
-    '소변검사',
-    '대변검사',
-    '혈액검사',
-    'PCR 검사',
-    '신속항원 검사',
-] as const;
-
-interface ExamScheduleItem {
-    id: number;
-    admission_id: string;
-    scheduled_at: string;
-    name: string;
-    note?: string;
-}
-
-interface VitalData {
-    time: string;
-    temperature: number;
-    has_medication: boolean;
-    medication_type?: string;
-    recorded_at: string;
-}
+import { Bed, Notification, ExamScheduleItem, VitalData, LastUploadedIv } from '@/types/domain';
+import { MEAL_MAP, DOC_MAP, EXAM_TYPE_OPTIONS } from '@/constants/mappings';
+import { api } from '@/lib/api';
 
 interface PatientDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
-    bed: any;
-    notifications: any[];
+    bed: Bed;
+    notifications: Notification[];
     onCompleteRequest: (id: string) => void;
-    lastUploadedIv?: { admissionId: string; url: string } | null;
-    onIVUploadSuccess?: (rate: number) => void;
+    lastUploadedIv?: LastUploadedIv | null;
+    onIVUploadSuccess?: (rate?: number) => void;
     lastUpdated?: number;
     vitals?: VitalData[];
     checkInAt?: string | null;
@@ -79,16 +53,14 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
 
     useEffect(() => {
         if (!isOpen || !bed?.id) return;
-        fetch(`${API_BASE}/api/v1/admissions/${bed.id}/exam-schedules`)
-            .then(res => res.ok ? res.json() : [])
+        api.get<ExamScheduleItem[]>(`/api/v1/admissions/${bed.id}/exam-schedules`)
             .then(data => setExamSchedules(Array.isArray(data) ? data : []))
             .catch(() => setExamSchedules([]));
     }, [isOpen, bed?.id]);
 
     const refetchExams = () => {
         if (!bed?.id) return;
-        fetch(`${API_BASE}/api/v1/admissions/${bed.id}/exam-schedules`)
-            .then(res => res.ok ? res.json() : [])
+        api.get<ExamScheduleItem[]>(`/api/v1/admissions/${bed.id}/exam-schedules`)
             .then(data => setExamSchedules(Array.isArray(data) ? data : []))
             .catch(() => { });
     };
@@ -101,25 +73,17 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
             const [y, m, d] = examForm.date.split('-').map(Number);
             const hour = examForm.timeOfDay === 'am' ? 9 : 14;
             const scheduledAt = new Date(y, m - 1, d, hour, 0).toISOString();
-            const res = await fetch(`${API_BASE}/api/v1/exam-schedules`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    admission_id: bed.id,
-                    scheduled_at: scheduledAt,
-                    name: examForm.name.trim(),
-                    note: ''
-                })
+            await api.post('/api/v1/exam-schedules', {
+                admission_id: bed.id,
+                scheduled_at: scheduledAt,
+                name: examForm.name.trim(),
+                note: ''
             });
-            if (res.ok) {
-                setExamForm({ date: '', timeOfDay: 'am', name: '' });
-                setExamFormOpen(false);
-                setExamAddError(null);
-                refetchExams();
-            } else {
-                const text = await res.text();
-                setExamAddError(text || `서버 오류 (${res.status})`);
-            }
+
+            setExamForm({ date: '', timeOfDay: 'am', name: '' });
+            setExamFormOpen(false);
+            setExamAddError(null);
+            refetchExams();
         } catch (e) {
             setExamAddError('서버에 연결할 수 없습니다. 백엔드(localhost:8000)가 실행 중인지, exam_schedules 테이블이 생성되었는지 확인해 주세요.');
         } finally {
@@ -131,8 +95,8 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         if (!window.confirm('이 검사 일정을 삭제할까요?')) return;
         setDeletingExamId(scheduleId);
         try {
-            const res = await fetch(`${API_BASE}/api/v1/exam-schedules/${scheduleId}`, { method: 'DELETE' });
-            if (res.ok) refetchExams();
+            await api.delete(`/api/v1/exam-schedules/${scheduleId}`);
+            refetchExams();
         } finally {
             setDeletingExamId(null);
         }
@@ -145,38 +109,35 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
 
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = useCallback(async () => {
         if (!bed?.token) return;
         setIsRefreshing(true);
         try {
-            const res = await fetch(`${API_BASE}/api/v1/dashboard/${bed.token}`);
-            if (res.ok) {
-                const data = await res.json();
-                if (data) {
-                    if (data.vitals && Array.isArray(data.vitals)) {
-                        const formattedVitals = data.vitals.map((v: any) => ({
-                            time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                            temperature: v.temperature,
-                            has_medication: v.has_medication,
-                            medication_type: v.medication_type,
-                            recorded_at: v.recorded_at
-                        })).reverse();
-                        setFetchedVitals(formattedVitals);
-                    } else {
-                        setFetchedVitals([]);
-                    }
-                    setFetchedCheckIn(data.admission?.check_in_at || null);
-                    setFetchedMeals(data.meals || []);
-                    console.log('Fetched Document Requests:', data.document_requests); // Debug log
-                    setFetchedDocRequests(data.document_requests || []);
+            const data = await api.get<any>(`/api/v1/dashboard/${bed.token}`);
+            if (data) {
+                if (data.vitals && Array.isArray(data.vitals)) {
+                    const formattedVitals = data.vitals.map((v: any) => ({
+                        time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        temperature: v.temperature,
+                        has_medication: v.has_medication,
+                        medication_type: v.medication_type,
+                        recorded_at: v.recorded_at
+                    })).reverse();
+                    setFetchedVitals(formattedVitals);
+                } else {
+                    setFetchedVitals([]);
                 }
+                setFetchedCheckIn(data.admission?.check_in_at || null);
+                setFetchedMeals(data.meals || []);
+                console.log('Fetched Document Requests:', data.document_requests); // Debug log
+                setFetchedDocRequests(data.document_requests || []);
             }
         } catch (err) {
             console.error(err);
         } finally {
             setIsRefreshing(false);
         }
-    };
+    }, [bed?.token]);
 
     useEffect(() => {
         if (isOpen && bed?.token) {
@@ -188,13 +149,11 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
             setFetchedDocRequests([]);
         }
         // Auto-refresh when a new notification arrives for this room OR when lastUpdated changes (new vital/iv)
-    }, [isOpen, bed?.token, roomNotifications.length, lastUpdated]);
+    }, [isOpen, bed?.token, roomNotifications.length, lastUpdated, fetchDashboardData]);
 
-    const mealLabelMap: Record<string, string> = { GENERAL: '일반식', SOFT: '죽', NPO: '금식' };
-    const currentMealLabelModal = fetchedMeals.length > 0 ? (mealLabelMap[fetchedMeals[0].request_type] ?? fetchedMeals[0].request_type) : null;
-    const docLabelMap: Record<string, string> = { RECEIPT: '진료비 계산서(영수증)', DETAIL: '진료비 세부내역서', CERT: '입퇴원확인서', DIAGNOSIS: '진단서', INITIAL: '초진기록지' };
+    const currentMealLabelModal = fetchedMeals.length > 0 ? (MEAL_MAP[fetchedMeals[0].request_type] ?? fetchedMeals[0].request_type) : null;
     const latestDocRequest = fetchedDocRequests.length > 0 ? fetchedDocRequests[0] : null;
-    const currentDocLabelsModal = latestDocRequest?.request_items?.map((id: string) => docLabelMap[id] || id) ?? [];
+    const currentDocLabelsModal = latestDocRequest?.request_items?.map((id: string) => DOC_MAP[id] || id) ?? [];
 
     // Chart data: Prioritize props > fetched > empty (no mock data)
     const { chartVitals, chartCheckIn } = useMemo(() => {

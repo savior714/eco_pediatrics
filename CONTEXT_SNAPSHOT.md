@@ -34,3 +34,26 @@
 - [x] **검사 일정 동기화 수정**: 삭제 시 실시간 반영 안되던 버그 수정 (웹소켓 브로드캐스트 타겟팅 보완)
 - [x] **백엔드 비동기(Async) 전환**: Supabase AsyncClient 및 FastAPI lifespan 도입으로 Windows `WinError 10035` 해결 및 성능 최적화
 - [x] **Seeder UUID 수정**: `access_token` 형식을 UUID4로 변경하여 DB 제약 조건 위반(`22P02`) 해결
+
+## Refactoring (2026-02-14)
+
+### 목표
+- **코드 품질 향상**: 거대해진 `main.py`와 `Station.tsx`를 분리하여 유지보수성 확보
+- **안정성 강화**: 타입 정의(`domain.ts`) 도입 및 에러 핸들링 표준화
+- **확장성 확보**: Router-Service 구조 도입으로 기능 확장 용이성 확보
+
+### 완료된 작업
+1. **Backend Architecture Split**:
+   - `main.py` -> `routers/`(admissions, station, iv_records, vitals, exams, dev) + `services/dashboard.py`
+   - `utils.py`, `dependencies.py`, `logger.py` 분리
+   - `loguru` 도입 및 전역 예외 처리(`@app.exception_handler`)
+
+2. **Frontend Data Flow**:
+   - `hooks/useStation.ts`: WebSocket 및 상태 관리 로직 분리
+   - `lib/api.ts`: API 호출 로직 통합
+   - `types/domain.ts`: 공통 타입 정의
+   - `PatientDetailModal.tsx`: `useEffect` 의존성 최적화 및 `next/image` 적용
+
+3. **Verification**:
+   - Frontend Lint/Typecheck 통과
+   - 불필요한 파일(`backend/api.py`) 정리

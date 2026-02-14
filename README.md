@@ -15,7 +15,19 @@
 ## 기술 스택
 - **Frontend**: Next.js (App Router), Tailwind CSS v4, Lucide React, Recharts
 - **Backend**: FastAPI, Python 3.x, WebSockets
+- **Backend**: FastAPI, Python 3.x, WebSockets
 - **Database**: Supabase (PostgreSQL)
+
+## 아키텍처 (Refactoring 2026-02-14)
+- **Backend**: Layered Architecture
+  - `routers/`: 도메인별 엔드포인트 분리 (Admissions, Station, IV, Vitals, Exams)
+  - `services/`: 비즈니스 로직 분리 (Dashboard Data Fetching)
+  - `utils.py`, `dependencies.py`: 공통 유틸리티 및 의존성 분리
+  - Global Exception Handling & Structured Logging (`loguru`)
+- **Frontend**:
+  - `hooks/useStation.ts`: 데이터 페칭 및 WebSocket 로직 분리
+  - `lib/api.ts`: 중앙화된 API 클라이언트 (Axios 대체)
+  - `types/domain.ts`: 도메인 타입 정의 통합
 
 ## 시작하기
 1. `backend/.env` 생성 후 Supabase URL·KEY 설정 (참고: `backend/.env.example`)

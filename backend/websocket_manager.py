@@ -1,6 +1,8 @@
 from fastapi import WebSocket
 from typing import List, Dict
 
+from loguru import logger
+
 class ConnectionManager:
     def __init__(self):
         # active_connections: Maps access_token to a list of WebSockets
@@ -11,22 +13,22 @@ class ConnectionManager:
         if token not in self.active_connections:
             self.active_connections[token] = []
         self.active_connections[token].append(websocket)
-        print(f"[WS] Client connected. Token: {token}. Active clients for token: {len(self.active_connections[token])}")
+        logger.info(f"Client connected. Token: {token}. Active clients for token: {len(self.active_connections[token])}")
 
     def disconnect(self, websocket: WebSocket, token: str):
         if token in self.active_connections:
             if websocket in self.active_connections[token]:
                 self.active_connections[token].remove(websocket)
-                print(f"[WS] Client disconnected. Token: {token}")
+                logger.info(f"Client disconnected. Token: {token}")
             if not self.active_connections[token]:
                 del self.active_connections[token]
 
     async def broadcast(self, message: str, token: str):
         if token in self.active_connections:
-            print(f"[WS] Broadcasting to {token}: {message}")
+            logger.debug(f"Broadcasting to {token}: {message}")
             for connection in self.active_connections[token]:
                 await connection.send_text(message)
         else:
-            print(f"[WS] No active connections for token: {token}. Skipping broadcast.")
+            logger.debug(f"No active connections for token: {token}. Skipping broadcast.")
 
 manager = ConnectionManager()

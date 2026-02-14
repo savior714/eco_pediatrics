@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Card } from './Card';
 import { Upload, X, Check, Camera, Droplet } from 'lucide-react';
+import Image from 'next/image';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -111,10 +112,11 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
                     {/* If photo uploaded, show small preview or X to clear */}
                     {photoUrl ? (
                         <div className="w-full h-full relative bg-slate-100 rounded-lg overflow-hidden border border-slate-200 group">
-                            <img
+                            <Image
                                 src={photoUrl.startsWith('/') ? `${API_BASE}${photoUrl}` : photoUrl}
                                 alt="Up"
-                                className="w-full h-full object-cover"
+                                fill
+                                className="object-cover"
                             />
                             <button
                                 onClick={() => setPhotoUrl('')}

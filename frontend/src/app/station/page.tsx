@@ -8,148 +8,31 @@ import { PatientDetailModal } from '@/components/PatientDetailModal';
 import Image from 'next/image';
 import { QrCodeModal } from '@/components/QrCodeModal';
 
-export default function Station() {
-    // Use static initial state to prevent hydration mismatch
-    const [beds, setBeds] = useState<any[]>([]);
-    const [notifications, setNotifications] = useState<any[]>([]);
-    const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
-    const [qrBed, setQrBed] = useState<any>(null); // State for QR Modal
-    const [lastUploadedIv, setLastUploadedIv] = useState<{ admissionId: string; url: string } | null>(null);
-    const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
+import { Bed, Notification, LastUploadedIv } from '@/types/domain';
+import { MEAL_MAP, DOC_MAP, ROOM_NUMBERS } from '@/constants/mappings';
+import { api } from '@/lib/api';
 
-    // Derive selectedBed from beds and selectedRoom
+import { useStation } from '@/hooks/useStation';
+
+export default function Station() {
+    const {
+        beds,
+        setBeds,
+        notifications,
+        setNotifications,
+        lastUploadedIv,
+        lastUpdated,
+        removeNotification
+    } = useStation();
+
+    const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+    const [qrBed, setQrBed] = useState<Bed | null>(null); // State for QR Modal
+
+    // Derived selectedBed from beds and selectedRoom
     const selectedBed = React.useMemo(() => {
         if (!selectedRoom) return null;
         return beds.find(b => String(b.room) === selectedRoom) || null;
     }, [beds, selectedRoom]);
-
-    React.useEffect(() => {
-        const roomNumbers = [
-            '301', '302', '303', '304', '305', '306', '307', '308', '309',
-            '310-1', '310-2',
-            '311-1', '311-2', '311-3', '311-4',
-            '312', '313', '314',
-            '315-1', '315-2', '315-3', '315-4',
-            '401-1', '401-2', '401-3', '401-4',
-            '402-1', '402-2', '402-3', '402-4'
-        ];
-
-        // 초기 30 병상
-        setBeds(roomNumbers.map((room, i) => ({
-            id: '',
-            room: room,
-            name: `환자${i + 1}`,
-            temp: 36.5,
-            drops: 20,
-            status: 'normal',
-            token: '' // access_token placeholder
-        })));
-
-        // 실제 입원 목록 연동
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        fetch(`${API_URL}/api/v1/admissions`)
-            .then(res => res.ok ? res.json() : [])
-            .then((admissions: {
-                id: string;
-                room_number: string;
-                patient_name_masked: string;
-                access_token: string;
-                latest_iv: { infusion_rate: number; photo_url: string } | null;
-            }[]) => {
-                console.log('[DEBUG] Fetched admissions:', admissions); // Added log
-                if (!Array.isArray(admissions)) {
-                    console.error('[DEBUG] Admissions is not an array:', admissions);
-                    return;
-                }
-                setBeds(prev => prev.map(bed => {
-                    const adm = admissions.find((a: any) => String(a.room_number).trim() === String(bed.room).trim());
-                    if (adm) {
-                        const infusionRate = adm.latest_iv ? adm.latest_iv.infusion_rate : 20;
-                        return {
-                            ...bed,
-                            id: adm.id,
-                            name: adm.patient_name_masked,
-                            token: adm.access_token,
-                            drops: infusionRate
-                        };
-                    }
-                    return bed;
-                }));
-            })
-            .catch((err) => console.error('[DEBUG] Fetch admissions failed:', err)); // Added error log
-
-        // ... WebSocket ...
-        const WS_URL = API_URL.replace(/^http/, 'ws');
-        const ws = new WebSocket(`${WS_URL}/ws/STATION`);
-
-        ws.onopen = () => {
-            console.log('Connected to Station WS');
-        };
-
-        ws.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            const id = Math.random().toString(36).substr(2, 9);
-
-            // Trigger update for any relevant message
-            setLastUpdated(Date.now());
-
-            if (message.type === 'NEW_MEAL_REQUEST') {
-                const mealMap: any = { GENERAL: '일반식', SOFT: '죽', NPO: '금식' };
-                setNotifications(prev => [{
-                    id,
-                    room: message.data.room,
-                    time: '방금',
-                    content: `식단 신청 (${mealMap[message.data.request_type] || message.data.request_type})`,
-                    type: 'meal'
-                }, ...prev]);
-            } else if (message.type === 'NEW_DOC_REQUEST') {
-                const docMap: any = { RECEIPT: '영수증', DETAIL: '세부내역서', CERT: '진단서', DIAGNOSIS: '소견서', INITIAL: '기록지' };
-                const items = message.data.request_items.map((it: string) => docMap[it] || it).join(', ');
-                setNotifications(prev => [{
-                    id,
-                    room: message.data.room,
-                    time: '방금',
-                    content: `서류 신청 (${items})`,
-                    type: 'doc'
-                }, ...prev]);
-            } else if (message.type === 'IV_PHOTO_UPLOADED') {
-                // If the modal is open for this bed, we want to auto-fill the photo
-                // We'll use a specific state or event for this
-                // Since we can't easily pass this to the modal deeply without context or prop drilling,
-                // We will set a temporary state that PatientDetailModal can react to.
-                setLastUploadedIv({
-                    admissionId: message.data.admission_id,
-                    url: message.data.photo_url
-                });
-            } else if (message.type === 'NEW_IV') {
-                const newDrops = message.data.infusion_rate;
-                const room = message.data.room;
-
-                console.log(`[DEBUG] Received NEW_IV for room ${room}: ${newDrops}`);
-
-                setBeds(prev => prev.map(bed => {
-                    if (String(bed.room) === String(room)) {
-                        console.log(`[DEBUG] Updating grid bed ${room} drops to ${newDrops}`);
-                        return { ...bed, drops: newDrops };
-                    }
-                    return bed;
-                }));
-
-                // Update selectedBed logic no longer needed separately as it's derived
-            } else if (message.type === 'NEW_VITAL') {
-                // Vitals update - handled by setLastUpdated triggering modal refresh
-                console.log(`[DEBUG] Received NEW_VITAL`);
-            }
-        };
-
-        return () => ws.close();
-    }, []);
-
-    // ... (rest of removeNotification, handleNotificationClick) ...
-
-    const removeNotification = (id: string) => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
-    };
 
     const handleNotificationClick = (notif: any) => {
         const bed = beds.find(b => b.room === notif.room);
@@ -267,22 +150,25 @@ export default function Station() {
             </aside>
 
             {/* Detail Modal */}
-            <PatientDetailModal
-                isOpen={!!selectedRoom}
-                onClose={() => setSelectedRoom(null)}
-                bed={selectedBed}
-                notifications={notifications}
-                onCompleteRequest={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
-                lastUploadedIv={lastUploadedIv}
-                onIVUploadSuccess={(rate) => {
-                    console.log('IV Upload Success!', rate);
-                    // Optimistic update
-                    if (rate !== undefined && selectedRoom) {
-                        setBeds(prev => prev.map(b => String(b.room) === selectedRoom ? { ...b, drops: rate } : b));
-                    }
-                }}
-                lastUpdated={lastUpdated}
-            />
+            {/* Detail Modal */}
+            {selectedBed && (
+                <PatientDetailModal
+                    isOpen={!!selectedRoom}
+                    onClose={() => setSelectedRoom(null)}
+                    bed={selectedBed}
+                    notifications={notifications}
+                    onCompleteRequest={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
+                    lastUploadedIv={lastUploadedIv}
+                    onIVUploadSuccess={(rate) => {
+                        console.log('IV Upload Success!', rate);
+                        // Optimistic update
+                        if (rate !== undefined && selectedRoom) {
+                            setBeds(prev => prev.map(b => String(b.room) === selectedRoom ? { ...b, drops: rate } : b));
+                        }
+                    }}
+                    lastUpdated={lastUpdated}
+                />
+            )}
 
             {/* QR Code Modal using dynamic import to avoid SSR issues if component uses browser APIs immediately */}
             {qrBed && (
