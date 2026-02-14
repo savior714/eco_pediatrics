@@ -16,13 +16,12 @@ interface MealRequestModalProps {
     onSuccess?: () => void;
 }
 
-const PEDIATRIC_OPTIONS = ['일반식', '죽1', '죽2', '죽3', '선택 안함'];
+const PEDIATRIC_OPTIONS = ['일반식', '죽1', '죽2', '죽3'];
 const GUARDIAN_OPTIONS = ['일반식', '선택 안함'];
 
 export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: MealRequestModalProps) {
     const slots = getNextThreeMealSlots();
-    const [selectedSlotIdx, setSelectedSlotIdx] = useState(0);
-    const [pediatric, setPediatric] = useState('선택 안함');
+    const [pediatric, setPediatric] = useState('일반식');
     const [guardian, setGuardian] = useState('선택 안함');
 
     const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +31,7 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
         if (isOpen) {
             setResult(null);
             setSelectedSlotIdx(0);
-            setPediatric('선택 안함');
+            setPediatric('일반식');
             setGuardian('선택 안함');
         }
     }, [isOpen]);

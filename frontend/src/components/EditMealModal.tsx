@@ -12,7 +12,7 @@ interface EditMealModalProps {
     onSave: (pediatric: string, guardian: string) => Promise<void>;
 }
 
-const PEDIATRIC_OPTIONS = ['일반식', '죽1', '죽2', '죽3', '선택 안함'];
+const PEDIATRIC_OPTIONS = ['일반식', '죽1', '죽2', '죽3'];
 const GUARDIAN_OPTIONS = ['일반식', '선택 안함'];
 
 export function EditMealModal({
