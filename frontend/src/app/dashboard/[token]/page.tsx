@@ -178,7 +178,7 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                                     ))
                                 )}
                             </div>
-                            <p className="text-xs text-slate-400 mt-3">* 일정은 변동될 수 있으며, 담당 코너에서 안내해 드립니다.</p>
+                            <p className="text-xs text-slate-400 mt-3">* 일정은 약간의 변동이 있을 수 있으며, 궁금점은 스테이션에 문의 바랍니다.</p>
                         </section>
 
 
