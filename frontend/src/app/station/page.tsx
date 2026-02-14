@@ -38,11 +38,20 @@ export default function Station() {
                 patient_name: name,
                 room_number: admitRoom
             });
+            // 1. Success Feedback
             alert('입원 수속이 완료되었습니다.');
-            window.location.reload();
+            setAdmitRoom(null);
+
+            // 2. Refresh Logic separation
+            try {
+                window.location.reload();
+            } catch (reloadErr) {
+                console.error("Reload/Fetch failed", reloadErr);
+                alert('목록 조회 중 오류가 발생했습니다. (입원은 정상 처리됨)');
+            }
         } catch (e) {
             console.error(e);
-            alert('입원 처리 실패');
+            alert('입원 처리 실패: 서버 응답을 확인해주세요.');
         }
     };
 

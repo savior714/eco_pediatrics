@@ -125,7 +125,7 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
             db.table("meal_requests")
             .select("admission_id, request_type, pediatric_meal_type, guardian_meal_type, room_note, created_at")
             .in_("admission_id", admission_ids)
-            .order("created_at", desc=True)
+            .order("id", desc=True)
         )
         all_meals = meal_res.data or []
         for m in all_meals:
