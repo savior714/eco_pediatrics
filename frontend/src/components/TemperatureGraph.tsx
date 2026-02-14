@@ -12,7 +12,8 @@ import {
     ReferenceDot,
     ReferenceArea,
     ReferenceLine,
-    Label
+    Label,
+    TooltipProps
 } from 'recharts';
 import { Card } from './Card';
 import { clsx, type ClassValue } from 'clsx';
@@ -114,7 +115,8 @@ export function TemperatureGraph({ data, checkInAt, className }: TemperatureGrap
         // (dataMax - 38) gives the distance from top to the threshold
         // (dataMax - dataMin) gives the total height of the line path
         return (dataMax - 38) / (dataMax - dataMin);
-    }, [chartData, yDomain]); // Keep yDomain as dependency if needed, but mainly chartData
+        // yDomain is not used in calculation
+    }, [chartData]); // yDomain is not used in calculation
 
     return (
         <Card className={cn("w-full relative overflow-hidden border-slate-200/80", className)}>
@@ -179,9 +181,9 @@ export function TemperatureGraph({ data, checkInAt, className }: TemperatureGrap
                             {/* Fever Threshold Line */}
                             <ReferenceLine y={38} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'right', value: '38°', fill: '#ef4444', fontSize: 10 }} />
                             <Tooltip
-                                content={({ active, payload, label }: any) => {
+                                content={({ active, payload, label }: TooltipProps<number, string>) => {
                                     if (!active || !payload?.length || !payload[0]?.payload) return null;
-                                    const p = payload[0].payload;
+                                    const p = payload[0].payload as any; // Cast payload to any or specific type if accessible
                                     return (
                                         <div className="rounded-xl border-none shadow-lg bg-white/95 px-3 py-2">
                                             <p className="text-xs text-slate-500 mb-0.5">

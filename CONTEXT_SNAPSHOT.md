@@ -57,3 +57,8 @@
 3. **Verification**:
    - Frontend Lint/Typecheck 통과
    - 불필요한 파일(`backend/api.py`) 정리
+
+4. **Cleanup & Polish**:
+   - **Backend**: `lifespan` 중복 초기화 방지 및 `iv_records.py` Import 정리
+   - **Frontend**: `any` 타입 제로화(`VitalDataResponse` 도입) 및 Lint Warning(의존성 배열) 해결
+   - **Build**: `compileall` 및 `npm run lint` 통과 확인 (Quality Gate 준수)

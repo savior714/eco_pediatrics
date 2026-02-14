@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { api } from '@/lib/api';
-import { VitalData, Bed, WsMessage, IVRecord, MealRequest, DocumentRequest, ExamScheduleItem } from '@/types/domain';
+import { VitalData, Bed, WsMessage, IVRecord, MealRequest, DocumentRequest, ExamScheduleItem, VitalDataResponse } from '@/types/domain';
 
 interface UseVitalsReturn {
     vitals: VitalData[];
@@ -16,6 +16,15 @@ interface UseVitalsReturn {
     isRefreshing: boolean;
     refetchDashboard: () => Promise<void>;
     fetchDashboardData: () => Promise<void>; // Alias
+}
+
+interface DashboardResponse {
+    admission: { id: string; patient_name: string; room_number: string; check_in_at: string };
+    vitals: VitalDataResponse[];
+    meals: MealRequest[];
+    document_requests: DocumentRequest[];
+    iv_records: IVRecord[];
+    exam_schedules: ExamScheduleItem[];
 }
 
 export function useVitals(token: string | null | undefined, enabled: boolean = true): UseVitalsReturn {
@@ -37,7 +46,7 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
         if (!token) return;
         setIsRefreshing(true);
         try {
-            const data = await api.get<any>(`/api/v1/dashboard/${token}`);
+            const data = await api.get<DashboardResponse>(`/api/v1/dashboard/${token}`);
             if (data) {
                 // Admission Info
                 if (data.admission) {
@@ -49,18 +58,13 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
 
                 // Vitals
                 if (data.vitals && Array.isArray(data.vitals)) {
-                    const formattedVitals = data.vitals.map((v: any) => ({
+                    const formattedVitals = data.vitals.map((v: VitalDataResponse) => ({
                         time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                         temperature: v.temperature,
                         has_medication: v.has_medication,
                         medication_type: v.medication_type,
                         recorded_at: v.recorded_at
-                    })).reverse(); // Oldest to newest for graph? Or newest first? Dashboard usually expects newest first or graph handles it.
-                    // PatientDetailModal reversed it. Text said "reverse()".
-                    // Let's stick to reverse() to match PatientDetailModal logic.
-                    // But Dashboard might expect chronological for graph?
-                    // TemperatureGraph usually takes chronological data.
-                    // Reversing "desc" order from backend (newest first) -> oldest first.
+                    })).reverse();
                     setVitals(formattedVitals);
                 } else {
                     setVitals([]);

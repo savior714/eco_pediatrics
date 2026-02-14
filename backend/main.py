@@ -17,8 +17,9 @@ from routers import admissions, station, iv_records, vitals, exams, dev
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize Supabase and store in app.state
-    app.state.supabase = await init_supabase()
-    logger.info("Supabase AsyncClient initialized and stored in app.state")
+    if not hasattr(app.state, "supabase") or not app.state.supabase:
+        app.state.supabase = await init_supabase()
+        logger.info("Supabase AsyncClient initialized and stored in app.state")
     yield
     # Cleanup: Close connections to prevent resource leaks
     if app.state.supabase:
@@ -77,14 +78,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- WebSocket Endpoint ---
-# Must be here or in a router. Let's keep it here or move to station if generic?
-# The socket connects with {token}, which maps to station logic. 
-# Re-using the logic from station router might be better, but the decorator needs 'app'.
-# Actually, we can use router.websocket in station.py and include it.
-# Let's check station.py again. I didn't add websocket endpoint there.
-# I should add websocket endpoint to a router, but APIRouter support websockets.
-
 from fastapi import WebSocket, WebSocketDisconnect
 
 @app.websocket("/ws/{token}")
@@ -107,9 +100,6 @@ app.include_router(vitals.router, prefix="/api/v1/vitals", tags=["Vitals"])
 app.include_router(exams.router, prefix="/api/v1", tags=["Exams"]) 
 app.include_router(dev.router, prefix="/api/v1", tags=["Dev"])
 
-# Additional include for upload which was in 'iv_records' router but path was /api/v1/upload/image
-# In iv_records.py I defined @router.post("/upload/image"). 
-# So if I include iv_records.router with prefix /api/v1, it becomes /api/v1/upload/image.
 
 @app.get("/")
 def read_root():

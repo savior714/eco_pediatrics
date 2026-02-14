@@ -24,6 +24,13 @@ export interface VitalData {
     recorded_at: string;
 }
 
+export interface VitalDataResponse {
+    recorded_at: string;
+    temperature: number;
+    has_medication: boolean;
+    medication_type?: string;
+}
+
 export interface ExamScheduleItem {
     id: number;
     admission_id: string;
@@ -49,10 +56,12 @@ export interface AdmissionSummary {
 
 export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL';
 
-export interface WsMessage {
-    type: WsMessageType;
-    data: any; // We can be more specific if needed, but 'any' with type guard is okay for now or specific interfaces
-}
+export type WsMessage =
+    | { type: 'NEW_MEAL_REQUEST'; data: { room: string; request_type: string } }
+    | { type: 'NEW_DOC_REQUEST'; data: { room: string; request_items: string[] } }
+    | { type: 'IV_PHOTO_UPLOADED'; data: { admission_id: string; room_number: string; photo_url: string } }
+    | { type: 'NEW_IV'; data: { infusion_rate: number; room: string } }
+    | { type: 'NEW_VITAL'; data: VitalDataResponse };
 
 export interface IVRecord {
     id: number;
