@@ -123,7 +123,7 @@ export function TemperatureGraph({ data, checkInAt, className }: TemperatureGrap
         <Card className={cn("w-full relative overflow-hidden border-slate-200/80", className)}>
             <div className="flex justify-between items-center gap-3 pb-3 bg-white z-10 relative">
                 <div className="flex items-center gap-2.5">
-                    <span className="w-9 h-9 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center shrink-0 border border-teal-100/50">
+                    <span className="w-9 h-9 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center shrink-0 border border-orange-100/50">
                         <Thermometer size={18} />
                     </span>
                     <h3 className="text-base font-bold text-slate-800">체온 차트</h3>
