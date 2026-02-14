@@ -9,11 +9,11 @@ import { Utensils, FileText, CalendarCheck, Bell, Smartphone, Monitor } from 'lu
 import { useVitals } from '@/hooks/useVitals';
 import { MealRequestModal } from '@/components/MealRequestModal';
 import { DocumentRequestModal } from '@/components/DocumentRequestModal';
-import { calculateHospitalDay } from '@/utils/dateUtils';
+import { calculateHospitalDay, getNextThreeMealSlots } from '@/utils/dateUtils';
 
 export default function Dashboard({ params }: { params: { token: string } }) {
     const { token } = params;
-    const { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, examSchedules, ivRecords, refetchDashboard } = useVitals(token);
+    const { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, examSchedules, ivRecords, documentRequests, refetchDashboard } = useVitals(token);
     const [isMealModalOpen, setIsMealModalOpen] = useState(false);
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
@@ -38,6 +38,9 @@ export default function Dashboard({ params }: { params: { token: string } }) {
     const mealLabel: Record<string, string> = { GENERAL: '일반식', SOFT: '죽', NPO: '금식' };
     const currentMeal = meals.length > 0 ? meals[0] : null;
     const currentMealLabel = currentMeal ? (mealLabel[currentMeal.request_type] ?? currentMeal.request_type) : null;
+    const docLabel: Record<string, string> = { RECEIPT: '진료비 계산서(영수증)', DETAIL: '진료비 세부내역서', CERT: '입퇴원확인서', DIAGNOSIS: '진단서', INITIAL: '초진기록지' };
+    const latestDocRequest = documentRequests.length > 0 ? documentRequests[0] : null;
+    const currentDocLabels = latestDocRequest?.request_items?.map((id: string) => docLabel[id] || id) ?? [];
     const isDesktop = viewMode === 'desktop';
 
     return (
@@ -112,11 +115,10 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                             </div>
 
                             <div className="grid grid-cols-3 gap-2">
-                                {['아침', '점심', '저녁'].map((label) => (
+                                {getNextThreeMealSlots().map(({ label }) => (
                                     <div key={label} className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
                                         <span className="text-[10px] text-slate-400 block mb-1 font-bold">{label}</span>
                                         <span className="text-xs font-bold text-slate-600 truncate block">
-                                            {/* Since the current data doesn't distinguish by time, we show the latest request for the corresponding slots if it exists, or show common status */}
                                             {currentMealLabel ?? '신청전'}
                                         </span>
                                     </div>
@@ -161,17 +163,34 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                         </section>
 
                         {/* 서류 신청 */}
-                        <section>
-                            <button
-                                onClick={() => setIsDocModalOpen(true)}
-                                className="min-h-[56px] w-full bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 flex flex-row items-center justify-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition-colors active:scale-[0.99] touch-manipulation group"
-                            >
-                                <div className="w-10 h-10 bg-sky-100 text-sky-600 rounded-xl flex items-center justify-center shrink-0 group-active:bg-sky-600 group-active:text-white transition-colors">
-                                    <FileText size={20} />
-                                </div>
-                                <span className="font-semibold text-slate-700">퇴원 전 서류 신청</span>
-                            </button>
-                            <p className="text-center text-xs text-slate-400 mt-2">미리 신청하시면 퇴원 수속이 빨라집니다.</p>
+                        <section className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2.5">
+                                    <span className="w-9 h-9 bg-sky-100 text-sky-600 rounded-xl flex items-center justify-center shrink-0">
+                                        <FileText size={18} />
+                                    </span>
+                                    퇴원 전 서류 신청
+                                </h3>
+                                <button
+                                    onClick={() => setIsDocModalOpen(true)}
+                                    className="h-9 px-4 bg-sky-500 hover:bg-sky-600 text-white font-semibold rounded-xl text-sm transition-colors active:scale-[0.98] touch-manipulation"
+                                >
+                                    추가 신청
+                                </button>
+                            </div>
+                            {currentDocLabels.length > 0 ? (
+                                <ul className="space-y-1.5 mb-3">
+                                    {currentDocLabels.map((label: string) => (
+                                        <li key={label} className="flex items-center gap-2 text-sm text-slate-700">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
+                                            {label}
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-sm text-slate-400 mb-3">신청된 서류가 없습니다.</p>
+                            )}
+                            <p className="text-xs text-slate-400">미리 신청하시면 퇴원 수속이 빨라집니다.</p>
                         </section>
 
                         {/* 병원 공지사항 */}
@@ -201,6 +220,7 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                     isOpen={isDocModalOpen}
                     onClose={() => setIsDocModalOpen(false)}
                     admissionId={admissionId}
+                    onSuccess={() => { refetchDashboard(); }}
                 />
 
                 {/* Footer View Mode Toggle */}

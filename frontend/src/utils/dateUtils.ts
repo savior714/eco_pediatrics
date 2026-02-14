@@ -20,3 +20,11 @@ export function calculateHospitalDay(checkInAt: string | null | undefined, targe
 
     return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
 }
+
+/** 현재 시각 기준 "앞으로의 3끼" 라벨. 6~13시 / 14~18시 / 19~5시 구간. */
+export function getNextThreeMealSlots(now: Date = new Date()): { label: string }[] {
+    const h = now.getHours();
+    if (h >= 6 && h < 14) return [{ label: '오늘 점심' }, { label: '오늘 저녁' }, { label: '내일 아침' }];  // 6~13시
+    if (h >= 14 && h < 19) return [{ label: '오늘 저녁' }, { label: '내일 아침' }, { label: '내일 점심' }]; // 14~18시
+    return [{ label: '내일 아침' }, { label: '내일 점심' }, { label: '내일 저녁' }];                         // 19~5시
+}

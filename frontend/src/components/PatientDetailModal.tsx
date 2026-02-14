@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { X, Check, Clock, AlertCircle, CalendarCheck, Plus, Thermometer, Droplets, Calendar, Bell, Edit2 } from 'lucide-react';
+import { X, Check, Clock, AlertCircle, CalendarCheck, Plus, Thermometer, Droplets, Calendar, Bell, Edit2, Trash2, FileText } from 'lucide-react';
 import { Card } from './Card';
 import { IVUploadForm } from './IVUploadForm';
 import { TemperatureGraph } from './TemperatureGraph';
+import { getNextThreeMealSlots } from '@/utils/dateUtils';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -67,6 +68,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
     const [examForm, setExamForm] = useState<{ date: string; timeOfDay: 'am' | 'pm'; name: string }>({ date: '', timeOfDay: 'am', name: '' });
     const [examSubmitting, setExamSubmitting] = useState(false);
     const [examAddError, setExamAddError] = useState<string | null>(null);
+    const [deletingExamId, setDeletingExamId] = useState<number | null>(null);
 
     // Derived state (safe access)
     const roomNotifications = useMemo(() => {
@@ -124,8 +126,21 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         }
     };
 
+    const handleDeleteExam = async (scheduleId: number) => {
+        if (!window.confirm('이 검사 일정을 삭제할까요?')) return;
+        setDeletingExamId(scheduleId);
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/exam-schedules/${scheduleId}`, { method: 'DELETE' });
+            if (res.ok) refetchExams();
+        } finally {
+            setDeletingExamId(null);
+        }
+    };
+
     const [fetchedVitals, setFetchedVitals] = useState<VitalData[]>([]);
     const [fetchedCheckIn, setFetchedCheckIn] = useState<string | null>(null);
+    const [fetchedMeals, setFetchedMeals] = useState<{ request_type: string }[]>([]);
+    const [fetchedDocRequests, setFetchedDocRequests] = useState<{ request_items: string[] }[]>([]);
 
     useEffect(() => {
         if (isOpen && bed?.token) {
@@ -135,14 +150,24 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                     if (data) {
                         setFetchedVitals(data.vitals || []);
                         setFetchedCheckIn(data.admission?.check_in_at || null);
+                        setFetchedMeals(data.meals || []);
+                        setFetchedDocRequests(data.document_requests || []);
                     }
                 })
                 .catch(err => console.error(err));
         } else {
             setFetchedVitals([]);
             setFetchedCheckIn(null);
+            setFetchedMeals([]);
+            setFetchedDocRequests([]);
         }
     }, [isOpen, bed?.token]);
+
+    const mealLabelMap: Record<string, string> = { GENERAL: '일반식', SOFT: '죽', NPO: '금식' };
+    const currentMealLabelModal = fetchedMeals.length > 0 ? (mealLabelMap[fetchedMeals[0].request_type] ?? fetchedMeals[0].request_type) : null;
+    const docLabelMap: Record<string, string> = { RECEIPT: '진료비 계산서(영수증)', DETAIL: '진료비 세부내역서', CERT: '입퇴원확인서', DIAGNOSIS: '진단서', INITIAL: '초진기록지' };
+    const latestDocRequest = fetchedDocRequests.length > 0 ? fetchedDocRequests[0] : null;
+    const currentDocLabelsModal = latestDocRequest?.request_items?.map((id: string) => docLabelMap[id] || id) ?? [];
 
     // Chart data: Prioritize props > fetched > empty (no mock data)
     const { chartVitals, chartCheckIn } = useMemo(() => {
@@ -212,8 +237,8 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                             {/* Divider line (optional, or just gap) */}
                             <div className="w-px bg-slate-200 mx-1 shrink-0 my-2" />
 
-                            {/* 2. Meals */}
-                            {['아침', '점심', '저녁'].map((label) => (
+                            {/* 2. Meals - 다음 3끼 (오늘 점심, 오늘 저녁, 내일 아침 등) */}
+                            {getNextThreeMealSlots().map(({ label }) => (
                                 <div key={label} className="bg-white px-3 rounded-xl border border-slate-100 shadow-sm flex-1 min-w-[80px] text-center font-bold flex flex-col justify-center relative group/meal">
                                     <button
                                         className="absolute top-1 right-1 p-1 text-slate-300 hover:text-slate-500 rounded-full hover:bg-slate-50 transition-colors opacity-100"
@@ -223,7 +248,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                     </button>
                                     <span className="text-[9px] text-slate-400 block mb-0 uppercase">{label}</span>
                                     <span className="text-xs text-slate-600 line-clamp-1">
-                                        {notifications.find(n => n.room === bed.room && n.type === 'meal' && n.content.includes(label)) ? '진행중' : '신청전'}
+                                        {currentMealLabelModal ?? '신청전'}
                                     </span>
                                 </div>
                             ))}
@@ -286,11 +311,22 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                 </div>
                                 <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
                                     {examSchedules.map(ex => (
-                                        <div key={ex.id} className="p-3 bg-white rounded-xl border border-slate-100 shadow-sm text-xs">
-                                            <div className="flex justify-between mb-1">
-                                                <span className="font-bold text-slate-700">{ex.name}</span>
-                                                <span className="text-slate-400">{formatExamTime(ex.scheduled_at)}</span>
+                                        <div key={ex.id} className="p-3 bg-white rounded-xl border border-slate-100 shadow-sm text-xs flex justify-between items-center gap-2">
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex justify-between mb-0.5">
+                                                    <span className="font-bold text-slate-700">{ex.name}</span>
+                                                    <span className="text-slate-400 shrink-0">{formatExamTime(ex.scheduled_at)}</span>
+                                                </div>
                                             </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteExam(ex.id)}
+                                                disabled={deletingExamId === ex.id}
+                                                className="shrink-0 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                                                title="삭제"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
                                         </div>
                                     ))}
                                     {examSchedules.length === 0 && <p className="text-xs text-slate-400 text-center py-4">등록된 일정이 없습니다.</p>}
@@ -313,6 +349,25 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                             <button onClick={handleAddExam} disabled={examSubmitting} className="flex-1 py-2 text-xs bg-violet-500 text-white rounded font-bold">추가</button>
                                         </div>
                                     </div>
+                                )}
+                            </section>
+
+                            <section className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 flex-1">
+                                <h3 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                    <FileText size={16} className="text-sky-500" />
+                                    신청된 서류
+                                </h3>
+                                {currentDocLabelsModal.length > 0 ? (
+                                    <ul className="space-y-1 text-xs text-slate-600">
+                                        {currentDocLabelsModal.map((label: string) => (
+                                            <li key={label} className="flex items-center gap-2">
+                                                <span className="w-1 h-1 rounded-full bg-sky-400 shrink-0" />
+                                                {label}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-xs text-slate-400">신청된 서류 없음</p>
                                 )}
                             </section>
 

@@ -14,6 +14,7 @@ interface DocumentRequestModalProps {
     isOpen: boolean;
     onClose: () => void;
     admissionId: string | null;
+    onSuccess?: () => void;
 }
 
 const DOCUMENT_OPTIONS = [
@@ -24,7 +25,7 @@ const DOCUMENT_OPTIONS = [
     { id: 'INITIAL', label: '초진기록지' }
 ];
 
-export function DocumentRequestModal({ isOpen, onClose, admissionId }: DocumentRequestModalProps) {
+export function DocumentRequestModal({ isOpen, onClose, admissionId, onSuccess }: DocumentRequestModalProps) {
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<'SUCCESS' | 'ERROR' | null>(null);
@@ -76,7 +77,7 @@ export function DocumentRequestModal({ isOpen, onClose, admissionId }: DocumentR
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="필요 서류 신청">
             {result === 'SUCCESS' ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in zoom-in duration-300">
+                <div className="flex flex-col items-center justify-center py-6 text-center animate-in fade-in zoom-in duration-300">
                     <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-4">
                         <CheckCircle size={32} />
                     </div>
@@ -85,6 +86,9 @@ export function DocumentRequestModal({ isOpen, onClose, admissionId }: DocumentR
                         신청하신 서류는 간호스테이션에서<br />
                         준비 후 전달해 드립니다.
                     </p>
+                    <button type="button" onClick={() => { onSuccess?.(); onClose(); }} className="mt-6 w-full min-h-[48px] py-3 rounded-xl font-bold text-white bg-teal-500 hover:bg-teal-600 touch-manipulation">
+                        확인
+                    </button>
                 </div>
             ) : (
                 <div className="space-y-4">

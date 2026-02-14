@@ -1,8 +1,18 @@
+# Dependencies & build
 node_modules/
+.next/
+*.pyc
+__pycache__/
+
+# Environment (작업 환경마다 다름 - 커밋 제외)
+.env
 .env*
 !.env.example
-.next/
-.env
-__pycache__/
 .venv/
+backend/env
+frontend/env.local
+
+# Cache (환경 바꿀 때 캐시 삭제 후 재빌드 권장)
+node_modules/.cache/
+
 .DS_Store

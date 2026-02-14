@@ -19,9 +19,14 @@
 
 ## 시작하기
 1. `backend/.env` 생성 후 Supabase URL·KEY 설정 (참고: `backend/.env.example`)
-2. `easy_start.bat` 실행 (venv·의존성 설치 후 백엔드·프론트 동시 실행)
-3. 시드 단계에서 출력되는 대시보드 URL로 보호자 페이지 접속 (QR 스캔 가정)
-4. **검사 일정 연동 테스트**: 개발 시 `POST http://localhost:8000/api/v1/seed/station-admissions` 한 번 호출 후 스테이션 새로고침 → 환자 모달에서 검사 일정 추가 가능. 자세한 내용은 [TROUBLESHOOTING.md §7](./TROUBLESHOOTING.md) 참고.
+2. **백엔드**: `start_backend.bat` 실행 → http://localhost:8000
+3. **프론트**: `start_frontend.bat` 실행 → http://localhost:3000 (별도 창에서)
+4. **테스트 데이터(필요할 때만)**  
+   - 보호자 대시보드용 더미 1건: `seed_data.bat`  
+   - 스테이션 30병상 연동용: 백엔드 실행 후 `POST http://localhost:8000/api/v1/seed/station-admissions` 호출 후 스테이션 새로고침  
+   자세한 내용은 [TROUBLESHOOTING.md §7](./TROUBLESHOOTING.md) 참고.
+
+한 번에 실행하려면 `easy_start.bat`(시드 포함)을 쓸 수 있으나, 충돌 시 위처럼 백엔드/프론트를 각각 띄우고 필요할 때만 시드하세요.
 
 ## 문서
 - [Context Snapshot](./CONTEXT_SNAPSHOT.md): 프로젝트 현재 상태 및 주요 설계 결정

@@ -19,6 +19,7 @@ export function useVitals(token: string) {
     const [examSchedules, setExamSchedules] = useState<{ id: number; scheduled_at: string; name: string; note?: string }[]>([]);
 
     const [ivRecords, setIvRecords] = useState<{ id: number; infusion_rate: number; photo_url: string; created_at: string }[]>([]);
+    const [documentRequests, setDocumentRequests] = useState<{ id: number; request_items: string[]; status: string; created_at?: string }[]>([]);
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     const WS_URL = API_URL.replace(/^http/, 'ws');
@@ -42,6 +43,7 @@ export function useVitals(token: string) {
             if (data.meals && Array.isArray(data.meals)) setMeals(data.meals);
             if (data.exam_schedules && Array.isArray(data.exam_schedules)) setExamSchedules(data.exam_schedules);
             if (data.iv_records && Array.isArray(data.iv_records)) setIvRecords(data.iv_records);
+            if (data.document_requests && Array.isArray(data.document_requests)) setDocumentRequests(data.document_requests);
 
             if (data.vitals && Array.isArray(data.vitals)) {
                 const formattedVitals = data.vitals.map((v: any) => ({
@@ -99,5 +101,5 @@ export function useVitals(token: string) {
         return () => ws.close();
     }, [token, fetchDashboard]);
 
-    return { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, examSchedules, ivRecords, refetchDashboard: fetchDashboard };
+    return { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, examSchedules, ivRecords, documentRequests, refetchDashboard: fetchDashboard };
 }

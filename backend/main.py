@@ -314,6 +314,10 @@ async def _fetch_dashboard_data(db: AsyncClient, admission_id: str):
     exam_schedules_res = await execute_with_retry_async(db.table("exam_schedules").select("*").eq("admission_id", admission_id).order("scheduled_at"))
     exam_schedules = exam_schedules_res.data or []
 
+    # 6. Document requests (퇴원 전 서류 신청)
+    doc_res = await execute_with_retry_async(db.table("document_requests").select("*").eq("admission_id", admission_id).order("created_at", desc=True).limit(10))
+    document_requests = doc_res.data or []
+
     await create_audit_log(db, "GUARDIAN", "VIEW", admission_id)
 
     return {
@@ -321,7 +325,8 @@ async def _fetch_dashboard_data(db: AsyncClient, admission_id: str):
         "vitals": vitals,
         "iv_records": iv_records,
         "meals": meals,
-        "exam_schedules": exam_schedules
+        "exam_schedules": exam_schedules,
+        "document_requests": document_requests
     }
 
 @app.get("/api/v1/admissions/{admission_id}/dashboard")
