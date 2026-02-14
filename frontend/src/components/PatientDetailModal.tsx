@@ -304,8 +304,8 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                             >
                                                 <Edit2 size={10} />
                                             </button>
-                                            <span className="text-[9px] text-slate-400 block mb-0.5 uppercase tracking-tight">{slot.label}</span>
-                                            <span className="text-sm font-bold text-slate-700 line-clamp-1 break-keep text-center leading-tight px-1">
+                                            <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-tight">{slot.label}</span>
+                                            <span className="text-lg font-bold text-slate-700 line-clamp-1 break-keep text-center leading-tight">
                                                 {labelText}
                                             </span>
                                         </div>
@@ -322,7 +322,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                         <div className="p-1.5 bg-sky-50 text-sky-500 rounded-full">
                                             <Droplets size={14} />
                                         </div>
-                                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-tight">
+                                        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
                                             IV 수액 속도 기록
                                         </h3>
                                     </div>
