@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
-import { Bed, Notification, LastUploadedIv } from '@/types/domain';
+import { Bed, Notification, LastUploadedIv, AdmissionSummary, WsMessage } from '@/types/domain';
 import { ROOM_NUMBERS, MEAL_MAP, DOC_MAP } from '@/constants/mappings';
 
 interface UseStationReturn {
@@ -35,18 +35,18 @@ export function useStation(): UseStationReturn {
         })));
 
         // 2. Fetch real admissions
-        api.get<any[]>('/api/v1/admissions')
+        api.get<AdmissionSummary[]>('/api/v1/admissions')
             .then(admissions => {
                 if (!Array.isArray(admissions)) return;
                 setBeds(prev => prev.map(bed => {
-                    const adm = admissions.find((a: any) => String(a.room_number).trim() === String(bed.room).trim());
+                    const adm = admissions.find((a) => String(a.room_number).trim() === String(bed.room).trim());
                     if (adm) {
                         const infusionRate = adm.latest_iv ? adm.latest_iv.infusion_rate : 20;
                         return {
                             ...bed,
                             id: adm.id,
                             name: adm.patient_name_masked,
-                            token: adm.access_token, // Now we have this for dashboard fetching
+                            token: adm.access_token,
                             drops: infusionRate
                         };
                     }
@@ -74,7 +74,7 @@ export function useStation(): UseStationReturn {
 
         ws.onmessage = (event) => {
             try {
-                const message = JSON.parse(event.data);
+                const message = JSON.parse(event.data) as WsMessage;
                 const id = Math.random().toString(36).substr(2, 9);
                 setLastUpdated(Date.now());
 
@@ -90,7 +90,8 @@ export function useStation(): UseStationReturn {
                         break;
 
                     case 'NEW_DOC_REQUEST':
-                        const items = message.data.request_items.map((it: string) => DOC_MAP[it] || it).join(', ');
+                        // data: { room, request_items: string[] }
+                        const items = (message.data.request_items as string[]).map(it => DOC_MAP[it] || it).join(', ');
                         setNotifications(prev => [{
                             id,
                             room: message.data.room,

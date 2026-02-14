@@ -7,6 +7,7 @@ import { getNextThreeMealSlots } from '@/utils/dateUtils';
 import { Bed, Notification, ExamScheduleItem, VitalData, LastUploadedIv } from '@/types/domain';
 import { MEAL_MAP, DOC_MAP, EXAM_TYPE_OPTIONS } from '@/constants/mappings';
 import { api } from '@/lib/api';
+import { useVitals } from '@/hooks/useVitals';
 
 interface PatientDetailModalProps {
     isOpen: boolean;
@@ -102,54 +103,21 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         }
     };
 
-    const [fetchedVitals, setFetchedVitals] = useState<VitalData[]>([]);
-    const [fetchedCheckIn, setFetchedCheckIn] = useState<string | null>(null);
-    const [fetchedMeals, setFetchedMeals] = useState<{ request_type: string }[]>([]);
-    const [fetchedDocRequests, setFetchedDocRequests] = useState<{ request_items: string[] }[]>([]);
+    const {
+        vitals: fetchedVitals,
+        checkInAt: fetchedCheckIn,
+        meals: fetchedMeals,
+        documentRequests: fetchedDocRequests,
+        isRefreshing,
+        fetchDashboardData
+    } = useVitals(bed?.token, isOpen);
 
-    const [isRefreshing, setIsRefreshing] = useState(false);
-
-    const fetchDashboardData = useCallback(async () => {
-        if (!bed?.token) return;
-        setIsRefreshing(true);
-        try {
-            const data = await api.get<any>(`/api/v1/dashboard/${bed.token}`);
-            if (data) {
-                if (data.vitals && Array.isArray(data.vitals)) {
-                    const formattedVitals = data.vitals.map((v: any) => ({
-                        time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                        temperature: v.temperature,
-                        has_medication: v.has_medication,
-                        medication_type: v.medication_type,
-                        recorded_at: v.recorded_at
-                    })).reverse();
-                    setFetchedVitals(formattedVitals);
-                } else {
-                    setFetchedVitals([]);
-                }
-                setFetchedCheckIn(data.admission?.check_in_at || null);
-                setFetchedMeals(data.meals || []);
-                console.log('Fetched Document Requests:', data.document_requests); // Debug log
-                setFetchedDocRequests(data.document_requests || []);
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsRefreshing(false);
-        }
-    }, [bed?.token]);
-
+    // Auto-refresh when a new notification arrives for this room OR when lastUpdated changes (new vital/iv)
     useEffect(() => {
-        if (isOpen && bed?.token) {
+        if (isOpen) {
             fetchDashboardData();
-        } else {
-            setFetchedVitals([]);
-            setFetchedCheckIn(null);
-            setFetchedMeals([]);
-            setFetchedDocRequests([]);
         }
-        // Auto-refresh when a new notification arrives for this room OR when lastUpdated changes (new vital/iv)
-    }, [isOpen, bed?.token, roomNotifications.length, lastUpdated, fetchDashboardData]);
+    }, [isOpen, roomNotifications.length, lastUpdated, fetchDashboardData]);
 
     const currentMealLabelModal = fetchedMeals.length > 0 ? (MEAL_MAP[fetchedMeals[0].request_type] ?? fetchedMeals[0].request_type) : null;
     const latestDocRequest = fetchedDocRequests.length > 0 ? fetchedDocRequests[0] : null;

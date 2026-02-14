@@ -5,7 +5,7 @@ import { Thermometer, Droplet, QrCode } from 'lucide-react';
 interface PatientCardProps {
     name: string;
     roomNumber: string;
-    temperature: number;
+    temperature: string | number;
     infusionRate: number;
     status: 'normal' | 'fever' | 'warning';
     onCardClick?: () => void;

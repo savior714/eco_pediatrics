@@ -34,7 +34,7 @@ export default function Station() {
         return beds.find(b => String(b.room) === selectedRoom) || null;
     }, [beds, selectedRoom]);
 
-    const handleNotificationClick = (notif: any) => {
+    const handleNotificationClick = (notif: Notification) => {
         const bed = beds.find(b => b.room === notif.room);
         if (bed) {
             setSelectedRoom(notif.room);
@@ -63,19 +63,14 @@ export default function Station() {
                         {/* [DEV] Seed Data Button */}
                         <button
                             onClick={async () => {
-                                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
                                 if (confirm('30개 병상 전체에 가상 입원 데이터를 생성하시겠습니까? (테스트용)')) {
                                     try {
-                                        const res = await fetch(`${API_URL}/api/v1/seed/full-test-data`, { method: 'POST' });
-                                        if (res.ok) {
-                                            alert('데이터 생성이 완료되었습니다. 페이지를 새로고침합니다.');
-                                            window.location.reload();
-                                        } else {
-                                            alert('데이터 생성 실패');
-                                        }
+                                        await api.post('/api/v1/seed/full-test-data', {});
+                                        alert('데이터 생성이 완료되었습니다. 페이지를 새로고침합니다.');
+                                        window.location.reload();
                                     } catch (e) {
                                         console.error(e);
-                                        alert('서버 연결 실패');
+                                        alert('데이터 생성 실패/서버 연결 실패');
                                     }
                                 }
                             }}
@@ -88,7 +83,7 @@ export default function Station() {
                 </header >
 
                 <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5">
-                    {beds.map((bed: any, index: number) => {
+                    {beds.map((bed: Bed, index: number) => {
                         const isFever = bed.temp >= 38.0;
                         const status = isFever ? 'fever' : 'normal';
 
@@ -131,7 +126,7 @@ export default function Station() {
                             대기 중인 요청이 없습니다.
                         </div>
                     ) : (
-                        notifications.map((notif: any) => (
+                        notifications.map((notif: Notification) => (
                             <Card
                                 key={notif.id}
                                 className={`border-l-4 cursor-pointer hover:bg-slate-50 transition-colors ${notif.type === 'meal' ? 'border-l-orange-500' : 'border-l-blue-500'

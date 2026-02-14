@@ -24,10 +24,31 @@ class ConnectionManager:
                 del self.active_connections[token]
 
     async def broadcast(self, message: str, token: str):
-        if token in self.active_connections:
-            logger.debug(f"Broadcasting to {token}: {message}")
+        if token == "STATION":
+            # Broadcast to all station connections
+            to_remove = []
+            for connection in self.station_connections:
+                try:
+                    await connection.send_text(message)
+                except Exception:
+                    to_remove.append(connection)
+            
+            for dead_conn in to_remove:
+                self.station_connections.remove(dead_conn)
+                
+        elif token in self.active_connections:
+            # Broadcast to specific token connections
+            to_remove = []
             for connection in self.active_connections[token]:
-                await connection.send_text(message)
+                try:
+                    await connection.send_text(message)
+                except Exception:
+                    to_remove.append(connection)
+            
+            for dead_conn in to_remove:
+                self.active_connections[token].remove(dead_conn)
+                if not self.active_connections[token]:
+                    del self.active_connections[token]
         else:
             logger.debug(f"No active connections for token: {token}. Skipping broadcast.")
 

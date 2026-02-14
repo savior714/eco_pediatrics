@@ -17,7 +17,6 @@ from routers import admissions, station, iv_records, vitals, exams, dev
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize Supabase and store in app.state
-    await init_supabase()
     app.state.supabase = await init_supabase()
     logger.info("Supabase AsyncClient initialized and stored in app.state")
     yield
@@ -110,10 +109,7 @@ app.include_router(dev.router, prefix="/api/v1", tags=["Dev"])
 
 # Additional include for upload which was in 'iv_records' router but path was /api/v1/upload/image
 # In iv_records.py I defined @router.post("/upload/image"). 
-# So if I include iv_records.router with prefix /api/v1/iv-records, it becomes /api/v1/iv-records/upload/image.
-# BUT original was /api/v1/upload/image.
-# I should fix the router or the prefix.
-# Let's check iv_records.py again.
+# So if I include iv_records.router with prefix /api/v1, it becomes /api/v1/upload/image.
 
 @app.get("/")
 def read_root():
