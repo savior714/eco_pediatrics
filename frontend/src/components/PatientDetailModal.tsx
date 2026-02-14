@@ -224,16 +224,15 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                 {/* Header */}
                 <div className={`px-8 py-6 shrink-0 ${bed.status === 'fever' ? 'bg-red-50' : 'bg-slate-50'} border-b border-slate-100`}>
                     <div className="flex justify-between items-start">
-                        <div>
-                            <div className="flex items-center gap-2 mb-2">
-                                <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{bed.room}호</h2>
-                                {bed.status === 'fever' && (
-                                    <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-full">
-                                        고열 주의
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-slate-500 font-bold text-base">{bed.name}</p>
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{bed.room}호</h2>
+                            <span className="text-xl text-slate-300 font-light">/</span>
+                            <p className="text-slate-500 font-bold text-base mt-1">{bed.name}</p>
+                            {bed.status === 'fever' && (
+                                <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-full">
+                                    고열 주의
+                                </span>
+                            )}
                         </div>
                         <div className="flex gap-2 -mt-1">
                             <button
@@ -257,7 +256,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                         </div>
                     </div>
 
-                    {/* Quick Vitals Summary + Meal Status + IV Check Top */}
                     {/* Quick Vitals Summary + Meal Status + IV Check Top */}
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 mt-6">
                         {/* Left Group: Vitals & Meals (7 Cols) -> 5 Sub-cols */}
@@ -463,13 +461,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                             </section>
                         </div>
                     </div>
-                </div>
-
-                {/* Footer */}
-                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-                    <button onClick={onClose} className="px-6 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition">
-                        닫기
-                    </button>
                 </div>
             </div>
 
