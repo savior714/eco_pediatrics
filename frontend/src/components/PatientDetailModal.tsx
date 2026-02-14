@@ -53,6 +53,19 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
     const [vitalModalOpen, setVitalModalOpen] = useState(false);
     const [editMealConfig, setEditMealConfig] = useState<{ label: string; date: string; meal_time: string; pediatric: string; guardian: string } | null>(null);
 
+    const handleDischarge = async () => {
+        if (!bed?.id) return;
+        if (!window.confirm(`${bed.name} 환자를 퇴원 처리할까요?`)) return;
+        try {
+            await api.post(`/api/v1/admissions/${bed.id}/discharge`, {});
+            alert('퇴원 완료');
+            onClose();
+            window.location.reload();
+        } catch (e) {
+            alert('퇴원 실패');
+        }
+    };
+
     const handleTransfer = async (targetRoom: string) => {
         if (!bed?.id) return;
         try {
@@ -223,6 +236,12 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                             <p className="text-slate-500 font-medium">{bed.name}</p>
                         </div>
                         <div className="flex gap-2">
+                            <button
+                                onClick={handleDischarge}
+                                className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 self-start"
+                            >
+                                퇴원
+                            </button>
                             <button
                                 onClick={() => setTransferModalOpen(true)}
                                 className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg hover:bg-blue-100 self-start"

@@ -34,6 +34,22 @@ async def transfer_patient(admission_id: str, req: TransferRequest, db: AsyncCli
     
     return {"message": "Transferred successfully"}
 
+@router.post("/{admission_id}/discharge")
+async def discharge_patient(admission_id: str, db: AsyncClient = Depends(get_supabase)):
+    from datetime import datetime
+    now = datetime.now().isoformat()
+    
+    await execute_with_retry_async(
+        db.table("admissions")
+        .update({"status": "DISCHARGED", "discharged_at": now})
+        .eq("id", admission_id)
+    )
+    
+    await create_audit_log(db, "NURSE", "DISCHARGE", admission_id)
+    
+    return {"message": "Discharged successfully"}
+
+
 @router.post("", response_model=Admission)
 async def create_admission(admission: AdmissionCreate, db: AsyncClient = Depends(get_supabase)):
     masked_name = mask_name(admission.patient_name)
