@@ -112,7 +112,6 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                                 infusionRate={latestIv?.infusion_rate || 0}
                                 lastChecked={latestIv ? new Date(latestIv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}
                             />
-                            <p className="text-center text-xs text-slate-400 mt-2">라인 확보 및 수액 속도 확인 완료</p>
                         </section>
                     </div>
 
