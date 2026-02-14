@@ -64,13 +64,13 @@ export function EditMealModal({
                         <label className="text-xs font-bold text-slate-500 flex items-center gap-1.5 ml-1">
                             환아 식사
                         </label>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                             {PEDIATRIC_OPTIONS.map(opt => (
                                 <button
                                     key={opt}
                                     type="button"
                                     onClick={() => setPediatric(opt)}
-                                    className={`px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all ${pediatric === opt ? 'bg-primary/5 border-primary text-primary' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                                    className={`px-3 py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${pediatric === opt ? 'bg-primary/5 border-primary text-primary' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
                                 >
                                     {opt}
                                 </button>
@@ -82,13 +82,13 @@ export function EditMealModal({
                         <label className="text-xs font-bold text-slate-500 flex items-center gap-1.5 ml-1">
                             보호자 식사
                         </label>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                             {GUARDIAN_OPTIONS.map(opt => (
                                 <button
                                     key={opt}
                                     type="button"
                                     onClick={() => setGuardian(opt)}
-                                    className={`px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all ${guardian === opt ? 'bg-primary/5 border-primary text-primary' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                                    className={`px-3 py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${guardian === opt ? 'bg-primary/5 border-primary text-primary' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
                                 >
                                     {opt}
                                 </button>

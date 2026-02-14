@@ -102,7 +102,7 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
                                 <span className="w-1 h-3 bg-teal-500 rounded-full" />
                                 환아 식사
                             </label>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="grid grid-cols-2 gap-2">
                                 {PEDIATRIC_OPTIONS.map(opt => (
                                     <button
                                         key={opt}
@@ -127,7 +127,7 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
                                 <span className="w-1 h-3 bg-teal-500 rounded-full" />
                                 보호자 식사
                             </label>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="grid grid-cols-2 gap-2">
                                 {GUARDIAN_OPTIONS.map(opt => (
                                     <button
                                         key={opt}
