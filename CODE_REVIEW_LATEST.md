@@ -90,6 +90,7 @@ add validation + audit + websocket sync
 - [x] 최근 6시간 발열 환자 카드만 붉은 테두리
 - [x] WebSocket STATION 채널에서 알림/IV 이벤트 누락 없음
 - [x] 식사 요청 데이터에 환아식/보호자식/비고 필드 확장 설계 확정 (구현 완료)
+- [x] Phase G: Refactoring (Meals Router, Schema Update, MealGrid Props) 완료
 
 ---
 
