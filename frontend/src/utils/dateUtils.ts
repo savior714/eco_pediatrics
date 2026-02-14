@@ -36,6 +36,12 @@ export function getNextThreeMealSlots(now: Date = new Date()): { label: string; 
     const tomorrow = formatDate(tomorrowDate);
 
     const h = now.getHours();
+
+    if (h < 6) return [
+        { label: '오늘 아침', date: today, meal_time: 'BREAKFAST' },
+        { label: '오늘 점심', date: today, meal_time: 'LUNCH' },
+        { label: '오늘 저녁', date: today, meal_time: 'DINNER' }
+    ];
     if (h >= 6 && h < 14) return [
         { label: '오늘 점심', date: today, meal_time: 'LUNCH' },
         { label: '오늘 저녁', date: today, meal_time: 'DINNER' },
