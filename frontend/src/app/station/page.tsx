@@ -15,6 +15,7 @@ export default function Station() {
     const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
     const [qrBed, setQrBed] = useState<any>(null); // State for QR Modal
     const [lastUploadedIv, setLastUploadedIv] = useState<{ admissionId: string; url: string } | null>(null);
+    const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
 
     // Derive selectedBed from beds and selectedRoom
     const selectedBed = React.useMemo(() => {
@@ -55,7 +56,11 @@ export default function Station() {
                 access_token: string;
                 latest_iv: { infusion_rate: number; photo_url: string } | null;
             }[]) => {
-                if (!Array.isArray(admissions)) return;
+                console.log('[DEBUG] Fetched admissions:', admissions); // Added log
+                if (!Array.isArray(admissions)) {
+                    console.error('[DEBUG] Admissions is not an array:', admissions);
+                    return;
+                }
                 setBeds(prev => prev.map(bed => {
                     const adm = admissions.find((a: any) => String(a.room_number).trim() === String(bed.room).trim());
                     if (adm) {
@@ -71,15 +76,22 @@ export default function Station() {
                     return bed;
                 }));
             })
-            .catch(() => { });
+            .catch((err) => console.error('[DEBUG] Fetch admissions failed:', err)); // Added error log
 
         // ... WebSocket ...
         const WS_URL = API_URL.replace(/^http/, 'ws');
         const ws = new WebSocket(`${WS_URL}/ws/STATION`);
-        // ... (rest of websocket logic) ...
+
+        ws.onopen = () => {
+            console.log('Connected to Station WS');
+        };
+
         ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
             const id = Math.random().toString(36).substr(2, 9);
+
+            // Trigger update for any relevant message
+            setLastUpdated(Date.now());
 
             if (message.type === 'NEW_MEAL_REQUEST') {
                 const mealMap: any = { GENERAL: '일반식', SOFT: '죽', NPO: '금식' };
@@ -124,6 +136,9 @@ export default function Station() {
                 }));
 
                 // Update selectedBed logic no longer needed separately as it's derived
+            } else if (message.type === 'NEW_VITAL') {
+                // Vitals update - handled by setLastUpdated triggering modal refresh
+                console.log(`[DEBUG] Received NEW_VITAL`);
             }
         };
 
@@ -266,6 +281,7 @@ export default function Station() {
                         setBeds(prev => prev.map(b => String(b.room) === selectedRoom ? { ...b, drops: rate } : b));
                     }
                 }}
+                lastUpdated={lastUpdated}
             />
 
             {/* QR Code Modal using dynamic import to avoid SSR issues if component uses browser APIs immediately */}

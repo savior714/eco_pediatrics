@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { X, Check, Clock, AlertCircle, CalendarCheck, Plus, Thermometer, Droplets, Calendar, Bell, Edit2, Trash2, FileText } from 'lucide-react';
+import { X, Check, Clock, AlertCircle, CalendarCheck, Plus, Thermometer, Droplets, Calendar, Bell, Edit2, Trash2, FileText, RefreshCw } from 'lucide-react';
 import { Card } from './Card';
 import { IVUploadForm } from './IVUploadForm';
 import { TemperatureGraph } from './TemperatureGraph';
@@ -40,10 +40,11 @@ interface PatientDetailModalProps {
     bed: any;
     notifications: any[];
     onCompleteRequest: (id: string) => void;
-    onIVUploadSuccess?: (rate?: number) => void;
+    lastUploadedIv?: { admissionId: string; url: string } | null;
+    onIVUploadSuccess?: (rate: number) => void;
+    lastUpdated?: number;
     vitals?: VitalData[];
     checkInAt?: string | null;
-    lastUploadedIv?: { admissionId: string; url: string } | null;
 }
 
 function formatExamDate(iso: string): string {
@@ -62,7 +63,7 @@ function formatExamTime(iso: string): string {
     return `오후 ${h === 12 ? 12 : h - 12}${m ? `:${m.toString().padStart(2, '0')}` : ':00'}`;
 }
 
-export function PatientDetailModal({ isOpen, onClose, bed, notifications, onCompleteRequest, onIVUploadSuccess, vitals: propVitals, checkInAt: propCheckInAt, lastUploadedIv }: PatientDetailModalProps) {
+export function PatientDetailModal({ isOpen, onClose, bed, notifications, onCompleteRequest, onIVUploadSuccess, vitals: propVitals, checkInAt: propCheckInAt, lastUploadedIv, lastUpdated }: PatientDetailModalProps) {
     const [examSchedules, setExamSchedules] = useState<ExamScheduleItem[]>([]);
     const [examFormOpen, setExamFormOpen] = useState(false);
     const [examForm, setExamForm] = useState<{ date: string; timeOfDay: 'am' | 'pm'; name: string }>({ date: '', timeOfDay: 'am', name: '' });
@@ -73,7 +74,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
     // Derived state (safe access)
     const roomNotifications = useMemo(() => {
         if (!bed) return [];
-        return notifications.filter(n => n.room === bed.room);
+        return notifications.filter(n => String(n.room) === String(bed.room));
     }, [notifications, bed]);
 
     useEffect(() => {
@@ -142,26 +143,52 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
     const [fetchedMeals, setFetchedMeals] = useState<{ request_type: string }[]>([]);
     const [fetchedDocRequests, setFetchedDocRequests] = useState<{ request_items: string[] }[]>([]);
 
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const fetchDashboardData = async () => {
+        if (!bed?.token) return;
+        setIsRefreshing(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/dashboard/${bed.token}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data) {
+                    if (data.vitals && Array.isArray(data.vitals)) {
+                        const formattedVitals = data.vitals.map((v: any) => ({
+                            time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            temperature: v.temperature,
+                            has_medication: v.has_medication,
+                            medication_type: v.medication_type,
+                            recorded_at: v.recorded_at
+                        })).reverse();
+                        setFetchedVitals(formattedVitals);
+                    } else {
+                        setFetchedVitals([]);
+                    }
+                    setFetchedCheckIn(data.admission?.check_in_at || null);
+                    setFetchedMeals(data.meals || []);
+                    console.log('Fetched Document Requests:', data.document_requests); // Debug log
+                    setFetchedDocRequests(data.document_requests || []);
+                }
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     useEffect(() => {
         if (isOpen && bed?.token) {
-            fetch(`${API_BASE}/api/v1/dashboard/${bed.token}`)
-                .then(res => res.ok ? res.json() : null)
-                .then(data => {
-                    if (data) {
-                        setFetchedVitals(data.vitals || []);
-                        setFetchedCheckIn(data.admission?.check_in_at || null);
-                        setFetchedMeals(data.meals || []);
-                        setFetchedDocRequests(data.document_requests || []);
-                    }
-                })
-                .catch(err => console.error(err));
+            fetchDashboardData();
         } else {
             setFetchedVitals([]);
             setFetchedCheckIn(null);
             setFetchedMeals([]);
             setFetchedDocRequests([]);
         }
-    }, [isOpen, bed?.token]);
+        // Auto-refresh when a new notification arrives for this room OR when lastUpdated changes (new vital/iv)
+    }, [isOpen, bed?.token, roomNotifications.length, lastUpdated]);
 
     const mealLabelMap: Record<string, string> = { GENERAL: '일반식', SOFT: '죽', NPO: '금식' };
     const currentMealLabelModal = fetchedMeals.length > 0 ? (mealLabelMap[fetchedMeals[0].request_type] ?? fetchedMeals[0].request_type) : null;
@@ -221,15 +248,15 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
 
                     {/* Quick Vitals Summary + Meal Status + IV Check Top */}
                     <div className="flex gap-3 mt-3">
-                        <div className="flex-[7] flex gap-2 overflow-x-auto scrollbar-hide">
+                        <div className="flex-[7] flex gap-0 overflow-x-auto scrollbar-hide">
                             {/* 1. Vitals */}
-                            <div className="bg-white px-3 rounded-xl border-[1.5px] border-slate-600 shadow-sm inline-flex flex-col justify-center min-w-[100px] shrink-0">
+                            <div className="bg-white px-3 rounded-xl border-[1.5px] border-slate-600 shadow-sm inline-flex flex-col justify-center min-w-[100px] shrink-0 z-10">
                                 <span className="text-[10px] text-slate-400 block mb-0 font-bold uppercase tracking-tight">현재 체온</span>
                                 <span className={`text-base font-bold ${bed.status === 'fever' ? 'text-red-500' : 'text-slate-700'}`}>
                                     {bed.temp.toFixed(1)}°C
                                 </span>
                             </div>
-                            <div className="bg-white px-3 rounded-xl border-[1.5px] border-slate-600 shadow-sm inline-flex flex-col justify-center min-w-[100px] shrink-0">
+                            <div className="bg-white px-3 rounded-xl border-[1.5px] border-slate-600 shadow-sm inline-flex flex-col justify-center min-w-[100px] shrink-0 -ml-[1.5px] z-0">
                                 <span className="text-[10px] text-slate-400 block mb-0 font-bold uppercase tracking-tight">수액 속도</span>
                                 <span className="text-base font-bold text-slate-700">{bed.drops} <span className="text-xs font-normal text-slate-400">cc/hr</span></span>
                             </div>
@@ -239,7 +266,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
 
                             {/* 2. Meals - 다음 3끼 (오늘 점심, 오늘 저녁, 내일 아침 등) */}
                             {getNextThreeMealSlots().map(({ label }) => (
-                                <div key={label} className="bg-white px-3 rounded-xl border-[1.5px] border-slate-600 shadow-sm flex-1 min-w-[80px] text-center font-bold flex flex-col justify-center relative group/meal">
+                                <div key={label} className="bg-white px-3 rounded-xl border-[1.5px] border-slate-600 shadow-sm w-[110px] shrink-0 text-center font-bold flex flex-col justify-center relative group/meal -ml-[1.5px]">
                                     <button
                                         className="absolute top-1 right-1 p-1 text-slate-300 hover:text-slate-500 rounded-full hover:bg-slate-50 transition-colors opacity-100"
                                         title={`${label} 식사 수정`}

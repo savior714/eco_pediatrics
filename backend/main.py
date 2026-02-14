@@ -131,14 +131,22 @@ async def seed_full_test_data(force: bool = True, db: AsyncClient = Depends(get_
     if force:
         # 기존 IN_PROGRESS 입원을 모두 DISCHARGED으로 변경 (대청소)
         print("[SEED] Force reset: Marking existing admissions as DISCHARGED")
-        await execute_with_retry_async(
-            db.table("admissions")
-            .update({"status": "DISCHARGED", "discharged_at": datetime.now().isoformat()})
-            .eq("status", "IN_PROGRESS")
-        )
+        try:
+            await execute_with_retry_async(
+                db.table("admissions")
+                .update({"status": "DISCHARGED", "discharged_at": datetime.now().isoformat()})
+                .eq("status", "IN_PROGRESS")
+            )
+            print("[SEED] Force reset complete")
+        except Exception as e:
+            print(f"[SEED] ERROR during reset: {e}")
+            raise e
     
     # 1. Admissions (Optimized)
+    # 1. Admissions (Optimized)
+    print("[SEED] Fetching existing admissions...")
     res = await execute_with_retry_async(db.table("admissions").select("id, room_number").eq("status", "IN_PROGRESS"))
+    print(f"[SEED] Fetched {len(res.data or [])} existing admissions")
     admissions_data = res.data or []
     existing_map = {row['room_number']: row['id'] for row in admissions_data}
     
@@ -160,7 +168,9 @@ async def seed_full_test_data(force: bool = True, db: AsyncClient = Depends(get_
                 "access_token": access_token
             })
         
-        insert_res = await execute_with_retry_async(db.table("admissions").insert(new_admissions))
+        print(f"[SEED] Inserting {len(new_admissions)} new admissions...")
+        insert_res = await (db.table("admissions").insert(new_admissions).execute()) # Skipping retry for debug
+        print("[SEED] Insert complete")
         inserted_data = insert_res.data or []
         for row in inserted_data:
             existing_map[row['room_number']] = row['id']
