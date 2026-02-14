@@ -316,7 +316,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
 
                         {/* Right Group: IV Form (5 Cols) */}
                         <div className="lg:col-span-5 h-full">
-                            <div className="bg-white px-4 py-2 rounded-[1.5rem] border-[1.5px] border-slate-600 shadow-sm relative group/iv h-full flex flex-col justify-center">
+                            <div className="bg-white px-4 py-2 rounded-[1.5rem] border-[1.5px] border-slate-200 shadow-sm relative group/iv h-full flex flex-col justify-center">
                                 <div className="flex items-center justify-between mb-1 px-1">
                                     <div className="flex items-center gap-2">
                                         <div className="p-1.5 bg-sky-50 text-sky-500 rounded-full">
