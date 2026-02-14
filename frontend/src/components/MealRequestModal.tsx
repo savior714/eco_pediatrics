@@ -21,6 +21,7 @@ const GUARDIAN_OPTIONS = ['일반식', '선택 안함'];
 
 export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: MealRequestModalProps) {
     const slots = getNextThreeMealSlots();
+    const [selectedSlotIdx, setSelectedSlotIdx] = useState(0);
     const [pediatric, setPediatric] = useState('일반식');
     const [guardian, setGuardian] = useState('선택 안함');
 
