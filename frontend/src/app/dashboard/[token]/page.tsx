@@ -59,7 +59,8 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                     style={{
                         marginLeft: 'max(1rem, env(safe-area-inset-left))',
                         marginRight: 'max(1rem, env(safe-area-inset-right))',
-                        paddingBottom: '1rem',
+                        paddingTop: 'max(1rem, env(safe-area-inset-top))',
+                        paddingBottom: 'max(1rem, env(safe-area-inset-bottom), 1rem)',
                         paddingLeft: '1.25rem',
                         paddingRight: '1rem',
                     }}
