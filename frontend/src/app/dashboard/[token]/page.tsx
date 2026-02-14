@@ -95,12 +95,27 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                         paddingRight: 'max(1rem, env(safe-area-inset-right))',
                     }}
                 >
-                    {/* 체온 차트 - 모바일: 맨 위, PC: 왼쪽 */}
-                    <section className={isDesktop ? 'md:col-span-1' : ''}>
-                        <TemperatureGraph data={vitals} checkInAt={checkInAt} />
-                    </section>
+                    {/* Left Column (Desktop) */}
+                    <div className="flex flex-col gap-6">
+                        {/* 체온 차트 - 모바일: 맨 위, PC: 왼쪽 */}
+                        <section>
+                            <TemperatureGraph data={vitals} checkInAt={checkInAt} />
+                        </section>
 
-                    <div className={isDesktop ? 'flex flex-col gap-6 md:col-span-1' : 'contents'}>
+                        {/* 수액 안전 모니터링 */}
+                        <section>
+                            <IVStatusCard
+                                photoUrl={latestIv?.photo_url || ""}
+                                infusionRate={latestIv?.infusion_rate || 0}
+                                lastChecked={latestIv ? new Date(latestIv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}
+                            />
+                            <p className="text-center text-xs text-slate-400 mt-2">라인 확보 및 수액 속도 확인 완료</p>
+                        </section>
+                    </div>
+
+                    {/* Right Column (Desktop) */}
+                    <div className="flex flex-col gap-6">
+
                         {/* 아침, 점심, 저녁 식단 쪼개기 */}
                         <section className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
                             <div className="flex items-center justify-between mb-4">
@@ -163,15 +178,6 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                             <p className="text-xs text-slate-400 mt-3">* 일정은 변동될 수 있으며, 담당 코너에서 안내해 드립니다.</p>
                         </section>
 
-                        {/* 수액 안전 모니터링 */}
-                        <section>
-                            <IVStatusCard
-                                photoUrl={latestIv?.photo_url || ""}
-                                infusionRate={latestIv?.infusion_rate || 0}
-                                lastChecked={latestIv ? new Date(latestIv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}
-                            />
-                            <p className="text-center text-xs text-slate-400 mt-2">라인 확보 및 수액 속도 확인 완료</p>
-                        </section>
 
                         {/* 서류 신청 */}
                         <section className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
