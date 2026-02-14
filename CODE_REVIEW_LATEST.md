@@ -85,11 +85,11 @@ add validation + audit + websocket sync
 ---
 
 ## 5) Done Criteria (테스트/검증 체크리스트)
-- [ ] `/api/v1/admissions` 200 정상 응답, `vital_signs.created_at` 관련 에러 0건
-- [ ] 입원 생성 후 스테이션 그리드에서 즉시 환자 반영
-- [ ] 최근 6시간 발열 환자 카드만 붉은 테두리
-- [ ] WebSocket STATION 채널에서 알림/IV 이벤트 누락 없음
-- [ ] 식사 요청 데이터에 환아식/보호자식/비고 필드 확장 설계 확정
+- [x] `/api/v1/admissions` 200 정상 응답, `vital_signs.created_at` 관련 에러 0건
+- [x] 입원 생성 후 스테이션 그리드에서 즉시 환자 반영
+- [x] 최근 6시간 발열 환자 카드만 붉은 테두리
+- [x] WebSocket STATION 채널에서 알림/IV 이벤트 누락 없음
+- [x] 식사 요청 데이터에 환아식/보호자식/비고 필드 확장 설계 확정 (구현 완료)
 
 ---
 
