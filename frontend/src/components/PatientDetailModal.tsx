@@ -257,14 +257,14 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                     </div>
 
                     {/* Quick Vitals Summary + Meal Status + IV Check Top */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 mt-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 mt-4">
                         {/* Left Group: Vitals & Meals (7 Cols) -> 5 Sub-cols */}
                         <div className="lg:col-span-7">
                             <div className="grid grid-cols-5 gap-2 h-full">
                                 {/* 1. Temp (Clickable) */}
                                 <button
                                     onClick={() => setVitalModalOpen(true)}
-                                    className={`col-span-1 bg-white rounded-[1.2rem] border-[1.5px] ${displayVitalTime && (Date.now() - new Date(displayVitalTime).getTime()) / 3600000 >= 2 ? getTempBorderColor() : 'border-slate-200'} shadow-sm flex flex-col justify-center items-center hover:bg-slate-50 transition-all py-3 px-1`}
+                                    className={`col-span-1 bg-white rounded-[1.2rem] border-[1.5px] ${displayVitalTime && (Date.now() - new Date(displayVitalTime).getTime()) / 3600000 >= 2 ? getTempBorderColor() : 'border-slate-200'} shadow-sm flex flex-col justify-center items-center hover:bg-slate-50 transition-all py-1.5 px-1`}
                                 >
                                     <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-tight">체온</span>
                                     <div className="flex items-center gap-0.5">
@@ -276,7 +276,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                 </button>
 
                                 {/* 2. Drops */}
-                                <div className="col-span-1 bg-white rounded-[1.2rem] border-[1.5px] border-slate-200 shadow-sm flex flex-col justify-center items-center py-3 px-1">
+                                <div className="col-span-1 bg-white rounded-[1.2rem] border-[1.5px] border-slate-200 shadow-sm flex flex-col justify-center items-center py-1.5 px-1">
                                     <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-tight">속도</span>
                                     <div className="flex items-center gap-0.5">
                                         <span className="text-lg font-bold text-slate-700">{bed.drops ?? '-'}</span>
@@ -292,7 +292,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                         : '신청전';
 
                                     return (
-                                        <div key={slot.label} className="col-span-1 bg-white rounded-[1.2rem] border-[1.5px] border-slate-200 shadow-sm flex flex-col justify-center items-center relative group/meal py-3 px-1">
+                                        <div key={slot.label} className="col-span-1 bg-white rounded-[1.2rem] border-[1.5px] border-slate-200 shadow-sm flex flex-col justify-center items-center relative group/meal py-1.5 px-1">
                                             <button
                                                 onClick={() => setEditMealConfig({
                                                     ...slot,
@@ -316,8 +316,8 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
 
                         {/* Right Group: IV Form (5 Cols) */}
                         <div className="lg:col-span-5 h-full">
-                            <div className="bg-white px-5 py-4 rounded-[1.5rem] border-[1.5px] border-slate-600 shadow-sm relative group/iv h-full flex flex-col justify-center">
-                                <div className="flex items-center justify-between mb-2 px-1">
+                            <div className="bg-white px-4 py-2 rounded-[1.5rem] border-[1.5px] border-slate-600 shadow-sm relative group/iv h-full flex flex-col justify-center">
+                                <div className="flex items-center justify-between mb-1 px-1">
                                     <div className="flex items-center gap-2">
                                         <div className="p-1.5 bg-sky-50 text-sky-500 rounded-full">
                                             <Droplets size={14} />
