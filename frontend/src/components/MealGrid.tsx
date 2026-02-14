@@ -3,16 +3,16 @@
 import React from 'react';
 import { api } from '@/lib/api';
 import { Bed } from '@/types/domain';
-import { useStation } from '@/hooks/useStation';
 
-interface MealGridProps { }
+interface MealGridProps {
+    beds: Bed[];
+    setBeds: React.Dispatch<React.SetStateAction<Bed[]>>;
+}
 
 const PEDIATRIC_OPTIONS = ['일반식', '연식(죽)', '미음', '금식', '선택 안함'];
 const GUARDIAN_OPTIONS = ['일반식', '선택 안함'];
 
-export function MealGrid({ }: MealGridProps) {
-    const { beds, setBeds } = useStation();
-
+export function MealGrid({ beds, setBeds }: MealGridProps) {
     // Filter only occupied beds
     const patients = beds.filter(b => b.id && b.name);
 

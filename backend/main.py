@@ -13,7 +13,7 @@ from logger import logger
 from utils import execute_with_retry_async
 
 # Import routers
-from routers import admissions, station, iv_records, vitals, exams, dev
+from routers import admissions, station, iv_records, vitals, exams, dev, meals
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -101,7 +101,8 @@ app.include_router(station.router, prefix="/api/v1", tags=["Station"])
 app.include_router(iv_records.router, prefix="/api/v1", tags=["IV Records"])
 app.include_router(vitals.router, prefix="/api/v1/vitals", tags=["Vitals"])
 app.include_router(exams.router, prefix="/api/v1", tags=["Exams"]) 
-app.include_router(dev.router, prefix="/api/v1", tags=["Dev"])
+app.include_router(meals.router, prefix="/api/v1/meals", tags=["Meals"])
+app.include_router(dev.router, prefix="/api/v1/dev", tags=["Dev"])
 
 
 @app.get("/health")

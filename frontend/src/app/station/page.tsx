@@ -13,7 +13,6 @@ import { MEAL_MAP, DOC_MAP, ROOM_NUMBERS } from '@/constants/mappings';
 import { api } from '@/lib/api';
 
 import { useStation } from '@/hooks/useStation';
-import { useMeals } from '@/hooks/useMeals';
 import { MealGrid } from '@/components/MealGrid';
 
 export default function Station() {
@@ -73,34 +72,7 @@ export default function Station() {
     };
 
     const [activeTab, setActiveTab] = useState<'patients' | 'meals'>('patients');
-    const { plans, fetchPlans, savePlans, loading: mealsLoading } = useMeals(); // Import this hook at top
 
-    // Fetch meals on tab change
-    React.useEffect(() => {
-        if (activeTab === 'meals') {
-            const today = new Date();
-            const nextWeek = new Date(today);
-            nextWeek.setDate(today.getDate() + 7);
-            fetchPlans(today.toISOString().split('T')[0], nextWeek.toISOString().split('T')[0]);
-        }
-    }, [activeTab, fetchPlans]);
-
-    const handleSaveMeals = async () => {
-        try {
-            await savePlans(plans);
-            alert('식단이 저장되었습니다.');
-        } catch (e) {
-            alert('저장 실패');
-        }
-    };
-
-    const handleMealChange = (date: string, type: 'breakfast' | 'lunch' | 'dinner' | 'snack', value: string) => {
-        // Optimistic update in plans state (needs setPlans exposed from useMeals or handled here)
-        // For simplicity, let's assume useMeals exposes setPlans or we wrap it.
-        // Actually, useMeals should probably expose a setter or we manage local state here.
-        // Let's modify useMeals to expose setPlans or update logic.
-        // Re-implementing simplified logic here for speed if useMeals doesn't support it yet.
-    };
 
     return (
         <div className="flex h-screen bg-slate-100 overflow-hidden">
@@ -188,7 +160,7 @@ export default function Station() {
 
                 {activeTab === 'meals' && (
                     <div className="flex-1 overflow-hidden p-1">
-                        <MealGrid />
+                        <MealGrid beds={beds} setBeds={setBeds} />
                     </div>
                 )}
             </main>

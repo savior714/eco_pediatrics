@@ -30,30 +30,7 @@ async def get_dashboard_data_by_token(token: str, db: AsyncClient = Depends(get_
     admission_id = res.data[0]['id']
     return await fetch_dashboard_data(db, admission_id)
 
-@router.post("/meals/requests", response_model=MealRequest)
-async def request_meal(request: MealRequestCreate, db: AsyncClient = Depends(get_supabase)):
-    data = request.dict()
-    response = await execute_with_retry_async(db.table("meal_requests").insert(data))
-    new_request = response.data[0]
-    
-    # Broadcast to station
-    adm_response = await execute_with_retry_async(db.table("admissions").select("room_number").eq("id", request.admission_id))
-    if adm_response.data:
-        room = adm_response.data[0]['room_number']
-        message = {
-            "type": "NEW_MEAL_REQUEST",
-            "data": {
-                "room": room,
-                "request_type": request.request_type,
-                "pediatric_meal_type": request.pediatric_meal_type,
-                "guardian_meal_type": request.guardian_meal_type,
-                "room_note": request.room_note,
-                "created_at": datetime.now().isoformat()
-            }
-        }
-        await manager.broadcast(json.dumps(message), "STATION")
-    
-    return new_request
+
 
 @router.post("/documents/requests", response_model=DocumentRequest)
 async def request_document(request: DocumentRequestCreate, db: AsyncClient = Depends(get_supabase)):
