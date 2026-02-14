@@ -110,8 +110,14 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     case 'NEW_VITAL':
                     case 'NEW_IV':
                     case 'IV_PHOTO_UPLOADED':
-                    case 'NEW_MEAL_REQUEST':
                     case 'NEW_DOC_REQUEST':
+                        fetchDashboardData();
+                        break;
+                    case 'NEW_MEAL_REQUEST':
+                        // Filter by admission_id if available to prevent cross-patient refetch
+                        if (admissionId && (message.data as any).admission_id && (message.data as any).admission_id !== admissionId) {
+                            break;
+                        }
                         fetchDashboardData();
                         break;
                 }
@@ -121,7 +127,7 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
         };
 
         return () => ws.close();
-    }, [token, enabled, fetchDashboardData]);
+    }, [token, enabled, fetchDashboardData, admissionId]);
 
     // Initial Fetch
     useEffect(() => {

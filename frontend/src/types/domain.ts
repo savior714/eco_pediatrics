@@ -65,7 +65,7 @@ export interface AdmissionSummary {
 export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL';
 
 export type WsMessage =
-    | { type: 'NEW_MEAL_REQUEST'; data: { room: string; request_type: string } }
+    | { type: 'NEW_MEAL_REQUEST'; data: { room: string; request_type: string; admission_id?: string } }
     | { type: 'NEW_DOC_REQUEST'; data: { room: string; request_items: string[] } }
     | { type: 'IV_PHOTO_UPLOADED'; data: { admission_id: string; room_number: string; photo_url: string } }
     | { type: 'NEW_IV'; data: { infusion_rate: number; room: string } }

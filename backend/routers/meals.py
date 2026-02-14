@@ -86,17 +86,31 @@ async def upsert_meal_request(
         db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time")
     )
     
-    # Broadcast update
-    # Broadcast update
-    msg = json.dumps({
-        "type": "NEW_MEAL_REQUEST",
-        "data": {
-            "request_type": req.request_type,
-            "meal_date": str(req.meal_date),
-            "meal_time": req.meal_time
-        }
-    })
-    await manager.broadcast_all(msg)
+    # Fetch details for targeted broadcast
+    # We need room_number for Station notification and token for Patient dashboard update
+    adm_res = await db.table("admissions").select("access_token, room_number").eq("id", req.admission_id).single().execute()
+    admission_data = adm_res.data if adm_res and adm_res.data else None
+    
+    if admission_data:
+        msg = json.dumps({
+            "type": "NEW_MEAL_REQUEST",
+            "data": {
+                "room": admission_data.get("room_number"),
+                "admission_id": req.admission_id,
+                "request_type": req.request_type,
+                "meal_date": str(req.meal_date),
+                "meal_time": req.meal_time.value
+            }
+        })
+
+        # 1. Broadcast to STATION
+        await manager.broadcast(msg, "STATION")
+
+        # 2. Broadcast to specific Patient (Dashboard)
+        token = admission_data.get("access_token")
+        if token:
+            await manager.broadcast(msg, token)
+    
     return
 
 @router.get("/matrix", response_model=List[MealRequest])

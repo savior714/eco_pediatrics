@@ -2,8 +2,16 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, date
 
+from enum import Enum
+
+class MealTime(str, Enum):
+    BREAKFAST = 'BREAKFAST'
+    LUNCH = 'LUNCH'
+    DINNER = 'DINNER'
+
 # DB Models
 class Admission(BaseModel):
+
     id: Optional[str] = None
     patient_name_masked: str
     room_number: str
@@ -62,7 +70,7 @@ class MealRequestCreate(BaseModel):
     guardian_meal_type: Optional[str] = None
     room_note: Optional[str] = None
     meal_date: date
-    meal_time: str
+    meal_time: MealTime
 
 class DocumentRequest(BaseModel):
     id: Optional[int] = None
