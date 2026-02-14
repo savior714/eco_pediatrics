@@ -9,6 +9,7 @@ import { MEAL_MAP, DOC_MAP, EXAM_TYPE_OPTIONS } from '@/constants/mappings';
 import { api } from '@/lib/api';
 import { TransferModal } from './TransferModal';
 import { VitalModal } from './VitalModal';
+import { EditMealModal } from './EditMealModal';
 import { useVitals } from '@/hooks/useVitals';
 
 interface PatientDetailModalProps {
@@ -50,6 +51,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
     const [deletingExamId, setDeletingExamId] = useState<number | null>(null);
     const [transferModalOpen, setTransferModalOpen] = useState(false);
     const [vitalModalOpen, setVitalModalOpen] = useState(false);
+    const [editMealConfig, setEditMealConfig] = useState<{ label: string; date: string; meal_time: string; pediatric: string; guardian: string } | null>(null);
 
     const handleTransfer = async (targetRoom: string) => {
         if (!bed?.id) return;
@@ -129,6 +131,25 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         isRefreshing,
         fetchDashboardData
     } = useVitals(bed?.token, isOpen);
+
+    const handleMealEditSave = async (pediatric: string, guardian: string) => {
+        if (!bed?.id || !editMealConfig) return;
+        try {
+            await api.post('/api/v1/meals/requests', {
+                admission_id: bed.id,
+                request_type: 'STATION_UPDATE',
+                meal_date: editMealConfig.date,
+                meal_time: editMealConfig.meal_time,
+                pediatric_meal_type: pediatric,
+                guardian_meal_type: guardian,
+                room_note: fetchedMeals.find(m => m.meal_date === editMealConfig.date && m.meal_time === editMealConfig.meal_time)?.room_note || ''
+            });
+            fetchDashboardData();
+        } catch (e) {
+            console.error(e);
+            throw e;
+        }
+    };
 
     // Auto-refresh when a new notification arrives for this room OR when lastUpdated changes (new vital/iv)
     useEffect(() => {
@@ -247,20 +268,32 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                 </div>
 
                                 {/* 3,4,5. Meals */}
-                                {getNextThreeMealSlots().map(({ label }) => (
-                                    <div key={label} className="col-span-1 bg-white rounded-[1.2rem] border-[1.5px] border-slate-200 shadow-sm flex flex-col justify-center items-center relative group/meal py-3 px-1">
-                                        <button
-                                            className="absolute top-1 right-1 p-1 text-slate-300 hover:text-slate-500 rounded-full hover:bg-slate-50 transition-colors opacity-0 group-hover/meal:opacity-100"
-                                            title={`${label} 식사 수정`}
-                                        >
-                                            <Edit2 size={10} />
-                                        </button>
-                                        <span className="text-[9px] text-slate-400 block mb-0.5 uppercase tracking-tight">{label}</span>
-                                        <span className="text-sm font-bold text-slate-700 line-clamp-1 break-keep text-center leading-tight px-1">
-                                            {currentMealLabelModal ?? '신청전'}
-                                        </span>
-                                    </div>
-                                ))}
+                                {getNextThreeMealSlots().map((slot) => {
+                                    const meal = fetchedMeals.find(m => m.meal_date === slot.date && m.meal_time === slot.meal_time);
+                                    const labelText = meal
+                                        ? (meal.pediatric_meal_type || '일반식')
+                                        : '신청전';
+
+                                    return (
+                                        <div key={slot.label} className="col-span-1 bg-white rounded-[1.2rem] border-[1.5px] border-slate-200 shadow-sm flex flex-col justify-center items-center relative group/meal py-3 px-1">
+                                            <button
+                                                onClick={() => setEditMealConfig({
+                                                    ...slot,
+                                                    pediatric: meal?.pediatric_meal_type || '선택 안함',
+                                                    guardian: meal?.guardian_meal_type || '선택 안함'
+                                                })}
+                                                className="absolute top-1 right-1 p-1 text-slate-300 hover:text-slate-500 rounded-full hover:bg-slate-50 transition-colors opacity-0 group-hover/meal:opacity-100"
+                                                title={`${slot.label} 식사 수정`}
+                                            >
+                                                <Edit2 size={10} />
+                                            </button>
+                                            <span className="text-[9px] text-slate-400 block mb-0.5 uppercase tracking-tight">{slot.label}</span>
+                                            <span className="text-sm font-bold text-slate-700 line-clamp-1 break-keep text-center leading-tight px-1">
+                                                {labelText}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
@@ -439,6 +472,19 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                         fetchDashboardData();
                         onVitalUpdate?.(temp);
                     }}
+                />
+            )}
+
+            {editMealConfig && (
+                <EditMealModal
+                    isOpen={!!editMealConfig}
+                    onClose={() => setEditMealConfig(null)}
+                    label={editMealConfig.label}
+                    date={editMealConfig.date}
+                    mealTime={editMealConfig.meal_time}
+                    currentPediatric={editMealConfig.pediatric}
+                    currentGuardian={editMealConfig.guardian}
+                    onSave={handleMealEditSave}
                 />
             )}
         </div>

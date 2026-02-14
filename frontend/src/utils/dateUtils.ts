@@ -21,10 +21,34 @@ export function calculateHospitalDay(checkInAt: string | null | undefined, targe
     return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
 }
 
-/** 현재 시각 기준 "앞으로의 3끼" 라벨. 6~13시 / 14~18시 / 19~5시 구간. */
-export function getNextThreeMealSlots(now: Date = new Date()): { label: string }[] {
+/** 현재 시각 기준 "앞으로의 3끼" 라벨 및 메타데이터. 6~13시 / 14~18시 / 19~5시 구간. */
+export function getNextThreeMealSlots(now: Date = new Date()): { label: string; date: string; meal_time: 'BREAKFAST' | 'LUNCH' | 'DINNER' }[] {
+    const formatDate = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const today = formatDate(now);
+    const tomorrowDate = new Date(now);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrow = formatDate(tomorrowDate);
+
     const h = now.getHours();
-    if (h >= 6 && h < 14) return [{ label: '오늘 점심' }, { label: '오늘 저녁' }, { label: '내일 아침' }];  // 6~13시
-    if (h >= 14 && h < 19) return [{ label: '오늘 저녁' }, { label: '내일 아침' }, { label: '내일 점심' }]; // 14~18시
-    return [{ label: '내일 아침' }, { label: '내일 점심' }, { label: '내일 저녁' }];                         // 19~5시
+    if (h >= 6 && h < 14) return [
+        { label: '오늘 점심', date: today, meal_time: 'LUNCH' },
+        { label: '오늘 저녁', date: today, meal_time: 'DINNER' },
+        { label: '내일 아침', date: tomorrow, meal_time: 'BREAKFAST' }
+    ];
+    if (h >= 14 && h < 19) return [
+        { label: '오늘 저녁', date: today, meal_time: 'DINNER' },
+        { label: '내일 아침', date: tomorrow, meal_time: 'BREAKFAST' },
+        { label: '내일 점심', date: tomorrow, meal_time: 'LUNCH' }
+    ];
+    return [
+        { label: '내일 아침', date: tomorrow, meal_time: 'BREAKFAST' },
+        { label: '내일 점심', date: tomorrow, meal_time: 'LUNCH' },
+        { label: '내일 저녁', date: tomorrow, meal_time: 'DINNER' }
+    ];
 }
