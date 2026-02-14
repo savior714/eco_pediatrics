@@ -17,14 +17,28 @@ async def record_vital(vital: VitalSignCreate, db: AsyncClient = Depends(get_sup
 
     await create_audit_log(db, "NURSE", "CREATE_VITAL", str(new_vital['id']))
 
-    # Broadcast to dashboard
-    adm_response = await execute_with_retry_async(db.table("admissions").select("access_token").eq("id", vital.admission_id))
+    # Broadcast to dashboard and station
+    adm_response = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", vital.admission_id))
     if adm_response.data:
-        token = adm_response.data[0]['access_token']
+        record = adm_response.data[0]
+        token = record['access_token']
+        room_number = record['room_number']
+        
+        # 1. To Patient Dashboard
         message = {
             "type": "NEW_VITAL",
             "data": new_vital
         }
         await manager.broadcast(json.dumps(message), token)
+
+        # 2. To Nurse Station
+        station_message = {
+            "type": "NEW_VITAL",
+            "data": {
+                "room": room_number,
+                **new_vital
+            }
+        }
+        await manager.broadcast(json.dumps(station_message), "STATION")
 
     return new_vital

@@ -70,9 +70,10 @@
    - **Performance**: 입원 목록 조회 시 N+1 쿼리 제거 (Batch Query 도입)
    - **Operational Hardening**: `FAIL_FAST` (Env Check), `CORS Tightening` (`ALLOWED_ORIGINS`), `Healthcheck` (`/health`) 도입
 
-### 6. Mobile IV Upload & Station Polish (Phase 5)
-- **Status**: Completed
-- **Key Changes**:
-    - **Mobile**: Strict MIME/Size validation, client-side pre-check.
-    - **Station**: Zoomable IV photo preview, 'Approve' workflow with optimistic updates.
-    - **Audit**: Logged all upload attempts for security.
+### 7. Production Hardening & Features (Phases A-E)
+- **Status**: Completed (2026-02-14)
+- **Phase A (Hotfixes)**: WebSocket broadcast fixed, Unified `display_name` for patients.
+- **Phase B (Optimization)**: Admissions deduplication refactored (Sort+Dict), N+1 check passed.
+- **Phase C (Station Expansion)**: Fever indication (`had_fever_in_6h` logic), `DEV: Discharge All` tool.
+- **Phase D (Empty Bed)**: Empty bed cards with `AdmitSubModal` (Immediate admission).
+- **Phase E (Transfer)**: Patient Transfer (`POST /transfer`, `TransferModal`, Audit Log).

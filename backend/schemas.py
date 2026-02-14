@@ -41,7 +41,6 @@ class PatientMealOverrideCreate(BaseModel):
 
 class AdmissionResponse(BaseModel):
     id: str
-    patient_name_masked: str
     display_name: str
     room_number: str
     check_in_at: Optional[datetime]

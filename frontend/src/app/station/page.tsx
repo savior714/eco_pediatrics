@@ -7,7 +7,7 @@ import { Bell } from 'lucide-react';
 import { PatientDetailModal } from '@/components/PatientDetailModal';
 import Image from 'next/image';
 import { QrCodeModal } from '@/components/QrCodeModal';
-
+import { AdmitSubModal } from '@/components/AdmitSubModal';
 import { Bed, Notification, LastUploadedIv } from '@/types/domain';
 import { MEAL_MAP, DOC_MAP, ROOM_NUMBERS } from '@/constants/mappings';
 import { api } from '@/lib/api';
@@ -28,6 +28,22 @@ export default function Station() {
 
     const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
     const [qrBed, setQrBed] = useState<Bed | null>(null); // State for QR Modal
+    const [admitRoom, setAdmitRoom] = useState<string | null>(null);
+
+    const handleAdmit = async (name: string, birthday: string) => {
+        if (!admitRoom) return;
+        try {
+            await api.post('/api/v1/admissions', {
+                patient_name: name,
+                room_number: admitRoom
+            });
+            alert('입원 수속이 완료되었습니다.');
+            window.location.reload();
+        } catch (e) {
+            console.error(e);
+            alert('입원 처리 실패');
+        }
+    };
 
     // Derived selectedBed from beds and selectedRoom
     const selectedBed = React.useMemo(() => {
@@ -104,6 +120,18 @@ export default function Station() {
                             >
                                 식단 관리
                             </button>
+                            <button onClick={async () => {
+                                if (!confirm('경고: DEV 모드 전용입니다.\n모든 환자를 퇴원 처리하시겠습니까?')) return;
+                                try {
+                                    await api.post('/api/v1/dev/discharge-all', {});
+                                    alert('모든 환자가 퇴원 처리되었습니다.');
+                                    window.location.reload();
+                                } catch (e) {
+                                    alert('Error discharging');
+                                }
+                            }} className="px-3 py-2 text-xs bg-red-50 text-red-500 border border-red-200 rounded hover:bg-red-100 font-bold ml-2">
+                                DEV: 전체퇴원
+                            </button>
                         </div>
                     </div>
                     <div className="text-slate-500 text-xs">Total: {beds.length}</div>
@@ -112,7 +140,21 @@ export default function Station() {
                 {activeTab === 'patients' && (
                     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 pb-20">
                         {beds.map((bed: Bed) => {
-                            const isFever = bed.temp >= 38.0;
+                            if (!bed.id) {
+                                return (
+                                    <div key={bed.room} className="h-[140px] border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                                        <div className="text-lg font-bold text-slate-400 mb-2">{bed.room}</div>
+                                        <button
+                                            onClick={() => setAdmitRoom(bed.room)}
+                                            className="px-3 py-1.5 bg-teal-600 text-white text-xs font-bold rounded-lg hover:bg-teal-700"
+                                        >
+                                            입원 수속
+                                        </button>
+                                    </div>
+                                );
+                            }
+
+                            const isFever = bed.had_fever_in_6h || bed.temp >= 38.0;
                             const status = isFever ? 'fever' : 'normal';
                             return (
                                 <PatientCard
@@ -229,6 +271,12 @@ export default function Station() {
                     token={qrBed.token}
                 />
             )}
+            <AdmitSubModal
+                isOpen={!!admitRoom}
+                onClose={() => setAdmitRoom(null)}
+                roomNumber={admitRoom || ''}
+                onAdmit={handleAdmit}
+            />
         </div>
     );
 }

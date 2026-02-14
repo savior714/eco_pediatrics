@@ -5,10 +5,34 @@ from typing import List
 from dependencies import get_supabase
 from utils import execute_with_retry_async, mask_name, create_audit_log
 from services.dashboard import fetch_dashboard_data
-from models import Admission, AdmissionCreate
+from models import Admission, AdmissionCreate, TransferRequest
 from schemas import DashboardResponse
 
 router = APIRouter()
+
+@router.post("/{admission_id}/transfer")
+async def transfer_patient(admission_id: str, req: TransferRequest, db: AsyncClient = Depends(get_supabase)):
+    # 1. Check target room availability
+    res = await execute_with_retry_async(
+        db.table("admissions")
+        .select("id")
+        .eq("room_number", req.target_room)
+        .in_("status", ["IN_PROGRESS", "OBSERVATION"])
+    )
+    if res.data:
+        raise HTTPException(status_code=400, detail=f"Room {req.target_room} is currently occupied.")
+
+    # 2. Update room
+    await execute_with_retry_async(
+        db.table("admissions")
+        .update({"room_number": req.target_room})
+        .eq("id", admission_id)
+    )
+    
+    # 3. Audit
+    await create_audit_log(db, "NURSE", "TRANSFER", admission_id, f"To {req.target_room}")
+    
+    return {"message": "Transferred successfully"}
 
 @router.post("", response_model=Admission)
 async def create_admission(admission: AdmissionCreate, db: AsyncClient = Depends(get_supabase)):
@@ -29,24 +53,15 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
     res = await execute_with_retry_async(db.table("admissions").select("*").in_("status", ["IN_PROGRESS", "OBSERVATION"]))
     admissions = res.data or []
     
-    # 2. Deduplicate: keep only the latest admission per room_number
+    # 2. Deduplicate: sort by check_in_at desc (latest first) and keep first per room
+    admissions.sort(key=lambda x: x.get('check_in_at') or x.get('created_at') or '', reverse=True)
+    
     unique_map = {}
     for adm in admissions:
         room = adm['room_number']
         if room not in unique_map:
             unique_map[room] = adm
-        else:
-            existing = unique_map[room]
-            # Prioritize IN_PROGRESS
-            if adm['status'] == 'IN_PROGRESS' and existing['status'] != 'IN_PROGRESS':
-                unique_map[room] = adm
-            elif adm['status'] == existing['status']:
-                # Tie-breaker: check_in_at desc (or created_at if check_in_at missing)
-                new_time = adm.get('check_in_at') or adm.get('created_at') or ''
-                old_time = existing.get('check_in_at') or existing.get('created_at') or ''
-                if new_time > old_time:
-                    unique_map[room] = adm
-
+    
     unique_admissions = list(unique_map.values())
     
     # 3. Enrich with latest IV rate (Batch Query)
@@ -68,8 +83,53 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
             if aid not in iv_map:
                 iv_map[aid] = iv
 
+    # 4. Enrich with Vitals
+    from datetime import datetime, timedelta
+    
+    vital_map = {}
+    if admission_ids:
+        # Fetch vitals
+        vitals_res = await execute_with_retry_async(
+            db.table("vital_signs")
+            .select("admission_id, temperature, created_at")
+            .in_("admission_id", admission_ids)
+            .order("created_at", desc=True)
+        )
+        all_vitals = vitals_res.data or []
+        
+        # Simple ISO comparison works because standard ISO format is sortable as string
+        six_hours_ago_iso = (datetime.now() - timedelta(hours=6)).isoformat()
+    
+        for v in all_vitals:
+            aid = v['admission_id']
+            
+            # Initialize with latest (first seen because of desc sort)
+            if aid not in vital_map:
+                vital_map[aid] = {
+                    'latest_temp': v['temperature'],
+                    'last_vital_at': v['created_at'],
+                    'had_fever_in_6h': False
+                }
+            
+            # Check fever (if not already found)
+            if not vital_map[aid]['had_fever_in_6h']:
+                # Compare string ISO directly
+                if v['temperature'] >= 38.0 and v['created_at'] >= six_hours_ago_iso:
+                    vital_map[aid]['had_fever_in_6h'] = True
+
     for adm in unique_admissions:
         adm['latest_iv'] = iv_map.get(adm['id'])
+        adm['display_name'] = adm.get('patient_name_masked', '')
+        
+        v_data = vital_map.get(adm['id'])
+        if v_data:
+            adm['latest_temp'] = v_data['latest_temp']
+            adm['last_vital_at'] = v_data['last_vital_at']
+            adm['had_fever_in_6h'] = v_data['had_fever_in_6h']
+        else:
+            adm['latest_temp'] = None
+            adm['last_vital_at'] = None
+            adm['had_fever_in_6h'] = False
             
     return unique_admissions
 

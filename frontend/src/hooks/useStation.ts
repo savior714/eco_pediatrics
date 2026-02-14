@@ -42,12 +42,17 @@ export function useStation(): UseStationReturn {
                     const adm = admissions.find((a) => String(a.room_number).trim() === String(bed.room).trim());
                     if (adm) {
                         const infusionRate = adm.latest_iv ? adm.latest_iv.infusion_rate : 20;
+                        const temp = adm.latest_temp ?? 36.5;
+
                         return {
                             ...bed,
                             id: adm.id,
-                            name: adm.patient_name_masked,
+                            name: adm.display_name,
                             token: adm.access_token,
-                            drops: infusionRate
+                            drops: infusionRate,
+                            temp: temp,
+                            had_fever_in_6h: adm.had_fever_in_6h,
+                            status: (temp >= 38.0 || adm.had_fever_in_6h) ? 'fever' : 'normal'
                         };
                     }
                     return bed;

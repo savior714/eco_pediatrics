@@ -75,3 +75,6 @@ class ExamScheduleCreate(BaseModel):
     scheduled_at: datetime
     name: str
     note: Optional[str] = ""
+
+class TransferRequest(BaseModel):
+    target_room: str

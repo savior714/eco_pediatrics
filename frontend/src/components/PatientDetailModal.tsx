@@ -7,6 +7,7 @@ import { getNextThreeMealSlots } from '@/utils/dateUtils';
 import { Bed, Notification, ExamScheduleItem, VitalData, LastUploadedIv } from '@/types/domain';
 import { MEAL_MAP, DOC_MAP, EXAM_TYPE_OPTIONS } from '@/constants/mappings';
 import { api } from '@/lib/api';
+import { TransferModal } from './TransferModal';
 import { useVitals } from '@/hooks/useVitals';
 
 interface PatientDetailModalProps {
@@ -45,6 +46,16 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
     const [examSubmitting, setExamSubmitting] = useState(false);
     const [examAddError, setExamAddError] = useState<string | null>(null);
     const [deletingExamId, setDeletingExamId] = useState<number | null>(null);
+    const [transferModalOpen, setTransferModalOpen] = useState(false);
+
+    const handleTransfer = async (targetRoom: string) => {
+        if (!bed?.id) return;
+        await api.post(`/api/v1/admissions/${bed.id}/transfer`, { target_room: targetRoom });
+        alert('전실 완료');
+        setTransferModalOpen(false);
+        onClose();
+        window.location.reload();
+    };
 
     // Derived state (safe access)
     const roomNotifications = useMemo(() => {
@@ -165,12 +176,20 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                             </div>
                             <p className="text-slate-500 font-medium">{bed.name}</p>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 -mr-2 -mt-2 hover:bg-black/5 rounded-full text-slate-400 transition-colors"
-                        >
-                            <X size={20} />
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setTransferModalOpen(true)}
+                                className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg hover:bg-blue-100 self-start"
+                            >
+                                전실
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="p-2 -mr-2 -mt-2 hover:bg-black/5 rounded-full text-slate-400 transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Quick Vitals Summary + Meal Status + IV Check Top */}

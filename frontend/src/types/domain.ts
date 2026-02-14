@@ -6,6 +6,8 @@ export interface Bed {
     drops: number;
     status: 'normal' | 'fever';
     token: string;
+    latest_temp?: number;
+    had_fever_in_6h?: boolean;
 }
 
 export interface Notification {
@@ -46,12 +48,14 @@ export interface LastUploadedIv {
 
 export interface AdmissionSummary {
     id: string;
-    patient_name_masked: string;
+    display_name: string;
     room_number: string;
     access_token: string;
     latest_iv?: {
         infusion_rate: number;
-    }
+    };
+    latest_temp?: number;
+    had_fever_in_6h?: boolean;
 }
 
 export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL';
