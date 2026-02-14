@@ -222,29 +222,29 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
 
             <div className={`bg-white rounded-[2rem] w-[75%] max-w-none max-h-[85vh] shadow-2xl overflow-hidden flex flex-col transition-all duration-300 transform ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
                 {/* Header */}
-                <div className={`p-4 shrink-0 ${bed.status === 'fever' ? 'bg-red-50' : 'bg-slate-50'} border-b border-slate-100`}>
+                <div className={`px-8 py-6 shrink-0 ${bed.status === 'fever' ? 'bg-red-50' : 'bg-slate-50'} border-b border-slate-100`}>
                     <div className="flex justify-between items-start">
                         <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <h2 className="text-2xl font-bold text-slate-800">{bed.room}호</h2>
+                            <div className="flex items-center gap-2 mb-2">
+                                <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{bed.room}호</h2>
                                 {bed.status === 'fever' && (
-                                    <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full">
+                                    <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-full">
                                         고열 주의
                                     </span>
                                 )}
                             </div>
-                            <p className="text-slate-500 font-medium">{bed.name}</p>
+                            <p className="text-slate-500 font-bold text-base">{bed.name}</p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 -mt-1">
                             <button
                                 onClick={handleDischarge}
-                                className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 self-start"
+                                className="px-4 py-2 bg-red-50 text-red-600 text-xs font-bold rounded-xl hover:bg-red-100 transition-colors"
                             >
                                 퇴원
                             </button>
                             <button
                                 onClick={() => setTransferModalOpen(true)}
-                                className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg hover:bg-blue-100 self-start"
+                                className="px-4 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition-colors"
                             >
                                 전실
                             </button>
@@ -252,7 +252,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                 onClick={onClose}
                                 className="p-2 -mr-2 -mt-2 hover:bg-black/5 rounded-full text-slate-400 transition-colors"
                             >
-                                <X size={20} />
+                                <X size={24} />
                             </button>
                         </div>
                     </div>
