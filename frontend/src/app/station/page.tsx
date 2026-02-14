@@ -176,6 +176,7 @@ export default function Station() {
                                             alert('데이터 생성 실패');
                                         }
                                     } catch (e) {
+                                        console.error(e);
                                         alert('서버 연결 실패');
                                     }
                                 }
@@ -237,7 +238,7 @@ export default function Station() {
                                 key={notif.id}
                                 className={`border-l-4 cursor-pointer hover:bg-slate-50 transition-colors ${notif.type === 'meal' ? 'border-l-orange-500' : 'border-l-blue-500'
                                     }`}
-                                onClick={() => { /* handleNotificationClick(notif) */ }}
+                                onClick={() => handleNotificationClick(notif)}
                             >
                                 <div className="flex justify-between items-start">
                                     <span className="font-bold text-slate-700">{notif.room}호</span>

@@ -223,13 +223,13 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                     <div className="flex gap-3 mt-3">
                         <div className="flex-[7] flex gap-2 overflow-x-auto scrollbar-hide">
                             {/* 1. Vitals */}
-                            <div className="bg-white px-3 rounded-xl border border-slate-100 shadow-sm inline-flex flex-col justify-center min-w-[100px] shrink-0">
+                            <div className="bg-white px-3 rounded-xl border-[1.5px] border-slate-600 shadow-sm inline-flex flex-col justify-center min-w-[100px] shrink-0">
                                 <span className="text-[10px] text-slate-400 block mb-0 font-bold uppercase tracking-tight">현재 체온</span>
                                 <span className={`text-base font-bold ${bed.status === 'fever' ? 'text-red-500' : 'text-slate-700'}`}>
                                     {bed.temp.toFixed(1)}°C
                                 </span>
                             </div>
-                            <div className="bg-white px-3 rounded-xl border border-slate-100 shadow-sm inline-flex flex-col justify-center min-w-[100px] shrink-0">
+                            <div className="bg-white px-3 rounded-xl border-[1.5px] border-slate-600 shadow-sm inline-flex flex-col justify-center min-w-[100px] shrink-0">
                                 <span className="text-[10px] text-slate-400 block mb-0 font-bold uppercase tracking-tight">수액 속도</span>
                                 <span className="text-base font-bold text-slate-700">{bed.drops} <span className="text-xs font-normal text-slate-400">cc/hr</span></span>
                             </div>
@@ -239,7 +239,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
 
                             {/* 2. Meals - 다음 3끼 (오늘 점심, 오늘 저녁, 내일 아침 등) */}
                             {getNextThreeMealSlots().map(({ label }) => (
-                                <div key={label} className="bg-white px-3 rounded-xl border border-slate-100 shadow-sm flex-1 min-w-[80px] text-center font-bold flex flex-col justify-center relative group/meal">
+                                <div key={label} className="bg-white px-3 rounded-xl border-[1.5px] border-slate-600 shadow-sm flex-1 min-w-[80px] text-center font-bold flex flex-col justify-center relative group/meal">
                                     <button
                                         className="absolute top-1 right-1 p-1 text-slate-300 hover:text-slate-500 rounded-full hover:bg-slate-50 transition-colors opacity-100"
                                         title={`${label} 식사 수정`}
@@ -258,7 +258,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                         <div className="w-px bg-slate-200 mx-1 shrink-0 my-2" />
 
                         {/* IV Upload Form moved to TOP - More compact design (3 Ratio) */}
-                        <div className="flex-[3] bg-white p-3 rounded-[1.5rem] border border-slate-100 shadow-sm relative group/iv">
+                        <div className="flex-[3] bg-white p-3 rounded-[1.5rem] border-[1.5px] border-slate-600 shadow-sm relative group/iv">
                             <div className="flex items-center justify-between mb-2 px-1">
                                 <div className="flex items-center gap-1.5">
                                     <Droplets size={12} className="text-sky-500" />
@@ -283,14 +283,16 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                         {/* 1st Column: Chart (Main Bottom Left) */}
                         <div className="lg:col-span-7 space-y-6">
-                            <section className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 h-full">
+                            <section className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
                                 <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
                                     <Thermometer size={16} className="text-rose-500" />
                                     체온 기록 (24h)
                                 </h3>
-                                <div className="h-[350px]">
-                                    <TemperatureGraph data={chartVitals} checkInAt={chartCheckIn} />
-                                </div>
+                                <TemperatureGraph
+                                    data={chartVitals}
+                                    checkInAt={chartCheckIn}
+                                    className="h-auto min-h-[340px] border-[1.5px] border-slate-600 shadow-sm"
+                                />
                             </section>
                         </div>
 
@@ -311,7 +313,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                 </div>
                                 <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
                                     {examSchedules.map(ex => (
-                                        <div key={ex.id} className="p-3 bg-white rounded-xl border border-slate-100 shadow-sm text-xs flex justify-between items-center gap-2">
+                                        <div key={ex.id} className="p-3 bg-white rounded-xl border-[1.5px] border-slate-600 shadow-sm text-xs flex justify-between items-center gap-2">
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex justify-between mb-0.5">
                                                     <span className="font-bold text-slate-700">{ex.name}</span>
@@ -322,7 +324,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                                 type="button"
                                                 onClick={() => handleDeleteExam(ex.id)}
                                                 disabled={deletingExamId === ex.id}
-                                                className="shrink-0 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                                                className="shrink-0 p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm disabled:opacity-50"
                                                 title="삭제"
                                             >
                                                 <Trash2 size={14} />
@@ -333,7 +335,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                 </div>
 
                                 {examFormOpen && (
-                                    <div className="mt-4 p-4 bg-white rounded-xl border border-violet-100 space-y-3 shadow-lg">
+                                    <div className="mt-4 p-4 bg-white rounded-xl border-[1.5px] border-slate-600 space-y-3 shadow-lg">
                                         {examAddError && <p className="text-[10px] text-red-500">{examAddError}</p>}
                                         <input type="date" value={examForm.date} onChange={e => setExamForm(f => ({ ...f, date: e.target.value }))} className="w-full text-xs p-2 border rounded" />
                                         <div className="flex gap-2">
@@ -357,18 +359,20 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                     <FileText size={16} className="text-sky-500" />
                                     신청된 서류
                                 </h3>
-                                {currentDocLabelsModal.length > 0 ? (
-                                    <ul className="space-y-1 text-xs text-slate-600">
-                                        {currentDocLabelsModal.map((label: string) => (
-                                            <li key={label} className="flex items-center gap-2">
-                                                <span className="w-1 h-1 rounded-full bg-sky-400 shrink-0" />
-                                                {label}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className="text-xs text-slate-400">신청된 서류 없음</p>
-                                )}
+                                <div className="bg-white rounded-xl border-[1.5px] border-slate-600 p-4 shadow-sm">
+                                    {currentDocLabelsModal.length > 0 ? (
+                                        <ul className="space-y-1 text-xs text-slate-600">
+                                            {currentDocLabelsModal.map((label: string) => (
+                                                <li key={label} className="flex items-center gap-2">
+                                                    <span className="w-1 h-1 rounded-full bg-sky-400 shrink-0" />
+                                                    {label}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-xs text-slate-400">신청된 서류 없음</p>
+                                    )}
+                                </div>
                             </section>
 
                             <section className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 flex-1">
@@ -378,12 +382,17 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                 </h3>
                                 <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
                                     {roomNotifications.map(note => (
-                                        <div key={note.id} className="p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className="text-[10px] font-bold text-slate-400">{note.time}</span>
-                                                <button onClick={() => onCompleteRequest(note.id)} className="text-[10px] text-green-500 font-bold hover:underline">완료</button>
+                                        <div key={note.id} className="p-3 bg-white rounded-xl border-[1.5px] border-slate-600 shadow-sm flex items-center justify-between gap-3">
+                                            <div className="min-w-0 flex-1">
+                                                <span className="text-[10px] font-bold text-slate-400 block mb-0.5">{note.time}</span>
+                                                <p className="text-xs text-slate-700 line-clamp-2 leading-snug">{note.content}</p>
                                             </div>
-                                            <p className="text-xs text-slate-700 line-clamp-2">{note.content}</p>
+                                            <button
+                                                onClick={() => onCompleteRequest(note.id)}
+                                                className="shrink-0 px-3 py-1.5 bg-green-500 text-white text-[10px] font-bold rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+                                            >
+                                                완료
+                                            </button>
                                         </div>
                                     ))}
                                     {roomNotifications.length === 0 && <p className="text-xs text-slate-400 text-center py-4">대기 중인 요청이 없습니다.</p>}

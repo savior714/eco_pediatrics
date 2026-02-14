@@ -34,9 +34,10 @@ interface VitalData {
 interface TemperatureGraphProps {
     data: VitalData[];
     checkInAt?: string | null;
+    className?: string;
 }
 
-export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
+export function TemperatureGraph({ data, checkInAt, className }: TemperatureGraphProps) {
     // 1. Calculate hospital days logic
     const { chartData, totalWidthPercent, ticks, yDomain } = useMemo(() => {
         if (!checkInAt || data.length === 0) return { chartData: data, totalWidthPercent: 100, ticks: [], yDomain: [35.5, 41] };
@@ -116,11 +117,10 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
     }, [chartData, yDomain]); // Keep yDomain as dependency if needed, but mainly chartData
 
     return (
-        <Card className="w-full relative overflow-hidden border-slate-200/80">
-            <div className="flex justify-between items-start gap-3 pb-3 bg-white z-10 relative">
+        <Card className={cn("w-full relative overflow-hidden border-slate-200/80", className)}>
+            <div className="flex justify-between items-center gap-3 pb-1 bg-white z-10 relative">
                 <div>
                     <h3 className="text-base font-bold text-slate-800">체온 차트</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">입원 기간 전체</p>
                 </div>
                 <div className="text-right">
                     <span className={cn(
@@ -129,20 +129,16 @@ export function TemperatureGraph({ data, checkInAt }: TemperatureGraphProps) {
                     )}>
                         {latestTemp ?? '--'}°C
                     </span>
-                    <div className="flex items-center justify-end gap-1 mt-1">
-                        <span className="w-2 h-2 rounded-full bg-status-success animate-pulse"></span>
-                        <span className="text-xs text-slate-500 font-medium">실시간</span>
-                    </div>
                 </div>
             </div>
 
             {/* Scrollable Chart Area */}
-            <div className="overflow-x-auto w-full pb-2 touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="overflow-x-auto w-full touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
                 <div className="h-[260px] sm:h-[320px]" style={{ width: `${totalWidthPercent}%`, minWidth: '100%' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart
                             data={chartData}
-                            margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
+                            margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                         >
                             <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f1f5f9" />
 
