@@ -119,14 +119,21 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                             </div>
 
                             <div className="grid grid-cols-3 gap-2">
-                                {getNextThreeMealSlots().map(({ label }) => (
-                                    <div key={label} className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                                        <span className="text-[10px] text-slate-400 block mb-1 font-bold">{label}</span>
-                                        <span className="text-xs font-bold text-slate-600 truncate block">
-                                            {currentMealLabel ?? '신청전'}
-                                        </span>
-                                    </div>
-                                ))}
+                                {getNextThreeMealSlots().map((slot) => {
+                                    const meal = meals.find(m => m.meal_date === slot.date && m.meal_time === slot.meal_time);
+                                    const labelText = meal
+                                        ? (meal.pediatric_meal_type || '일반식')
+                                        : '신청전';
+
+                                    return (
+                                        <div key={slot.label} className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
+                                            <span className="text-[10px] text-slate-400 block mb-1 font-bold">{slot.label}</span>
+                                            <span className="text-xs font-bold text-slate-600 truncate block">
+                                                {labelText}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </section>
 

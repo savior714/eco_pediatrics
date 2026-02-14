@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { TransferModal } from './TransferModal';
 import { VitalModal } from './VitalModal';
 import { EditMealModal } from './EditMealModal';
+import { AddExamModal } from './AddExamModal';
 import { useVitals } from '@/hooks/useVitals';
 
 interface PatientDetailModalProps {
@@ -44,10 +45,7 @@ function formatExamTime(iso: string): string {
 
 export function PatientDetailModal({ isOpen, onClose, bed, notifications, onCompleteRequest, onIVUploadSuccess, onVitalUpdate, vitals: propVitals, checkInAt: propCheckInAt, lastUploadedIv, lastUpdated }: PatientDetailModalProps) {
     const [examSchedules, setExamSchedules] = useState<ExamScheduleItem[]>([]);
-    const [examFormOpen, setExamFormOpen] = useState(false);
-    const [examForm, setExamForm] = useState<{ date: string; timeOfDay: 'am' | 'pm'; name: string }>({ date: '', timeOfDay: 'am', name: '' });
-    const [examSubmitting, setExamSubmitting] = useState(false);
-    const [examAddError, setExamAddError] = useState<string | null>(null);
+    const [addExamModalOpen, setAddExamModalOpen] = useState(false);
     const [deletingExamId, setDeletingExamId] = useState<number | null>(null);
     const [transferModalOpen, setTransferModalOpen] = useState(false);
     const [vitalModalOpen, setVitalModalOpen] = useState(false);
@@ -99,29 +97,23 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
             .catch(() => { });
     };
 
-    const handleAddExam = async () => {
-        if (!bed?.id || !examForm.date || !examForm.name) return;
-        setExamSubmitting(true);
-        setExamAddError(null);
+    const handleAddExam = async (examData: { name: string; date: string; timeOfDay: 'am' | 'pm' }) => {
+        if (!bed?.id) return;
         try {
-            const [y, m, d] = examForm.date.split('-').map(Number);
-            const hour = examForm.timeOfDay === 'am' ? 9 : 14;
+            const [y, m, d] = examData.date.split('-').map(Number);
+            const hour = examData.timeOfDay === 'am' ? 9 : 14;
             const scheduledAt = new Date(y, m - 1, d, hour, 0).toISOString();
             await api.post('/api/v1/exam-schedules', {
                 admission_id: bed.id,
                 scheduled_at: scheduledAt,
-                name: examForm.name.trim(),
+                name: examData.name.trim(),
                 note: ''
             });
 
-            setExamForm({ date: '', timeOfDay: 'am', name: '' });
-            setExamFormOpen(false);
-            setExamAddError(null);
             refetchExams();
         } catch (e) {
-            setExamAddError('서버에 연결할 수 없습니다. 백엔드(localhost:8000)가 실행 중인지, exam_schedules 테이블이 생성되었는지 확인해 주세요.');
-        } finally {
-            setExamSubmitting(false);
+            console.error(e);
+            throw e;
         }
     };
 
@@ -366,8 +358,8 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                         오늘의 검사 일정
                                     </h3>
                                     <button
-                                        onClick={() => setExamFormOpen(true)}
-                                        className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-lg font-bold hover:bg-primary/20 transition"
+                                        onClick={() => setAddExamModalOpen(true)}
+                                        className="text-[10px] bg-violet-100 text-violet-600 px-2 py-1 rounded-lg font-bold hover:bg-violet-200 transition"
                                     >
                                         일정 등록
                                     </button>
@@ -395,24 +387,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                     {examSchedules.length === 0 && <p className="text-xs text-slate-400 text-center py-4">등록된 일정이 없습니다.</p>}
                                 </div>
 
-                                {examFormOpen && (
-                                    <div className="mt-4 p-4 bg-white rounded-xl border-[1.5px] border-slate-600 space-y-3 shadow-lg">
-                                        {examAddError && <p className="text-[10px] text-red-500">{examAddError}</p>}
-                                        <input type="date" value={examForm.date} onChange={e => setExamForm(f => ({ ...f, date: e.target.value }))} className="w-full text-xs p-2 border rounded" />
-                                        <div className="flex gap-2">
-                                            <button onClick={() => setExamForm(f => ({ ...f, timeOfDay: 'am' }))} className={`flex-1 py-1 text-xs rounded border ${examForm.timeOfDay === 'am' ? 'border-violet-500 bg-violet-50' : ''}`}>오전</button>
-                                            <button onClick={() => setExamForm(f => ({ ...f, timeOfDay: 'pm' }))} className={`flex-1 py-1 text-xs rounded border ${examForm.timeOfDay === 'pm' ? 'border-violet-500 bg-violet-50' : ''}`}>오후</button>
-                                        </div>
-                                        <select value={examForm.name} onChange={e => setExamForm(f => ({ ...f, name: e.target.value }))} className="w-full text-xs p-2 border rounded">
-                                            <option value="">검사 선택</option>
-                                            {EXAM_TYPE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                        </select>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => setExamFormOpen(false)} className="flex-1 py-2 text-xs border rounded">취소</button>
-                                            <button onClick={handleAddExam} disabled={examSubmitting} className="flex-1 py-2 text-xs bg-violet-500 text-white rounded font-bold">추가</button>
-                                        </div>
-                                    </div>
-                                )}
                             </section>
 
                             <section className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 flex-1">
@@ -497,6 +471,12 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                     onSave={handleMealEditSave}
                 />
             )}
+
+            <AddExamModal
+                isOpen={addExamModalOpen}
+                onClose={() => setAddExamModalOpen(false)}
+                onSave={handleAddExam}
+            />
         </div>
     );
 }
