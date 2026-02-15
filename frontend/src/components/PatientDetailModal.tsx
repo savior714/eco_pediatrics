@@ -66,12 +66,18 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
 
     const handleSeedData = async () => {
         if (!bed?.id) return;
-        if (!window.confirm(`[Dev] ${bed.name} 환자에게 24시간치 가상 데이터를 생성할까요?`)) return;
+        if (!window.confirm(`[Dev] ${bed.name} 환자에게 가상 데이터를 생성할까요?`)) return;
         try {
             await api.post(`/api/v1/dev/seed-patient/${bed.id}`, {});
-            alert('데이터 생성 완료');
-            fetchDashboardData();
-            window.location.reload();
+            // 1. Refresh internal data (vitals, meals, exam schedules)
+            await fetchDashboardData();
+            refetchExams();
+            // 2. Notify parent dashboard to update the patient card (temp/IV rate)
+            // Note: onVitalUpdate and onIVUploadSuccess trigger state refresh in the parent 'Station'
+            onVitalUpdate?.(36.5); // Placeholder to trigger re-fetch in parent
+            onIVUploadSuccess?.(40); // Placeholder to trigger re-fetch in parent
+
+            alert('데이터 생성 및 동기화 완료');
         } catch (e) {
             alert('데이터 생성 실패');
         }
