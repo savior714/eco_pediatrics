@@ -110,23 +110,41 @@ export function MealGrid({ beds }: MealGridProps) {
 
     // Render Cell Helper
     const renderCell = (bed: Bed, time: string, type: 'child' | 'guardian') => {
-        if (!bed.id) return null; // Should not happen with patients filter, but for type safety
+        if (!bed.id) return null;
         const req = matrix[bed.id]?.[time];
         const value = type === 'child'
             ? (req?.pediatric_meal_type || '선택 안함')
             : (req?.guardian_meal_type || '선택 안함');
 
+        const requestedValue = type === 'child'
+            ? req?.requested_pediatric_meal_type
+            : req?.requested_guardian_meal_type;
+
+        const isPending = req?.status === 'PENDING' && requestedValue && requestedValue !== value;
+
         const options = type === 'child' ? PEDIATRIC_OPTIONS : GUARDIAN_OPTIONS;
 
         return (
-            <td className="p-0 border border-slate-300 h-[32px]">
-                <select
-                    className={`w-full h-full text-center bg-transparent border-none text-xs focus:ring-inset focus:ring-1 focus:ring-blue-500 cursor-pointer ${value !== '선택 안함' ? 'font-bold text-slate-800' : 'text-slate-400'}`}
-                    value={value}
-                    onChange={(e) => handleUpdate(bed, time, type === 'child' ? 'pediatric_meal_type' : 'guardian_meal_type', e.target.value)}
-                >
-                    {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                </select>
+            <td className={`p-0 border border-slate-300 h-[32px] relative ${isPending ? 'bg-orange-50' : ''}`}>
+                <div className="flex items-center h-full">
+                    <select
+                        className={`flex-1 h-full text-center bg-transparent border-none text-xs focus:ring-inset focus:ring-1 focus:ring-blue-500 cursor-pointer ${value !== '선택 안함' ? 'font-bold text-slate-800' : 'text-slate-400'}`}
+                        value={value}
+                        onChange={(e) => handleUpdate(bed, time, type === 'child' ? 'pediatric_meal_type' : 'guardian_meal_type', e.target.value)}
+                    >
+                        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+
+                    {isPending && (
+                        <button
+                            title={`환자 신청: ${requestedValue}`}
+                            onClick={() => handleUpdate(bed, time, type === 'child' ? 'pediatric_meal_type' : 'guardian_meal_type', requestedValue)}
+                            className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold hover:bg-orange-600 shadow-sm z-10 animate-pulse"
+                        >
+                            !
+                        </button>
+                    )}
+                </div>
             </td>
         );
     };

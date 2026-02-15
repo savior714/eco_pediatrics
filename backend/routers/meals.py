@@ -79,10 +79,38 @@ async def upsert_meal_request(
     req: MealRequestCreate,
     db: AsyncClient = Depends(get_supabase)
 ):
-    # Upsert based on (admission_id, meal_date, meal_time)
+    # Fetch current record to preserve existing plan if needed
+    current_res = await execute_with_retry_async(
+        db.table("meal_requests")
+        .select("*")
+        .eq("admission_id", req.admission_id)
+        .eq("meal_date", req.meal_date.isoformat())
+        .eq("meal_time", req.meal_time.value)
+    )
+    current_data = current_res.data[0] if current_res and current_res.data else None
+
+    # Sync fields based on request_type
     data = req.model_dump(mode='json')
     
-    # Using the unique index we created in Migration 003
+    if req.request_type == 'STATION_UPDATE':
+        # Nurse is directly updating the plan
+        data['status'] = 'APPROVED'
+        data['requested_pediatric_meal_type'] = None
+        data['requested_guardian_meal_type'] = None
+    else:
+        # Patient is requesting - keep current plan as is
+        if current_data:
+            data['pediatric_meal_type'] = current_data.get('pediatric_meal_type')
+            data['guardian_meal_type'] = current_data.get('guardian_meal_type')
+        else:
+            data['pediatric_meal_type'] = None
+            data['guardian_meal_type'] = None
+        
+        data['requested_pediatric_meal_type'] = req.pediatric_meal_type
+        data['requested_guardian_meal_type'] = req.guardian_meal_type
+        data['status'] = 'PENDING'
+
+    # Upsert with the updated logic
     await execute_with_retry_async(
         db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time")
     )

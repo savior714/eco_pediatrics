@@ -52,6 +52,8 @@ class MealRequest(BaseModel):
     request_type: str
     pediatric_meal_type: Optional[str] = None
     guardian_meal_type: Optional[str] = None
+    requested_pediatric_meal_type: Optional[str] = None
+    requested_guardian_meal_type: Optional[str] = None
     room_note: Optional[str] = None
     meal_date: Optional[date] = None
     meal_time: Optional[str] = None

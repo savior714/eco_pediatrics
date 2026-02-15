@@ -88,15 +88,18 @@ export interface IVRecord {
 }
 
 export interface MealRequest {
-    id: number;
+    id?: number;
     admission_id: string;
     request_type: string;
     pediatric_meal_type?: string;
     guardian_meal_type?: string;
+    requested_pediatric_meal_type?: string;
+    requested_guardian_meal_type?: string;
     room_note?: string;
-    created_at: string;
-    meal_date?: string;
-    meal_time?: string;
+    meal_date: string;
+    meal_time: string;
+    status: string;
+    created_at?: string;
 }
 
 export interface DocumentRequest {
