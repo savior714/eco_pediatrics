@@ -84,7 +84,7 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                         has_medication: v.has_medication,
                         medication_type: v.medication_type,
                         recorded_at: v.recorded_at
-                    })).reverse();
+                    }));
                     setVitals(formattedVitals);
                 } else {
                     setVitals([]);
@@ -188,6 +188,7 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
     const { isConnected } = useWebSocket({
         url: token ? `${api.getBaseUrl().replace(/^http/, 'ws')}/ws/${token}` : '',
         enabled: !!token && enabled,
+        onOpen: fetchDashboardData,
         onMessage: handleMessage
     });
 

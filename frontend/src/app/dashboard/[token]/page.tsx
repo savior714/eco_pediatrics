@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { TemperatureGraph } from '@/components/TemperatureGraph';
 import { IVStatusCard } from '@/components/IVStatusCard';
-import { Card } from '@/components/Card';
 import { Utensils, FileText, CalendarCheck, Bell, Smartphone, Monitor } from 'lucide-react';
 import { useVitals } from '@/hooks/useVitals';
+import { api, API_BASE } from '@/lib/api';
 import { MealRequestModal } from '@/components/MealRequestModal';
 import { DocumentRequestModal } from '@/components/DocumentRequestModal';
 import { calculateHospitalDay, getNextThreeMealSlots, formatPatientDemographics } from '@/utils/dateUtils';
@@ -114,7 +114,7 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                         {/* 수액 안전 모니터링 */}
                         <section>
                             <IVStatusCard
-                                photoUrl={latestIv?.photo_url || ""}
+                                photoUrl={latestIv?.photo_url ? (latestIv.photo_url.startsWith('/') ? `${API_BASE}${latestIv.photo_url}` : latestIv.photo_url) : ""}
                                 infusionRate={latestIv?.infusion_rate || 0}
                                 lastChecked={latestIv ? new Date(latestIv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}
                             />

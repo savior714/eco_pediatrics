@@ -66,7 +66,8 @@ export function TemperatureGraph({ data, checkInAt, className }: TemperatureGrap
                     hospitalDay: calculateHospitalDay(checkInAt, date),
                     timestamp: ts
                 };
-            });
+            })
+            .sort((a, b) => a.timestamp - b.timestamp);
 
         // Calculate Y-axis domain based on data
         let minTemp = 35.5;
