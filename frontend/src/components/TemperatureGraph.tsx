@@ -160,7 +160,7 @@ export function TemperatureGraph({ data, checkInAt, className }: TemperatureGrap
                             <XAxis
                                 dataKey="timestamp"
                                 type="number"
-                                domain={['dataMin', 'dataMax']} // Or strictly start to end day
+                                domain={[ticks[0], ticks[ticks.length - 1]]}
                                 scale="time"
                                 ticks={ticks}
                                 tickFormatter={(unixTime) => {
