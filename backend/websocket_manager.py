@@ -47,9 +47,13 @@ class ConnectionManager:
             if current_connections_snapshot:
                 results = await asyncio.gather(*(send(conn) for conn in current_connections_snapshot), return_exceptions=True)
 
-                for res in results:
-                    if isinstance(res, WebSocket):
-                        to_remove.append(res)
+                for i, res in enumerate(results):
+                    # If res is a WebSocket (returned by send() on error) or an Exception (raised during gather), mark it for removal
+                    if isinstance(res, (WebSocket, Exception)):
+                        to_remove.append(current_connections_snapshot[i])
+                    elif res is not None:
+                        # Should not happen with current send() logic, but for robustness
+                        to_remove.append(current_connections_snapshot[i])
             
             # Cleanup dead connections
             # Re-check if token still exists in active_connections because it might have been removed during await

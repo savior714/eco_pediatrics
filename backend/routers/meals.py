@@ -9,7 +9,7 @@ from logger import get_logger
 from models import MealRequest, MealRequestCreate
 
 from dependencies import get_supabase
-from utils import execute_with_retry_async
+from utils import execute_with_retry_async, broadcast_to_station_and_patient, is_pgrst204_error
 from schemas import CommonMealPlan, PatientMealOverride, PatientMealOverrideCreate
 
 router = APIRouter()
@@ -116,9 +116,9 @@ async def upsert_meal_request(
         await execute_with_retry_async(
             db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time")
         )
-    except APIError as e:
+    except Exception as e:
         # Fallback for missing schema migration (PGRST204)
-        if (hasattr(e, 'code') and e.code == 'PGRST204') or "schema cache" in str(e):
+        if is_pgrst204_error(e):
             get_logger().warning("Schema mismatch detected: 'requested_*_meal_type' columns missing. Retrying upsert without them. Please apply migration 004.")
 
             # Remove problematic fields
@@ -144,7 +144,7 @@ async def upsert_meal_request(
         admission_data = adm_res.data if adm_res and adm_res.data else None
         
         if admission_data:
-            msg = json.dumps({
+            msg = {
                 "type": "NEW_MEAL_REQUEST",
                 "data": {
                     "room": admission_data.get("room_number"),
@@ -155,15 +155,9 @@ async def upsert_meal_request(
                     "pediatric_meal_type": req.pediatric_meal_type,
                     "guardian_meal_type": req.guardian_meal_type
                 }
-            })
-
-            # 1. Broadcast to STATION
-            await manager.broadcast(msg, "STATION")
-
-            # 2. Broadcast to specific Patient (Dashboard)
+            }
             token = admission_data.get("access_token")
-            if token:
-                await manager.broadcast(msg, str(token)) # Force token string cast
+            await broadcast_to_station_and_patient(manager, msg, token)
                 
     except Exception as e:
         get_logger().error(f"Failed to broadcast meal request: {e}")
