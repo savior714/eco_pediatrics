@@ -6,7 +6,9 @@ CREATE TABLE admissions (
     access_token UUID DEFAULT gen_random_uuid() UNIQUE, -- QR 접속용 토큰
     status TEXT DEFAULT 'IN_PROGRESS',         -- IN_PROGRESS / DISCHARGED
     check_in_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    discharged_at TIMESTAMP WITH TIME ZONE
+    discharged_at TIMESTAMP WITH TIME ZONE,
+    dob DATE,                                  -- 생년월일
+    gender TEXT                                -- 성별 (M/F)
 );
 
 -- 2. 바이탈 사인 (시계열 데이터, 그래프용)

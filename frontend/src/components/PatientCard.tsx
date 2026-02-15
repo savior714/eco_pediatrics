@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from './Card';
 import { Thermometer, Droplet, QrCode } from 'lucide-react';
+import { calculateAge } from '@/utils/dateUtils';
 
 interface PatientCardProps {
     name: string;
@@ -8,11 +9,13 @@ interface PatientCardProps {
     temperature: string | number;
     infusionRate: number | string | null;
     status: 'normal' | 'fever' | 'warning';
+    dob?: string;
+    gender?: string;
     onCardClick?: () => void;
     onQrClick?: (e: React.MouseEvent) => void;
 }
 
-export function PatientCard({ name, roomNumber, temperature, infusionRate, status, onCardClick, onQrClick }: PatientCardProps) {
+export function PatientCard({ name, roomNumber, temperature, infusionRate, status, dob, gender, onCardClick, onQrClick }: PatientCardProps) {
     const statusStyles = {
         fever: 'border-status-danger border-2 bg-red-100 shadow-sm shadow-red-200',
         warning: 'border-status-warning border-2 bg-orange-50',
@@ -27,7 +30,16 @@ export function PatientCard({ name, roomNumber, temperature, infusionRate, statu
             <div className="flex justify-between items-start mb-1">
                 <div>
                     <h4 className={`text-lg font-bold ${status === 'fever' ? 'text-red-700' : 'text-slate-800'}`}>{roomNumber}</h4>
-                    <p className={`${status === 'fever' ? 'text-red-900/70' : 'text-slate-600'} text-xs font-medium`}>{name}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                        <p className={`${status === 'fever' ? 'text-red-900/70' : 'text-slate-600'} text-[11px] font-bold`}>{name}</p>
+                        <span className="text-[10px] text-slate-300">|</span>
+                        <span className="text-[10px] text-slate-500 font-medium">{dob ? calculateAge(dob) : ''}</span>
+                        {gender && (
+                            <span className={`text-[10px] font-bold ${gender === 'M' ? 'text-blue-500' : 'text-rose-500'}`}>
+                                {gender === 'M' ? '남' : '여'}
+                            </span>
+                        )}
+                    </div>
                 </div>
                 {onQrClick && (
                     <button

@@ -3,7 +3,7 @@ import { X, Check, Clock, AlertCircle, CalendarCheck, Plus, Thermometer, Droplet
 import { Card } from './Card';
 import { IVUploadForm } from './IVUploadForm';
 import { TemperatureGraph } from './TemperatureGraph';
-import { getNextThreeMealSlots } from '@/utils/dateUtils';
+import { getNextThreeMealSlots, calculateAge } from '@/utils/dateUtils';
 import { Bed, Notification, ExamScheduleItem, VitalData, LastUploadedIv } from '@/types/domain';
 import { MEAL_MAP, DOC_MAP, EXAM_TYPE_OPTIONS } from '@/constants/mappings';
 import { api } from '@/lib/api';
@@ -227,6 +227,16 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                             <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{bed.room}호</h2>
                             <span className="text-xl text-slate-300 font-light">/</span>
                             <p className="text-slate-500 font-bold text-base mt-1">{bed.name}</p>
+                            {bed.dob && (
+                                <span className="text-slate-400 text-sm mt-1 ml-1 font-medium italic">
+                                    ({calculateAge(bed.dob)})
+                                </span>
+                            )}
+                            {bed.gender && (
+                                <span className={`text-sm mt-1 ml-1 font-bold ${bed.gender === 'M' ? 'text-blue-500' : 'text-rose-500'}`}>
+                                    {bed.gender === 'M' ? '남' : '여'}
+                                </span>
+                            )}
                             {bed.status === 'fever' && (
                                 <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-full">
                                     고열 주의

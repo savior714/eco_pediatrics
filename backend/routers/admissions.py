@@ -95,7 +95,9 @@ async def create_admission(admission: AdmissionCreate, db: AsyncClient = Depends
     data = {
         "patient_name_masked": masked_name,
         "room_number": admission.room_number,
-        "status": "IN_PROGRESS"
+        "status": "IN_PROGRESS",
+        "dob": admission.dob,
+        "gender": admission.gender
     }
     response = await execute_with_retry_async(db.table("admissions").insert(data))
     new_admission = response.data[0]

@@ -7,12 +7,13 @@ interface AdmitSubModalProps {
     isOpen: boolean;
     onClose: () => void;
     roomNumber: string;
-    onAdmit: (name: string, birthday: string) => Promise<void>;
+    onAdmit: (name: string, birthday: string, gender: string) => Promise<void>;
 }
 
 export function AdmitSubModal({ isOpen, onClose, roomNumber, onAdmit }: AdmitSubModalProps) {
     const [name, setName] = useState('');
     const [birthday, setBirthday] = useState(''); // YYYY-MM-DD
+    const [gender, setGender] = useState<'M' | 'F' | ''>('M'); // Default to M
     const [isLoading, setIsLoading] = useState(false);
 
     if (!isOpen) return null;
@@ -25,7 +26,7 @@ export function AdmitSubModal({ isOpen, onClose, roomNumber, onAdmit }: AdmitSub
         }
         setIsLoading(true);
         try {
-            await onAdmit(name, birthday);
+            await onAdmit(name, birthday, gender);
             onClose();
             setName('');
             setBirthday('');
@@ -72,6 +73,26 @@ export function AdmitSubModal({ isOpen, onClose, roomNumber, onAdmit }: AdmitSub
                             placeholder="YYYY-MM-DD"
                             className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all"
                         />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">성별</label>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setGender('M')}
+                                className={`flex-1 py-3 rounded-xl font-bold transition-all ${gender === 'M' ? 'bg-blue-500 text-white shadow-sm' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}
+                            >
+                                남아 (M)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setGender('F')}
+                                className={`flex-1 py-3 rounded-xl font-bold transition-all ${gender === 'F' ? 'bg-rose-500 text-white shadow-sm' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}
+                            >
+                                여아 (F)
+                            </button>
+                        </div>
                     </div>
 
                     <div className="pt-2">

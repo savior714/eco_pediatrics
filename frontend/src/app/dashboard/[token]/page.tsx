@@ -9,11 +9,11 @@ import { Utensils, FileText, CalendarCheck, Bell, Smartphone, Monitor } from 'lu
 import { useVitals } from '@/hooks/useVitals';
 import { MealRequestModal } from '@/components/MealRequestModal';
 import { DocumentRequestModal } from '@/components/DocumentRequestModal';
-import { calculateHospitalDay, getNextThreeMealSlots } from '@/utils/dateUtils';
+import { calculateHospitalDay, getNextThreeMealSlots, calculateAge } from '@/utils/dateUtils';
 
 export default function Dashboard({ params }: { params: { token: string } }) {
     const { token } = params;
-    const { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, meals, examSchedules, ivRecords, documentRequests, refetchDashboard } = useVitals(token);
+    const { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, dob, gender, meals, examSchedules, ivRecords, documentRequests, refetchDashboard } = useVitals(token);
     const [isMealModalOpen, setIsMealModalOpen] = useState(false);
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
@@ -75,6 +75,20 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                                     <span className="text-slate-400">{roomNumber || '...'}</span>
                                     <span className="w-1 md:w-1.5 h-1 md:h-1.5 bg-slate-200 rounded-full shrink-0" />
                                     <span className="text-teal-600 font-extrabold">{checkInAt ? `${calculateHospitalDay(checkInAt)}일차` : '...'}</span>
+                                    {dob && (
+                                        <>
+                                            <span className="w-1 md:w-1.5 h-1 md:h-1.5 bg-slate-200 rounded-full shrink-0" />
+                                            <span className="text-slate-500">{calculateAge(dob)}</span>
+                                        </>
+                                    )}
+                                    {gender && (
+                                        <>
+                                            <span className="w-1 md:w-1.5 h-1 md:h-1.5 bg-slate-200 rounded-full shrink-0" />
+                                            <span className={gender === 'M' ? 'text-blue-500' : 'text-rose-500'}>
+                                                {gender === 'M' ? '남' : '여'}
+                                            </span>
+                                        </>
+                                    )}
                                 </p>
                             </div>
                         </div>
@@ -263,8 +277,8 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                         </button>
                     </div>
                 </footer>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
 

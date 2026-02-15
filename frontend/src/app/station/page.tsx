@@ -30,12 +30,14 @@ export default function Station() {
     const [qrBed, setQrBed] = useState<Bed | null>(null); // State for QR Modal
     const [admitRoom, setAdmitRoom] = useState<string | null>(null);
 
-    const handleAdmit = async (name: string, birthday: string) => {
+    const handleAdmit = async (name: string, birthday: string, gender: string) => {
         if (!admitRoom) return;
         try {
             await api.post('/api/v1/admissions', {
                 patient_name: name,
-                room_number: admitRoom
+                room_number: admitRoom,
+                dob: birthday,
+                gender: gender
             });
             // 1. Success Feedback
             alert('입원 수속이 완료되었습니다.');
@@ -152,6 +154,8 @@ export default function Station() {
                                         if (bed.token) setQrBed(bed);
                                         else alert('토큰 없음');
                                     }}
+                                    dob={bed.dob}
+                                    gender={bed.gender}
                                 />
                             );
                         })}

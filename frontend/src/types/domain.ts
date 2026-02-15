@@ -10,6 +10,8 @@ export interface Bed {
     had_fever_in_6h?: boolean;
     latest_meal?: MealRequest;
     last_vital_at?: string;
+    dob?: string;
+    gender?: string;
 }
 
 export interface Notification {
@@ -60,6 +62,8 @@ export interface AdmissionSummary {
     had_fever_in_6h?: boolean;
     latest_meal?: MealRequest;
     last_vital_at?: string;
+    dob?: string;
+    gender?: string;
 }
 
 export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL' | 'NEW_EXAM_SCHEDULE' | 'DELETE_EXAM_SCHEDULE' | 'ADMISSION_TRANSFERRED' | 'ADMISSION_DISCHARGED';

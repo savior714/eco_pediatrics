@@ -16,9 +16,10 @@ class Admission(BaseModel):
     patient_name_masked: str
     room_number: str
     status: str = "IN_PROGRESS"
-    check_in_at: Optional[datetime] = None
     discharged_at: Optional[datetime] = None
     access_token: Optional[str] = None # Added for QR generation
+    dob: Optional[date] = None
+    gender: Optional[str] = None
 
 class VitalSign(BaseModel):
     id: Optional[int] = None
@@ -51,6 +52,8 @@ class MealRequest(BaseModel):
 class AdmissionCreate(BaseModel):
     patient_name: str  # Raw name, will be masked in logic
     room_number: str
+    dob: Optional[date] = None
+    gender: Optional[str] = None
 
 class VitalSignCreate(BaseModel):
     admission_id: str

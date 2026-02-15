@@ -43,9 +43,10 @@ class AdmissionResponse(BaseModel):
     id: str
     display_name: str
     room_number: str
-    check_in_at: Optional[datetime]
     discharged_at: Optional[datetime]
     access_token: Optional[str]
+    dob: Optional[date] = None
+    gender: Optional[str] = None
 
 class DashboardResponse(BaseModel):
     admission: AdmissionResponse

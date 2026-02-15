@@ -20,6 +20,25 @@ export function calculateHospitalDay(checkInAt: string | null | undefined, targe
 
     return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
 }
+export function calculateAge(dob: string | null | undefined): string {
+    if (!dob) return '';
+    const birthDate = new Date(dob);
+    const today = new Date();
+
+    let years = today.getFullYear() - birthDate.getFullYear();
+    let months = today.getMonth() - birthDate.getMonth();
+    if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
+        years--;
+        months += 12;
+    }
+
+    const totalMonths = years * 12 + months;
+
+    if (totalMonths < 36) {
+        return `${totalMonths}개월`;
+    }
+    return `${years}세`;
+}
 
 /** 현재 시각 기준 "앞으로의 3끼" 라벨 및 메타데이터. 6~13시 / 14~18시 / 19~5시 구간. */
 export function getNextThreeMealSlots(now: Date = new Date()): { label: string; date: string; meal_time: 'BREAKFAST' | 'LUNCH' | 'DINNER' }[] {

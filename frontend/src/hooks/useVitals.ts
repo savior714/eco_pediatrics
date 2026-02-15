@@ -13,6 +13,8 @@ interface UseVitalsReturn {
     admissionId: string | null;
     patientName: string | null;
     roomNumber: string | null;
+    dob: string | null;
+    gender: string | null;
     isConnected: boolean;
     isRefreshing: boolean;
     refetchDashboard: () => Promise<void>;
@@ -21,7 +23,7 @@ interface UseVitalsReturn {
 }
 
 interface DashboardResponse {
-    admission: { id: string; patient_name_masked: string; display_name: string; room_number: string; check_in_at: string };
+    admission: { id: string; patient_name_masked: string; display_name: string; room_number: string; check_in_at: string; dob?: string; gender?: string };
     vitals: VitalDataResponse[];
     meals: MealRequest[];
     document_requests: DocumentRequest[];
@@ -40,6 +42,8 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
     const [admissionId, setAdmissionId] = useState<string | null>(null);
     const [patientName, setPatientName] = useState<string | null>(null);
     const [roomNumber, setRoomNumber] = useState<string | null>(null);
+    const [dob, setDob] = useState<string | null>(null);
+    const [gender, setGender] = useState<string | null>(null);
 
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -64,6 +68,8 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     setPatientName(data.admission.display_name || data.admission.patient_name_masked || '환자');
                     setRoomNumber(data.admission.room_number);
                     setCheckInAt(data.admission.check_in_at);
+                    setDob(data.admission.dob || null);
+                    setGender(data.admission.gender || null);
                 }
 
                 // Vitals
@@ -210,6 +216,8 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
         admissionId,
         patientName,
         roomNumber,
+        dob,
+        gender,
         isConnected,
         isRefreshing,
         refetchDashboard: fetchDashboardData,
