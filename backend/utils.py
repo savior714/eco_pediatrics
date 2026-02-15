@@ -36,7 +36,9 @@ async def execute_with_retry_async(query_builder):
 
             # Check for HTTP status code in response (e.g. httpx.HTTPStatusError)
             if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
-                if 400 <= e.response.status_code < 500:
+                status = e.response.status_code
+                # 429 is Too Many Requests (Transient), so we should retry it.
+                if 400 <= status < 500 and status != 429:
                     is_client_error = True
 
             # Check for Postgrest APIError (often deterministic logic errors)
