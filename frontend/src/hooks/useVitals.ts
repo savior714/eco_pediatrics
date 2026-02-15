@@ -108,11 +108,29 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                 // Optimization: Partial updates could be done here
                 switch (message.type) {
                     case 'NEW_VITAL':
+                        // Formatting logic same as in fetchDashboardData
+                        const v = message.data as any;
+                        const formattedV = {
+                            time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            temperature: v.temperature,
+                            has_medication: v.has_medication,
+                            medication_type: v.medication_type,
+                            recorded_at: v.recorded_at
+                        };
+                        setVitals(prev => [formattedV, ...prev]);
+                        fetchDashboardData();
+                        break;
                     case 'NEW_IV':
+                        setIvRecords(prev => [message.data as any, ...prev]);
+                        fetchDashboardData();
+                        break;
                     case 'IV_PHOTO_UPLOADED':
+                        // Handled by fetchDashboardData (or could add to ivRecords if it contains the data)
+                        fetchDashboardData();
+                        break;
                     case 'NEW_DOC_REQUEST':
                         setDocumentRequests(prev => [message.data as any, ...prev]);
-                        fetchDashboardData(); // Re-fetch to be sure
+                        fetchDashboardData();
                         break;
                     case 'NEW_EXAM_SCHEDULE':
                         setExamSchedules(prev => [...prev, message.data as any].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
