@@ -69,7 +69,7 @@ export function useStation(): UseStationReturn {
             name: `환자${i + 1}`,
             temp: null,
             drops: null,
-            status: 'normal',
+            status: 'normal' as const,
             token: ''
         })));
 
