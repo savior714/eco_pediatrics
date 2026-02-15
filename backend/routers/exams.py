@@ -22,15 +22,21 @@ async def create_exam_schedule(schedule: ExamScheduleCreate, db: AsyncClient = D
     response = await execute_with_retry_async(db.table("exam_schedules").insert(data))
     new_schedule = response.data[0]
 
-    # Broadcast to guardian dashboard
-    adm_response = await execute_with_retry_async(db.table("admissions").select("access_token").eq("id", schedule.admission_id))
+    # Broadcast to guardian dashboard & station
+    adm_response = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", schedule.admission_id))
     if adm_response.data:
         token = adm_response.data[0]['access_token']
+        room = adm_response.data[0]['room_number']
+        
         message = {
             "type": "NEW_EXAM_SCHEDULE",
-            "data": new_schedule
+            "data": {
+                **new_schedule,
+                "room": room
+            }
         }
         await manager.broadcast(json.dumps(message), token)
+        await manager.broadcast(json.dumps(message), "STATION")
 
     return new_schedule
 
@@ -51,14 +57,20 @@ async def delete_exam_schedule(schedule_id: int, db: AsyncClient = Depends(get_s
     # 3. Log
     await create_audit_log(db, "NURSE", "DELETE_EXAM", str(schedule_id))
 
-    # 4. Broadcast removal to guardian dashboard
-    adm_res = await execute_with_retry_async(db.table("admissions").select("access_token").eq("id", admission_id))
+    # 4. Broadcast removal to guardian dashboard & station
+    adm_res = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", admission_id))
     if adm_res.data:
         token = adm_res.data[0]['access_token']
+        room = adm_res.data[0]['room_number']
         message = {
             "type": "DELETE_EXAM_SCHEDULE",
-            "data": {"id": schedule_id}
+            "data": {
+                "id": schedule_id,
+                "admission_id": admission_id,
+                "room": room
+            }
         }
         await manager.broadcast(json.dumps(message), token)
+        await manager.broadcast(json.dumps(message), "STATION")
     
     return {"message": "Deleted successfully"}

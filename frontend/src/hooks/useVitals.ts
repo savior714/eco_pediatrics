@@ -111,7 +111,14 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     case 'NEW_IV':
                     case 'IV_PHOTO_UPLOADED':
                     case 'NEW_DOC_REQUEST':
+                    case 'NEW_EXAM_SCHEDULE':
+                    case 'DELETE_EXAM_SCHEDULE':
+                    case 'ADMISSION_TRANSFERRED':
                         fetchDashboardData();
+                        break;
+                    case 'ADMISSION_DISCHARGED':
+                        alert('환자가 퇴원되었습니다.');
+                        window.location.reload();
                         break;
                     case 'NEW_MEAL_REQUEST':
                         // Filter by admission_id if available to prevent cross-patient refetch

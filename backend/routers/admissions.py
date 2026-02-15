@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from supabase._async.client import AsyncClient
 from typing import List
+import json
+from websocket_manager import manager
 
 from dependencies import get_supabase
 from utils import execute_with_retry_async, mask_name, create_audit_log
@@ -32,6 +34,22 @@ async def transfer_patient(admission_id: str, req: TransferRequest, db: AsyncCli
     # 3. Audit
     await create_audit_log(db, "NURSE", "TRANSFER", admission_id, f"To {req.target_room}")
     
+    # 4. Broadcast
+    adm_res = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", admission_id))
+    if adm_res.data:
+        token = adm_res.data[0]['access_token']
+        old_room = adm_res.data[0]['room_number']
+        msg = {
+            "type": "ADMISSION_TRANSFERRED",
+            "data": {
+                "admission_id": admission_id,
+                "old_room": old_room,
+                "new_room": req.target_room
+            }
+        }
+        await manager.broadcast(json.dumps(msg), "STATION")
+        await manager.broadcast(json.dumps(msg), str(token))
+
     return {"message": "Transferred successfully"}
 
 @router.post("/{admission_id}/discharge")
@@ -47,6 +65,21 @@ async def discharge_patient(admission_id: str, db: AsyncClient = Depends(get_sup
     
     await create_audit_log(db, "NURSE", "DISCHARGE", admission_id)
     
+    # 4. Broadcast
+    adm_res = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", admission_id))
+    if adm_res.data:
+        token = adm_res.data[0]['access_token']
+        room = adm_res.data[0]['room_number']
+        msg = {
+            "type": "ADMISSION_DISCHARGED",
+            "data": {
+                "admission_id": admission_id,
+                "room": room
+            }
+        }
+        await manager.broadcast(json.dumps(msg), "STATION")
+        await manager.broadcast(json.dumps(msg), str(token))
+
     return {"message": "Discharged successfully"}
 
 

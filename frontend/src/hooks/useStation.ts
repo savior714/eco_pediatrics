@@ -126,7 +126,14 @@ export function useStation(): UseStationReturn {
                         break;
 
                     case 'NEW_VITAL':
+                    case 'NEW_EXAM_SCHEDULE':
+                    case 'DELETE_EXAM_SCHEDULE':
                         // Handled by setLastUpdated -> Modal refresh
+                        break;
+                    case 'ADMISSION_TRANSFERRED':
+                    case 'ADMISSION_DISCHARGED':
+                        // Re-fetch entire bed list to reflect room changes or discharge
+                        window.location.reload();
                         break;
                 }
             } catch (e) {

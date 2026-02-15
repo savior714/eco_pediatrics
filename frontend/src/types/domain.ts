@@ -62,7 +62,7 @@ export interface AdmissionSummary {
     last_vital_at?: string;
 }
 
-export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL';
+export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL' | 'NEW_EXAM_SCHEDULE' | 'DELETE_EXAM_SCHEDULE' | 'ADMISSION_TRANSFERRED' | 'ADMISSION_DISCHARGED';
 
 export type WsMessage =
     | { type: 'NEW_MEAL_REQUEST'; data: { room: string; request_type: string; admission_id: string; meal_date: string; meal_time: string } }
@@ -70,8 +70,10 @@ export type WsMessage =
     | { type: 'IV_PHOTO_UPLOADED'; data: { admission_id: string; room_number: string; photo_url: string } }
     | { type: 'NEW_IV'; data: { id: number; infusion_rate: number; room: string | null; admission_id: string; photo_url?: string; created_at?: string } }
     | { type: 'NEW_VITAL'; data: { id: number; admission_id: string; temperature: number; has_medication: boolean; medication_type?: string; recorded_at: string; room?: string } }
-    | { type: 'NEW_EXAM_SCHEDULE'; data: ExamScheduleItem }
-    | { type: 'DELETE_EXAM_SCHEDULE'; data: { id: number } };
+    | { type: 'NEW_EXAM_SCHEDULE'; data: ExamScheduleItem & { room: string } }
+    | { type: 'DELETE_EXAM_SCHEDULE'; data: { id: number; admission_id: string; room: string } }
+    | { type: 'ADMISSION_TRANSFERRED'; data: { admission_id: string; old_room: string; new_room: string } }
+    | { type: 'ADMISSION_DISCHARGED'; data: { admission_id: string; room: string } };
 
 export interface IVRecord {
     id: number;

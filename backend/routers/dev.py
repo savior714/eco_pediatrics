@@ -83,11 +83,36 @@ async def seed_patient_data(admission_id: str, db: AsyncClient = Depends(get_sup
     ]
     await execute_with_retry_async(db.table("exam_schedules").insert(exams))
 
-    # 4. Generate 1 Medication Request (Document Request style)
+    # 4. Notify Station/Patient about update
     from websocket_manager import manager
     import json
+
+    # Fetch admission info for token and room
+    adm_res = await execute_with_retry_async(
+        db.table("admissions")
+        .select("access_token, room_number")
+        .eq("id", admission_id)
+        .single()
+    )
+    if adm_res.data:
+        token = adm_res.data['access_token']
+        room = adm_res.data['room_number']
+        
+        # Vitals Broadcast (latest)
+        if vitals:
+            v_msg = {"type": "NEW_VITAL", "data": {**vitals[0], "room": room}}
+            await manager.broadcast(json.dumps(v_msg), "STATION")
+            await manager.broadcast(json.dumps(v_msg), token)
+        
+        # IV Broadcast (latest)
+        if ivs:
+            iv_msg = {"type": "NEW_IV", "data": {**ivs[-1], "room": room}}
+            await manager.broadcast(json.dumps(iv_msg), "STATION")
+            await manager.broadcast(json.dumps(iv_msg), token)
+
+        # Exams Broadcast (bulk notify via generic type or specific)
+        ex_msg = {"type": "NEW_EXAM_SCHEDULE", "data": {**exams[0], "room": room}}
+        await manager.broadcast(json.dumps(ex_msg), "STATION")
+        await manager.broadcast(json.dumps(ex_msg), token)
     
-    # Notify Station/Patient about update
-    # We'll just trigger a general refresh via WS if possible, or expect client to reload
-    
-    return {"message": f"Successfully seeded 24h data for patient {admission_id}"}
+    return {"message": f"Successfully seeded 72h data for patient {admission_id}"}
