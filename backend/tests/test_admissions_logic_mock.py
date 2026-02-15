@@ -22,7 +22,7 @@ sys.modules["utils"].execute_with_retry_async = mock_execute
 
 from routers.admissions import list_admissions
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_logic():
     mock_execute.reset_mock()
     print("--- Testing Admissions Logic (Dedupe & Batch IV) ---")

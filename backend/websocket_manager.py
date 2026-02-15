@@ -1,5 +1,6 @@
 from fastapi import WebSocket
 from typing import List, Dict
+import asyncio
 
 from loguru import logger
 
@@ -25,18 +26,32 @@ class ConnectionManager:
 
     async def broadcast(self, message: str, token: str):
         if token in self.active_connections:
-            # Broadcast to specific token connections (including STATION)
+            connections = self.active_connections[token]
             to_remove = []
-            for connection in self.active_connections[token]:
+
+            async def send(connection):
                 try:
-                    await connection.send_text(message)
+                    # 2 second timeout to prevent blocking
+                    await asyncio.wait_for(connection.send_text(message), timeout=2.0)
+                    return None
                 except Exception:
-                    to_remove.append(connection)
+                    return connection
+
+            # Parallel send with timeout (Phase B)
+            if connections:
+                results = await asyncio.gather(*(send(conn) for conn in connections), return_exceptions=True)
+
+                for res in results:
+                    if isinstance(res, WebSocket):
+                        to_remove.append(res)
             
+            # Cleanup dead connections
             for dead_conn in to_remove:
-                self.active_connections[token].remove(dead_conn)
-                if not self.active_connections[token]:
-                    del self.active_connections[token]
+                if dead_conn in self.active_connections[token]:
+                    self.active_connections[token].remove(dead_conn)
+
+            if not self.active_connections[token]:
+                del self.active_connections[token]
         else:
             logger.debug(f"No active connections for token: {token}. Skipping broadcast.")
 

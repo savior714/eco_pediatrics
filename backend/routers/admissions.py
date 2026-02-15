@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from supabase._async.client import AsyncClient
 from typing import List
 import json
+import asyncio
 from websocket_manager import manager
 
 from dependencies import get_supabase
@@ -124,46 +125,65 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
     
     unique_admissions = list(unique_map.values())
     
-    # 3. Enrich with latest IV rate (Batch Query)
+    # 3. Enrich in parallel (Phase A)
     admission_ids = [adm['id'] for adm in unique_admissions]
     iv_map = {}
+    vital_map = {}
+    meal_map = {}
     
     if admission_ids:
-        iv_res = await execute_with_retry_async(
-            db.table("iv_records")
-            .select("admission_id, infusion_rate, photo_url, created_at")
-            .in_("admission_id", admission_ids)
-            .order("created_at", desc=True)
+        # Define tasks
+        async def fetch_iv():
+            res = await execute_with_retry_async(
+                db.table("iv_records")
+                .select("admission_id, infusion_rate, photo_url, created_at")
+                .in_("admission_id", admission_ids)
+                .order("created_at", desc=True)
+                .order("id", desc=True) # Secondary sort for stability
+            )
+            return res.data or []
+
+        async def fetch_vitals():
+            res = await execute_with_retry_async(
+                db.table("vital_signs")
+                .select("admission_id, temperature, recorded_at")
+                .in_("admission_id", admission_ids)
+                .order("recorded_at", desc=True)
+            )
+            return res.data or []
+
+        async def fetch_meals():
+            res = await execute_with_retry_async(
+                db.table("meal_requests")
+                .select("admission_id, request_type, pediatric_meal_type, guardian_meal_type, room_note, created_at")
+                .in_("admission_id", admission_ids)
+                .order("id", desc=True)
+            )
+            return res.data or []
+
+        # Execute in parallel
+        all_ivs, all_vitals, all_meals = await asyncio.gather(
+            fetch_iv(),
+            fetch_vitals(),
+            fetch_meals()
         )
-        all_ivs = iv_res.data or []
         
-        # Keep only the first (latest) for each admission_id
+        # Process IVs
         for iv in all_ivs:
             aid = iv['admission_id']
             if aid not in iv_map:
                 iv_map[aid] = iv
 
-    # 4. Enrich with Vitals
-    from datetime import datetime, timedelta
-    
-    vital_map = {}
-    if admission_ids:
-        # Fetch vitals
-        vitals_res = await execute_with_retry_async(
-            db.table("vital_signs")
-            .select("admission_id, temperature, recorded_at")
-            .in_("admission_id", admission_ids)
-            .order("recorded_at", desc=True)
-        )
-        all_vitals = vitals_res.data or []
-        
-        # Simple ISO comparison works because standard ISO format is sortable as string
+        # Process Vitals
+        from datetime import datetime, timedelta
+        # Ensure we have local import or use top-level if available, but keeping it local as before to minimize diff scope
+        # (Though we might want to move it to top level, but let's stick to simple changes)
         six_hours_ago_iso = (datetime.now() - timedelta(hours=6)).isoformat()
     
         for v in all_vitals:
             aid = v['admission_id']
             
-            # Initialize with latest (first seen because of desc sort)
+            # Initialize with latest
             if aid not in vital_map:
                 vital_map[aid] = {
                     'latest_temp': v['temperature'],
@@ -171,23 +191,13 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
                     'had_fever_in_6h': False
                 }
             
-            # Check fever (if not already found)
+            # Check fever
             if not vital_map[aid]['had_fever_in_6h']:
-                # Compare string ISO directly
                 rec_at = v.get('recorded_at')
                 if rec_at and v['temperature'] >= 38.0 and rec_at >= six_hours_ago_iso:
                     vital_map[aid]['had_fever_in_6h'] = True
 
-    # 5. Enrich with Latest Meal Request
-    meal_map = {}
-    if admission_ids:
-        meal_res = await execute_with_retry_async(
-            db.table("meal_requests")
-            .select("admission_id, request_type, pediatric_meal_type, guardian_meal_type, room_note, created_at")
-            .in_("admission_id", admission_ids)
-            .order("id", desc=True)
-        )
-        all_meals = meal_res.data or []
+        # Process Meals
         for m in all_meals:
             aid = m['admission_id']
             if aid not in meal_map:

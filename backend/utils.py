@@ -30,6 +30,24 @@ async def execute_with_retry_async(query_builder):
         try:
             return await query_builder.execute()
         except Exception as e:
+            # Phase C: Retry Policy Refinement
+            # Check for non-retryable client errors (4xx)
+            is_client_error = False
+
+            # Check for HTTP status code in response (e.g. httpx.HTTPStatusError)
+            if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
+                if 400 <= e.response.status_code < 500:
+                    is_client_error = True
+
+            # Check for Postgrest APIError (often deterministic logic errors)
+            # If it has a 'code' attribute that looks like a PGRST error or 4xx
+            if hasattr(e, 'code') and (str(e.code).startswith('PGRST') or str(e.code).startswith('4')):
+                is_client_error = True
+
+            if is_client_error:
+                logger.error(f"DB Execute client error (non-retryable): {str(e)}")
+                raise e
+
             if attempt == max_retries - 1:
                 logger.critical(f"DB Async Execute failed after {max_retries} attempts: {str(e)}")
                 raise e
