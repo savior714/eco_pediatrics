@@ -7,8 +7,9 @@ from models import MealRequestCreate, MealTime
 # Import the function to test
 from routers.meals import upsert_meal_request
 
-@pytest.mark.asyncio
-async def test_upsert_meal_request_fallback_on_schema_error():
+@pytest.mark.anyio
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
+async def test_upsert_meal_request_fallback_on_schema_error(anyio_backend):
     # Mock data
     req = MealRequestCreate(
         admission_id="adm-123",

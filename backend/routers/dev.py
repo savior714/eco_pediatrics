@@ -3,7 +3,7 @@ import random
 from datetime import datetime, timedelta
 from supabase._async.client import AsyncClient
 from dependencies import get_supabase
-from utils import execute_with_retry_async
+from utils import execute_with_retry_async, broadcast_to_station_and_patient
 
 router = APIRouter()
 
@@ -112,18 +112,15 @@ async def seed_patient_data(admission_id: str, db: AsyncClient = Depends(get_sup
         # Vitals Broadcast (latest)
         if vitals:
             v_msg = {"type": "NEW_VITAL", "data": {**vitals[0], "room": room}}
-            await manager.broadcast(json.dumps(v_msg), "STATION")
-            await manager.broadcast(json.dumps(v_msg), token)
+            await broadcast_to_station_and_patient(manager, v_msg, token)
         
         # IV Broadcast (latest)
         if ivs:
             iv_msg = {"type": "NEW_IV", "data": {**ivs[-1], "room": room}}
-            await manager.broadcast(json.dumps(iv_msg), "STATION")
-            await manager.broadcast(json.dumps(iv_msg), token)
+            await broadcast_to_station_and_patient(manager, iv_msg, token)
 
         # Exams Broadcast (bulk notify via generic type or specific)
         ex_msg = {"type": "NEW_EXAM_SCHEDULE", "data": {**exams[0], "room": room}}
-        await manager.broadcast(json.dumps(ex_msg), "STATION")
-        await manager.broadcast(json.dumps(ex_msg), token)
+        await broadcast_to_station_and_patient(manager, ex_msg, token)
     
     return {"message": f"Successfully seeded 72h data for patient {admission_id}"}

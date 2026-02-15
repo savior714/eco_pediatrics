@@ -1,5 +1,6 @@
 from supabase._async.client import AsyncClient
 import asyncio
+import json
 from postgrest.exceptions import APIError
 from httpx import HTTPStatusError
 from logger import logger
@@ -24,7 +25,17 @@ async def create_audit_log(db: AsyncClient, actor_type: str, action: str, target
 
 async def execute_with_retry_async(query_builder):
     """
-    Supabase (Async) 쿼리 실행 시 재시도 로직 적용
+    Executes a Supabase (Postgrest) async query with a retry policy.
+
+    Retry Policy:
+    - Max Retries: 3
+    - Retryable Errors:
+        - 5xx Server Errors (HTTP and APIError codes)
+        - 429 Too Many Requests
+        - Network/Connection errors
+    - Non-retryable Errors:
+        - 4xx Client Errors (except 429)
+    - Backoff: Exponential wait (0.5s * attempt)
     """
     max_retries = 3
     
@@ -63,3 +74,29 @@ async def execute_with_retry_async(query_builder):
                 raise e
             logger.warning(f"DB async execute attempt {attempt+1} failed: {str(e)}. Retrying...")
             await asyncio.sleep(0.5 * (attempt + 1))
+
+async def broadcast_to_station_and_patient(manager, message_dict: dict, token: str = None):
+    """
+    Helper to broadcast a message to both the STATION and a specific patient token.
+    Ensures consistent string casting for tokens and JSON serialization.
+    """
+    try:
+        msg_str = json.dumps(message_dict)
+        # 1. Broadcast to STATION
+        await manager.broadcast(msg_str, "STATION")
+        # 2. Broadcast to specific Patient (if token exists)
+        if token:
+            await manager.broadcast(msg_str, str(token))
+    except Exception as e:
+        logger.error(f"Broadcast helper failed: {e}")
+
+def is_pgrst204_error(e: Exception) -> bool:
+    """
+    Checks if the exception is a Postgrest PGRST204 error (missing column or schema cache issue).
+    Useful for handling environments with stale schema caches.
+    """
+    if isinstance(e, APIError):
+        # Check both the code and the message for robustness
+        if (hasattr(e, 'code') and e.code == 'PGRST204') or "schema cache" in str(e).lower():
+            return True
+    return False

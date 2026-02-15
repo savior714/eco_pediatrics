@@ -6,7 +6,7 @@ import asyncio
 from websocket_manager import manager
 
 from dependencies import get_supabase
-from utils import execute_with_retry_async, mask_name, create_audit_log
+from utils import execute_with_retry_async, mask_name, create_audit_log, broadcast_to_station_and_patient
 from services.dashboard import fetch_dashboard_data
 from models import Admission, AdmissionCreate, TransferRequest
 from schemas import DashboardResponse
@@ -44,7 +44,6 @@ async def transfer_patient(admission_id: str, req: TransferRequest, db: AsyncCli
     await create_audit_log(db, "NURSE", "TRANSFER", admission_id, f"From {old_room} To {req.target_room}")
     
     # 5. Broadcast
-    # Send to STATION (nurses need to see change in both rooms) and Patient (token)
     msg = {
         "type": "ADMISSION_TRANSFERRED",
         "data": {
@@ -53,9 +52,7 @@ async def transfer_patient(admission_id: str, req: TransferRequest, db: AsyncCli
             "new_room": req.target_room
         }
     }
-    await manager.broadcast(json.dumps(msg), "STATION")
-    if token:
-        await manager.broadcast(json.dumps(msg), str(token))
+    await broadcast_to_station_and_patient(manager, msg, token)
 
     return {"message": "Transferred successfully"}
 
@@ -84,8 +81,7 @@ async def discharge_patient(admission_id: str, db: AsyncClient = Depends(get_sup
                 "room": room
             }
         }
-        await manager.broadcast(json.dumps(msg), "STATION")
-        await manager.broadcast(json.dumps(msg), str(token))
+        await broadcast_to_station_and_patient(manager, msg, token)
 
     return {"message": "Discharged successfully"}
 
@@ -175,9 +171,10 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
                 iv_map[aid] = iv
 
         # Process Vitals
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
-        six_hours_ago_iso = (datetime.now() - timedelta(hours=6)).isoformat()
+        now_utc = datetime.now(timezone.utc)
+        six_hours_ago = now_utc - timedelta(hours=6)
 
         for v in all_vitals:
             aid = v['admission_id']
@@ -192,9 +189,24 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
             
             # Check fever
             if not vital_map[aid]['had_fever_in_6h']:
-                rec_at = v.get('recorded_at')
-                if rec_at and v['temperature'] >= 38.0 and rec_at >= six_hours_ago_iso:
-                    vital_map[aid]['had_fever_in_6h'] = True
+                rec_at_str = v.get('recorded_at')
+                if rec_at_str and v['temperature'] >= 38.0:
+                    try:
+                        # Handle 'Z' suffix and other ISO formats
+                        clean_iso = rec_at_str.replace('Z', '+00:00')
+                        rec_at_dt = datetime.fromisoformat(clean_iso)
+
+                        # Ensure comparison is between aware datetimes
+                        if rec_at_dt.tzinfo is None:
+                            rec_at_dt = rec_at_dt.replace(tzinfo=timezone.utc)
+
+                        if rec_at_dt >= six_hours_ago:
+                            vital_map[aid]['had_fever_in_6h'] = True
+                    except (ValueError, TypeError):
+                        # Fallback for unexpected formats
+                        six_hours_ago_iso = (datetime.now() - timedelta(hours=6)).isoformat()
+                        if rec_at_str >= six_hours_ago_iso:
+                            vital_map[aid]['had_fever_in_6h'] = True
 
         # Process Meals
         for m in all_meals:

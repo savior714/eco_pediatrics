@@ -5,7 +5,7 @@ from typing import List
 import json
 
 from dependencies import get_supabase
-from utils import execute_with_retry_async, create_audit_log
+from utils import execute_with_retry_async, create_audit_log, broadcast_to_station_and_patient
 from models import ExamSchedule, ExamScheduleCreate
 from websocket_manager import manager
 
@@ -41,8 +41,7 @@ async def create_exam_schedule(schedule: ExamScheduleCreate, db: AsyncClient = D
                 "room": room
             }
         }
-        await manager.broadcast(json.dumps(message), str(token))
-        await manager.broadcast(json.dumps(message), "STATION")
+        await broadcast_to_station_and_patient(manager, message, token)
 
     return new_schedule
 
@@ -81,7 +80,6 @@ async def delete_exam_schedule(schedule_id: int, db: AsyncClient = Depends(get_s
                 "room": room
             }
         }
-        await manager.broadcast(json.dumps(message), str(token))
-        await manager.broadcast(json.dumps(message), "STATION")
+        await broadcast_to_station_and_patient(manager, message, token)
     
     return {"message": "Deleted successfully"}
