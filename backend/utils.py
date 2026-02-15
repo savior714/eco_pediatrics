@@ -34,8 +34,21 @@ async def execute_with_retry_async(query_builder):
         except Exception as e:
             # Check for non-retryable errors first
             if isinstance(e, APIError):
-                logger.error(f"DB API Error (Non-retryable): {str(e)}")
-                raise e
+                # APIError.code could be a string status (e.g., "503") or a Postgres error code (e.g., "23505")
+                is_retryable = False
+                try:
+                    code_int = int(e.code)
+                    if 500 <= code_int < 600:
+                        is_retryable = True
+                except (ValueError, TypeError):
+                    pass
+
+                if not is_retryable:
+                    logger.error(f"DB API Error (Non-retryable): {str(e)}")
+                    raise e
+                else:
+                    logger.warning(f"DB API Error (Retryable 5xx): {str(e)}. Retrying...")
+
             if isinstance(e, HTTPStatusError) and 400 <= e.response.status_code < 500:
                 logger.error(f"DB HTTP Client Error (Non-retryable): {str(e)}")
                 raise e
