@@ -158,10 +158,10 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
     };
 
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && bed?.token) {
             fetchDashboardData();
         }
-    }, [isOpen, fetchDashboardData]);
+    }, [isOpen, bed?.token, fetchDashboardData, lastUpdated]); // Add lastUpdated to sync when parent detects changes
 
     const latestMeal = fetchedMeals.length > 0 ? fetchedMeals[0] : null;
     const currentMealLabelModal = latestMeal
@@ -183,7 +183,8 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         return { chartVitals: [], chartCheckIn: fetchedCheckIn || propCheckInAt || null };
     }, [bed, propVitals, propCheckInAt, fetchedVitals, fetchedCheckIn]);
 
-    const latestVital = fetchedVitals.length > 0 ? fetchedVitals[fetchedVitals.length - 1] : null;
+    // useVitals returns vitals in newest-first order. latestVital should be index 0.
+    const latestVital = fetchedVitals.length > 0 ? fetchedVitals[0] : null;
     const displayTemp = latestVital ? latestVital.temperature : bed.temp;
     const displayVitalTime = latestVital ? latestVital.recorded_at : bed.last_vital_at;
 

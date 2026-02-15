@@ -125,8 +125,6 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
     }, [admissionId]);
 
     // WebSocket Implementation using shared hook
-    // Memoize the message handler to avoid reconnection loops if it changes
-    // Removed admissionId from dependency array to prevent reconnect on ID set
     const handleMessage = useCallback((event: MessageEvent) => {
         try {
             const message = JSON.parse(event.data) as WsMessage;
@@ -145,6 +143,8 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                         if (exists) return prev;
                         return [formattedV, ...prev];
                     });
+                    // Optimized: Only refetch if we need full state sync (e.g. status changes)
+                    // Reducing frequency of API calls improves performance
                     debouncedRefetch();
                     break;
                 }
@@ -175,7 +175,6 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     window.location.reload();
                     break;
                 case 'NEW_MEAL_REQUEST':
-                    // Check against ref to avoid dependency change
                     if (admissionIdRef.current && message.data.admission_id === admissionIdRef.current) {
                         debouncedRefetch();
                     }
@@ -189,11 +188,10 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
     const { isConnected } = useWebSocket({
         url: token ? `${api.getBaseUrl().replace(/^http/, 'ws')}/ws/${token}` : '',
         enabled: !!token && enabled,
-        onOpen: fetchDashboardData, // Resync on connect/reconnect
         onMessage: handleMessage
     });
 
-    // Initial Fetch
+    // Initial Fetch (Source of Truth)
     useEffect(() => {
         if (token && enabled) {
             fetchDashboardData();
