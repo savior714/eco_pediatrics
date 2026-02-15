@@ -245,6 +245,7 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                     isOpen={isDocModalOpen}
                     onClose={() => setIsDocModalOpen(false)}
                     admissionId={admissionId}
+                    token={token}
                     onSuccess={() => { refetchDashboard(); }}
                 />
 

@@ -14,6 +14,7 @@ interface DocumentRequestModalProps {
     isOpen: boolean;
     onClose: () => void;
     admissionId: string | null;
+    token: string;
     onSuccess?: () => void;
 }
 
@@ -25,7 +26,7 @@ const DOCUMENT_OPTIONS = [
     { id: 'INITIAL', label: '초진기록지' }
 ];
 
-export function DocumentRequestModal({ isOpen, onClose, admissionId, onSuccess }: DocumentRequestModalProps) {
+export function DocumentRequestModal({ isOpen, onClose, admissionId, token, onSuccess }: DocumentRequestModalProps) {
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<'SUCCESS' | 'ERROR' | null>(null);
@@ -55,7 +56,10 @@ export function DocumentRequestModal({ isOpen, onClose, admissionId, onSuccess }
             const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
             const res = await fetch(`${API_BASE}/api/v1/documents/requests`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admission-Token': token
+                },
                 body: JSON.stringify({
                     admission_id: admissionId,
                     request_items: selectedItems
