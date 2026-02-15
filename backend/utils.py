@@ -43,10 +43,11 @@ async def execute_with_retry_async(query_builder):
 
             # Check for Postgrest APIError (often deterministic logic errors)
             # If it has a 'code' attribute that looks like a PGRST error or 4xx
-            # But exclude 40001 (Serialization Failure) and 40P01 (Deadlock) from client error, as they are retryable
+            # But exclude 40xxx (Transaction Rollback) from client error, as they are retryable (e.g. 40001, 40P01)
             if hasattr(e, 'code'):
                 code_str = str(e.code)
-                if (code_str.startswith('PGRST') or code_str.startswith('4')) and code_str not in ['40001', '40P01']:
+                # PGRST codes or 4xx codes are client errors, EXCEPT 40xxx (Transaction/Rollback)
+                if (code_str.startswith('PGRST') or code_str.startswith('4')) and not code_str.startswith('40'):
                     is_client_error = True
 
             if is_client_error:
