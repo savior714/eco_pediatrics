@@ -178,7 +178,7 @@ export function useStation(): UseStationReturn {
         } catch (e) {
             console.error('WS Parse Error', e);
         }
-    }, [setBeds, setNotifications, setLastUpdated, setLastUploadedIv]);
+    }, [setBeds, setNotifications, setLastUpdated, setLastUploadedIv, fetchAdmissions]);
 
     const { isConnected } = useWebSocket({
         url: `${api.getBaseUrl().replace(/^http/, 'ws')}/ws/STATION`,

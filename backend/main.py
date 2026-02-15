@@ -95,29 +95,35 @@ app.include_router(exams.router, prefix="/api/v1", tags=["Exams"])
 app.include_router(meals.router, prefix="/api/v1/meals", tags=["Meals"])
 
 
-# Conditionally include dev router
-if os.getenv("ENV") != "production":
+# Conditionally include dev router (Operation Safety)
+ENABLE_DEV = os.getenv("ENABLE_DEV_ROUTES", "false").lower() == "true"
+ENV = os.getenv("ENV", "production")
+
+if ENABLE_DEV and ENV in ["local", "staging"]:
     app.include_router(dev.router, prefix="/api/v1/dev", tags=["Dev"])
-    logger.info("Dev router mounted (ENV != production)")
+    logger.info(f"Dev router mounted (ENABLE_DEV_ROUTES=true, ENV={ENV})")
 else:
-    logger.info("Dev router disabled in production")
+    logger.info(f"Dev router disabled (ENABLE_DEV_ROUTES={ENABLE_DEV}, ENV={ENV})")
 
 # WS Token Validation
 async def verify_ws_token(token: str):
-    if token == "STATION":
-        return True # Allow station for now (Phase 1)
-    
-    # Check if token exists in admissions
-    if not hasattr(app.state, "supabase"):
+    # 1. Check for Station Auth via Env Variable
+    station_token = os.getenv("STATION_WS_TOKEN")
+    if station_token and token == station_token:
+        return True
+        
+    # 2. Check for Patient Auth (Admission Token)
+    if not hasattr(app.state, "supabase") or not app.state.supabase:
         return False # DB not ready
         
     try:
-        res = await app.state.supabase.table("admissions").select("id", count="exact").eq("access_token", token).execute()
-        # execute() for supabase-py async might differ, but execute_with_retry_async uses .execute()
-        # Wait, execute_with_retry_async is in utils. Let's use that if possible or just direct call if imported.
-        # But 'utils' is imported. However, 'app' is here. 
-        # Using raw supabase client here is fine for simple check.
-        # res.data or res.count
+        # Enforce status == 'IN_PROGRESS' or 'OBSERVATION' to prevent discharged patients from connecting
+        res = await app.state.supabase.table("admissions") \
+            .select("id") \
+            .eq("access_token", token) \
+            .in_("status", ["IN_PROGRESS", "OBSERVATION"]) \
+            .execute()
+            
         if res.data:
             return True
     except Exception as e:
@@ -127,20 +133,20 @@ async def verify_ws_token(token: str):
 
 @app.websocket("/ws/{token}")
 async def websocket_endpoint(websocket: WebSocket, token: str):
-    # Validate Token Phase 1
+    # Validate Token
     is_valid = await verify_ws_token(token)
     if not is_valid:
-        logger.warning(f"Connection rejected for invalid token: {token}")
+        logger.warning(f"Connection rejected for invalid or inactive token: {token}")
         await websocket.close(code=4003) # Forbidden
         return
 
-    logger.info(f"Connection attempt for token: {token}")
+    logger.info(f"WebSocket connected for token: {token}")
     await manager.connect(websocket, token)
     try:
         while True:
-            await websocket.receive_text() # Keep connection alive, or handle client messages
+            await websocket.receive_text() # Keep connection alive
     except WebSocketDisconnect:
-        logger.info(f"Disconnected token: {token}")
+        logger.info(f"WebSocket disconnected for token: {token}")
         manager.disconnect(websocket, token)
 
 

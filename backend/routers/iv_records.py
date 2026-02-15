@@ -62,7 +62,7 @@ async def record_iv(iv: IVRecordCreate, db: AsyncClient = Depends(get_supabase))
     except Exception as e:
         logger.error(f"Error in record_iv: {str(e)}")
         # Only raise 500 for truly unexpected errors, but don't mask generic HTTPErrors if they were raised deeper
-        raise HTTPException(status_code=500, detail=f"Internal Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.post("/upload/image")
 async def upload_image(file: UploadFile = File(...), token: str = None, db: AsyncClient = Depends(get_supabase)):
