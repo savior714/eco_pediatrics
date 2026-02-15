@@ -1,7 +1,7 @@
-
+import asyncio
+import pytest
 import sys
 import os
-import asyncio
 from unittest.mock import MagicMock, AsyncMock
 from datetime import datetime, timedelta
 
@@ -22,7 +22,9 @@ sys.modules["utils"].execute_with_retry_async = mock_execute
 
 from routers.admissions import list_admissions
 
+@pytest.mark.anyio
 async def test_logic():
+    mock_execute.reset_mock()
     print("--- Testing Admissions Logic (Dedupe & Batch IV) ---")
 
     # Scenario: 
@@ -51,21 +53,31 @@ async def test_logic():
         {"admission_id": "adm_3", "infusion_rate": 5, "created_at": t2}, # Older record for adm_3
     ]
 
+    # Mock Vitals data response (3rd call)
+    mock_vitals_data = [
+        {"admission_id": "adm_3", "temperature": 38.5, "recorded_at": t3},
+        {"admission_id": "adm_4", "temperature": 36.5, "recorded_at": t3},
+    ]
+
+    # Mock Meals data response (4th call)
+    mock_meals_data = [
+        {"admission_id": "adm_3", "request_type": "BREAKFAST", "created_at": t3}
+    ]
+
     # Setup mocks
     db = MagicMock()
     
-    # First call to execute_with_retry_async is for fetching admissions
-    # Second call is for IVs
-    
-    # We need to simulate the chaining: db.table().select()...
-    # It's easier to mock the return value of execute_with_retry_async based on call count or args?
-    # But list_admissions awaits execute_with_retry_async(db.table...)
-    
-    # Let's verify the arguments passed to execute_with_retry_async
+    # Calls: 
+    # 1. Admissions
+    # 2. IVs
+    # 3. Vitals
+    # 4. Meals
     
     mock_execute.side_effect = [
         MagicMock(data=mock_admissions_data), # 1. Admissions
-        MagicMock(data=mock_iv_data)          # 2. IVs
+        MagicMock(data=mock_iv_data),         # 2. IVs
+        MagicMock(data=mock_vitals_data),      # 3. Vitals
+        MagicMock(data=mock_meals_data)       # 4. Meals
     ]
 
     # Run the function
@@ -98,11 +110,11 @@ async def test_logic():
     call_count = mock_execute.call_count
     print(f"DB Call Count: {call_count}")
     
-    if call_count != 2:
-        print(f"FAILURE: Expected 2 DB calls, got {call_count}. N+1 optimization might have failed.")
+    if call_count != 4:
+        print(f"FAILURE: Expected 4 DB calls, got {call_count}. enrichment might have failed.")
         sys.exit(1)
     else:
-        print("SUCCESS: N+1 Optimization verified (Only 2 DB calls)")
+        print("SUCCESS: N+1 Optimization verified (Only 4 DB calls)")
 
 if __name__ == "__main__":
     asyncio.run(test_logic())

@@ -47,10 +47,9 @@ def test_dashboard_response_schema():
         print("SUCCESS: Data validated against DashboardResponse")
         print(f"Serialized: {model.dict()}")
         
-        # Verify patient_name_masked is present
-        assert model.admission.patient_name_masked == "김*수"
+        # Verify display_name is present (patient_name_masked removed in Phase 4 cleanup)
         assert model.admission.display_name == "김*수"
-        print("SUCCESS: patient_name_masked and display_name verified")
+        print("SUCCESS: display_name verified")
         
     except Exception as e:
         print(f"FAILURE: Validation error: {e}")

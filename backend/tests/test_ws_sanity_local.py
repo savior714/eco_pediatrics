@@ -1,5 +1,5 @@
-
 import asyncio
+import pytest
 import sys
 
 # Mock classes to simulate WebSocket behavior without running full server
@@ -31,6 +31,7 @@ sys.path.append(os.path.join(os.getcwd(), 'backend'))
 
 from websocket_manager import manager
 
+@pytest.mark.anyio
 async def test_sanity():
     print("--- Starting WebSocket Sanity Test ---")
     
