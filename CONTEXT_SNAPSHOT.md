@@ -1,6 +1,6 @@
 # Context Snapshot
 
-## 현재 상태 (2026-02-13)
+## 현재 상태 (2026-02-15)
 
 - 보호자 대시보드(Guardian Dashboard) 핵심 기능 구현 완료, **모바일(QR 접속) 우선** 적용
 - 간호 스테이션(Nurse Station) MVP 구현 완료 (환자 패널 클릭 → 상세 모달, IV·체온 차트·요청·**예정된 검사** 포함)
@@ -34,6 +34,9 @@
 - [x] **검사 일정 동기화 수정**: 삭제 시 실시간 반영 안되던 버그 수정 (웹소켓 브로드캐스트 타겟팅 보완)
 - [x] **백엔드 비동기(Async) 전환**: Supabase AsyncClient 및 FastAPI lifespan 도입으로 Windows `WinError 10035` 해결 및 성능 최적화
 - [x] **Seeder UUID 수정**: `access_token` 형식을 UUID4로 변경하여 DB 제약 조건 위반(`22P02`) 해결
+- [x] **Patient-Specific Dev Seeder (Phase ZA-ZB)**: 개별 환자 상세 모달에 'Dev' 버튼 추가, 72시간 치 더미 데이터(체온·수액·검사) 생성 및 모달 유지 연동
+- [x] **실시간 동기화 하드닝 (Phase ZC-ZF)**: 스테이션–보호자 간 100% 실시간 연동 (검사 일정, 전실, 퇴원, 수액 속도). WebSocket Partial Update 도입으로 지연 시간 최소화
+- [x] **체온 차트 정렬 최적화 (Phase ZE)**: 가로축(X-axis)을 자정 기준으로 고정하여 날짜 칸막이와 데이터 위치가 어긋나던 버그 수정
 
 ## Refactoring (2026-02-14)
 
