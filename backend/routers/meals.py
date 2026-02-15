@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from supabase._async.client import AsyncClient
 from typing import List
-from datetime import datetime, date
+from datetime import date
 import json
 from websocket_manager import manager
+from logger import get_logger
 from models import MealRequest, MealRequestCreate
 
 from dependencies import get_supabase
@@ -86,30 +87,40 @@ async def upsert_meal_request(
         db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time")
     )
     
-    # Fetch details for targeted broadcast
-    # We need room_number for Station notification and token for Patient dashboard update
-    adm_res = await db.table("admissions").select("access_token, room_number").eq("id", req.admission_id).single().execute()
-    admission_data = adm_res.data if adm_res and adm_res.data else None
-    
-    if admission_data:
-        msg = json.dumps({
-            "type": "NEW_MEAL_REQUEST",
-            "data": {
-                "room": admission_data.get("room_number"),
-                "admission_id": req.admission_id,
-                "request_type": req.request_type,
-                "meal_date": str(req.meal_date),
-                "meal_time": req.meal_time.value
-            }
-        })
+    # 3. Targeted Broadcast with Hardening
+    try:
+        # Fetch details for targeted broadcast
+        adm_res = await execute_with_retry_async(
+            db.table("admissions")
+            .select("access_token, room_number")
+            .eq("id", req.admission_id)
+            .single()
+        )
+        admission_data = adm_res.data if adm_res and adm_res.data else None
+        
+        if admission_data:
+            msg = json.dumps({
+                "type": "NEW_MEAL_REQUEST",
+                "data": {
+                    "room": admission_data.get("room_number"),
+                    "admission_id": req.admission_id,
+                    "request_type": req.request_type,
+                    "meal_date": str(req.meal_date),
+                    "meal_time": req.meal_time.value
+                }
+            })
 
-        # 1. Broadcast to STATION
-        await manager.broadcast(msg, "STATION")
+            # 1. Broadcast to STATION
+            await manager.broadcast(msg, "STATION")
 
-        # 2. Broadcast to specific Patient (Dashboard)
-        token = admission_data.get("access_token")
-        if token:
-            await manager.broadcast(msg, token)
+            # 2. Broadcast to specific Patient (Dashboard)
+            token = admission_data.get("access_token")
+            if token:
+                await manager.broadcast(msg, str(token)) # Force token string cast
+                
+    except Exception as e:
+        get_logger().error(f"Failed to broadcast meal request: {e}")
+        # Safe early return or continue - we already saved to DB
     
     return
 

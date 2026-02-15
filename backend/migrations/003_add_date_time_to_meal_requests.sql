@@ -1,7 +1,5 @@
 -- Migration 003: Add meal_date and meal_time for spreadsheet view
 
--- Migration 003: Add meal_date and meal_time for spreadsheet view
-
 -- 1. Add Columns safely
 DO $$
 BEGIN

@@ -115,7 +115,7 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                         break;
                     case 'NEW_MEAL_REQUEST':
                         // Filter by admission_id if available to prevent cross-patient refetch
-                        if (admissionId && (message.data as any).admission_id && (message.data as any).admission_id !== admissionId) {
+                        if (admissionId && message.data.admission_id && message.data.admission_id !== admissionId) {
                             break;
                         }
                         fetchDashboardData();
