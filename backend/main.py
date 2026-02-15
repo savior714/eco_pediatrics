@@ -108,16 +108,24 @@ else:
 # WS Token Validation
 async def verify_ws_token(token: str):
     # 1. Check for Station Auth via Env Variable
-    station_token = os.getenv("STATION_WS_TOKEN")
-    if station_token and token == station_token:
+    # Default to 'STATION' if not set, following the .env.example guidance
+    station_token = os.getenv("STATION_WS_TOKEN", "STATION")
+    if token == station_token:
         return True
         
-    # 2. Check for Patient Auth (Admission Token)
+    # 2. Check for Patient Auth (Admission Token) - Must be a valid UUID string
+    import uuid
+    try:
+        uuid.UUID(token)
+    except ValueError:
+        # Not a UUID, and didn't match station_token, so reject early to avoid DB error 22P02
+        return False
+
     if not hasattr(app.state, "supabase") or not app.state.supabase:
         return False # DB not ready
         
     try:
-        # Enforce status == 'IN_PROGRESS' or 'OBSERVATION' to prevent discharged patients from connecting
+        # Enforce status == 'IN_PROGRESS' or 'OBSERVATION'
         res = await app.state.supabase.table("admissions") \
             .select("id") \
             .eq("access_token", token) \
