@@ -30,6 +30,30 @@ async def execute_with_retry_async(query_builder):
         try:
             return await query_builder.execute()
         except Exception as e:
+            # Phase C: Retry Policy Refinement
+            # Check for non-retryable client errors (4xx)
+            is_client_error = False
+
+            # Check for HTTP status code in response (e.g. httpx.HTTPStatusError)
+            if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
+                status = e.response.status_code
+                # 429 is Too Many Requests (Transient), so we should retry it.
+                if 400 <= status < 500 and status != 429:
+                    is_client_error = True
+
+            # Check for Postgrest APIError (often deterministic logic errors)
+            # If it has a 'code' attribute that looks like a PGRST error or 4xx
+            # But exclude 40xxx (Transaction Rollback) from client error, as they are retryable (e.g. 40001, 40P01)
+            if hasattr(e, 'code'):
+                code_str = str(e.code)
+                # PGRST codes or 4xx codes are client errors, EXCEPT 40xxx (Transaction/Rollback)
+                if (code_str.startswith('PGRST') or code_str.startswith('4')) and not code_str.startswith('40'):
+                    is_client_error = True
+
+            if is_client_error:
+                logger.error(f"DB Execute client error (non-retryable): {str(e)}")
+                raise e
+
             if attempt == max_retries - 1:
                 logger.critical(f"DB Async Execute failed after {max_retries} attempts: {str(e)}")
                 raise e

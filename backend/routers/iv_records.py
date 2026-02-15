@@ -17,6 +17,7 @@ router = APIRouter()
 async def record_iv(iv: IVRecordCreate, db: AsyncClient = Depends(get_supabase)):
     try:
         data = iv.dict()
+        data['created_at'] = datetime.utcnow().isoformat()
         response = await execute_with_retry_async(db.table("iv_records").insert(data))
         if not response.data:
             raise HTTPException(status_code=500, detail="Failed to save IV record")
