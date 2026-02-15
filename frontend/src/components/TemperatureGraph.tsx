@@ -117,7 +117,7 @@ export function TemperatureGraph({ data, checkInAt, className }: TemperatureGrap
     const rawId = React.useId();
     const gradientId = `tempColor-${rawId.replace(/:/g, '')}`;
 
-    const latestTemp = data.length > 0 ? data[data.length - 1].temperature : null;
+    const latestTemp = data.length > 0 ? data[0].temperature : null;
 
     // Calculate gradient offset based on the actual DATA RANGE, because the linearGradient
     // is applied to the Line path's bounding box, not the YAxis domain.
