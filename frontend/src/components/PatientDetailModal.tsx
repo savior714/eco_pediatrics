@@ -64,6 +64,19 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         }
     };
 
+    const handleSeedData = async () => {
+        if (!bed?.id) return;
+        if (!window.confirm(`[Dev] ${bed.name} 환자에게 24시간치 가상 데이터를 생성할까요?`)) return;
+        try {
+            await api.post(`/api/v1/dev/seed-patient/${bed.id}`, {});
+            alert('데이터 생성 완료');
+            fetchDashboardData();
+            window.location.reload();
+        } catch (e) {
+            alert('데이터 생성 실패');
+        }
+    };
+
     const handleTransfer = async (targetRoom: string) => {
         if (!bed?.id) return;
         try {
@@ -238,6 +251,13 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                 className="px-4 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition-colors"
                             >
                                 전실
+                            </button>
+                            <button
+                                onClick={handleSeedData}
+                                className="px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-100 transition-colors"
+                                title="가상 데이터 생성 (Dev)"
+                            >
+                                Dev
                             </button>
                             <button
                                 onClick={onClose}
