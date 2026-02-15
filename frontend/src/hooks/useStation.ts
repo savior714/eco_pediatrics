@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWebSocket } from './useWebSocket';
 import { api } from '@/lib/api';
-import { Bed, Notification, LastUploadedIv, AdmissionSummary, WsMessage } from '@/types/domain';
+import { Bed, Notification, LastUploadedIv, AdmissionSummary, WsMessage, MealRequest } from '@/types/domain';
 import { ROOM_NUMBERS, MEAL_MAP, DOC_MAP } from '@/constants/mappings';
 
 interface UseStationReturn {
@@ -90,8 +90,11 @@ export function useStation(): UseStationReturn {
                     if (message.data.request_type === 'STATION_UPDATE') break;
 
                     // 1. Update Notification
-                    const mealTypeDesc = message.data.pediatric_meal_type
-                        ? `${message.data.pediatric_meal_type}${message.data.guardian_meal_type ? ` / ${message.data.guardian_meal_type}` : ''}`
+                    const requestedPediatric = message.data.pediatric_meal_type;
+                    const requestedGuardian = message.data.guardian_meal_type;
+
+                    const mealTypeDesc = requestedPediatric
+                        ? `${requestedPediatric}${requestedGuardian && requestedGuardian !== '선택 안함' ? ` / ${requestedGuardian}` : ''}`
                         : (MEAL_MAP[message.data.request_type] || message.data.request_type);
 
                     setNotifications(prev => [{
@@ -108,13 +111,16 @@ export function useStation(): UseStationReturn {
                             return {
                                 ...bed,
                                 latest_meal: {
-                                    id: -1, // Placeholder
+                                    id: Math.floor(Math.random() * 1000),
                                     admission_id: message.data.admission_id,
                                     request_type: message.data.request_type,
+                                    pediatric_meal_type: message.data.pediatric_meal_type,
+                                    guardian_meal_type: message.data.guardian_meal_type,
+                                    status: 'PENDING',
                                     created_at: new Date().toISOString(),
                                     meal_date: message.data.meal_date,
                                     meal_time: message.data.meal_time
-                                }
+                                } as MealRequest
                             };
                         }
                         return bed;

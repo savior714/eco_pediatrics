@@ -3,6 +3,7 @@ export const MEAL_MAP: Record<string, string> = {
     SOFT: '죽',
     NPO: '금식'
 };
+// No changes here yet, I'll fix the logic in useStation.ts instead.
 
 export const DOC_MAP: Record<string, string> = {
     RECEIPT: '영수증',
