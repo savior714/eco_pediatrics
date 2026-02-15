@@ -39,7 +39,7 @@ interface TemperatureGraphProps {
     className?: string;
 }
 
-export function TemperatureGraph({ data, checkInAt, className }: TemperatureGraphProps) {
+function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphProps) {
     // 1. Calculate hospital days logic
     const { chartData, totalWidthPercent, gridTicks, labelTicks, yDomain } = useMemo(() => {
         if (!checkInAt || data.length === 0) {
@@ -333,3 +333,29 @@ export function TemperatureGraph({ data, checkInAt, className }: TemperatureGrap
         </Card>
     );
 }
+
+function arePropsEqual(prev: TemperatureGraphProps, next: TemperatureGraphProps) {
+    if (prev.checkInAt !== next.checkInAt) return false;
+    if (prev.className !== next.className) return false;
+
+    // Most common case: Stable prop reference (e.g. parent re-render from unrelated state)
+    // In this case, standard React.memo behavior is sufficient and O(1).
+    if (prev.data === next.data) return true;
+
+    if (prev.data.length !== next.data.length) return false;
+
+    // Fast check for common case: data appended
+    const prevFirst = prev.data[0];
+    const nextFirst = next.data[0];
+    const prevLast = prev.data[prev.data.length - 1];
+    const nextLast = next.data[next.data.length - 1];
+
+    if (prevFirst?.recorded_at !== nextFirst?.recorded_at) return false;
+    if (prevLast?.recorded_at !== nextLast?.recorded_at) return false;
+    if (prevFirst?.temperature !== nextFirst?.temperature) return false;
+
+    // Deep check for safety when reference changes but content might be same
+    return JSON.stringify(prev.data) === JSON.stringify(next.data);
+}
+
+export const TemperatureGraph = React.memo(TemperatureGraphBase, arePropsEqual);
