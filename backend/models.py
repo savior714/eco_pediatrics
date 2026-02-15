@@ -4,6 +4,15 @@ from datetime import datetime, date
 
 from enum import Enum
 
+class Status(str, Enum):
+    IN_PROGRESS = "IN_PROGRESS"
+    OBSERVATION = "OBSERVATION"
+    DISCHARGED = "DISCHARGED"
+
+class GenderEnum(str, Enum):
+    M = "M"
+    F = "F"
+
 class MealTime(str, Enum):
     BREAKFAST = 'BREAKFAST'
     LUNCH = 'LUNCH'
@@ -15,11 +24,12 @@ class Admission(BaseModel):
     id: Optional[str] = None
     patient_name_masked: str
     room_number: str
-    status: str = "IN_PROGRESS"
+    status: Status = Status.IN_PROGRESS
     discharged_at: Optional[datetime] = None
     access_token: Optional[str] = None # Added for QR generation
     dob: Optional[date] = None
-    gender: Optional[str] = None
+    gender: Optional[GenderEnum] = None
+    check_in_at: Optional[datetime] = None
 
 class VitalSign(BaseModel):
     id: Optional[int] = None
@@ -53,7 +63,7 @@ class AdmissionCreate(BaseModel):
     patient_name: str  # Raw name, will be masked in logic
     room_number: str
     dob: Optional[date] = None
-    gender: Optional[str] = None
+    gender: Optional[GenderEnum] = None
 
 class VitalSignCreate(BaseModel):
     admission_id: str

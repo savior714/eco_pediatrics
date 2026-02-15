@@ -3,7 +3,7 @@ from typing import List, Optional
 from datetime import datetime, date
 from uuid import UUID
 from enum import Enum
-from models import VitalSign, IVRecord, MealRequest, ExamSchedule, DocumentRequest
+from models import VitalSign, IVRecord, MealRequest, ExamSchedule, DocumentRequest, GenderEnum
 
 class MealTime(str, Enum):
     BREAKFAST = "BREAKFAST"
@@ -45,8 +45,9 @@ class AdmissionResponse(BaseModel):
     room_number: str
     discharged_at: Optional[datetime]
     access_token: Optional[str]
+    check_in_at: Optional[datetime] = None
     dob: Optional[date] = None
-    gender: Optional[str] = None
+    gender: Optional[GenderEnum] = None
 
 class DashboardResponse(BaseModel):
     admission: AdmissionResponse

@@ -55,7 +55,11 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
         const currentRequestId = ++requestRef.current;
         setIsRefreshing(true);
         try {
-            const data = await api.get<DashboardResponse>(`/api/v1/dashboard/${token}`);
+            const data = await api.get<DashboardResponse>(`/api/v1/dashboard/${token}`, {
+                headers: {
+                    'X-Admission-Token': token
+                }
+            });
 
             // Sequence Guard: Ignore if a newer request was started
             if (currentRequestId !== requestRef.current) return;

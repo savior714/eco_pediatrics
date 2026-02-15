@@ -8,7 +8,7 @@ CREATE TABLE admissions (
     check_in_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     discharged_at TIMESTAMP WITH TIME ZONE,
     dob DATE,                                  -- 생년월일
-    gender TEXT                                -- 성별 (M/F)
+    gender TEXT CHECK (gender IN ('M', 'F'))    -- 성별 (M/F)
 );
 
 -- 2. 바이탈 사인 (시계열 데이터, 그래프용)

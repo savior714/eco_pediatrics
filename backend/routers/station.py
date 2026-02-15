@@ -13,14 +13,22 @@ from schemas import DashboardResponse
 router = APIRouter()
 
 @router.get("/dashboard/{token}", response_model=DashboardResponse)
-async def get_dashboard_data_by_token(token: str, db: AsyncClient = Depends(get_supabase)):
+async def get_dashboard_data_by_token(
+    token: str, 
+    db: AsyncClient = Depends(get_supabase),
+    header_token: Optional[str] = Depends(verify_admission_token)
+):
     """
     Fetch dashboard data using an access_token (Guardian view)
+    Supports both path parameter (token) and X-Admission-Token header.
     """
+    # Use header token if provided and valid, otherwise fallback to path token
+    effective_token = header_token if header_token else token
+
     res = await execute_with_retry_async(
         db.table("admissions")
         .select("id")
-        .eq("access_token", token)
+        .eq("access_token", effective_token)
         .in_("status", ["IN_PROGRESS", "OBSERVATION"]) # Enforce active status
         .limit(1)
     )
