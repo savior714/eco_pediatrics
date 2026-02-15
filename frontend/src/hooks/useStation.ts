@@ -15,7 +15,7 @@ interface UseStationReturn {
     removeNotification: (id: string) => void;
 }
 
-export function useStation(): UseStationReturn {
+export function useStation(wsToken: string): UseStationReturn {
     const [beds, setBeds] = useState<Bed[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [lastUploadedIv, setLastUploadedIv] = useState<LastUploadedIv | null>(null);
@@ -192,11 +192,9 @@ export function useStation(): UseStationReturn {
         }
     }, [setBeds, setNotifications, setLastUpdated, setLastUploadedIv, fetchAdmissions]);
 
-    const wsToken = process.env.NEXT_PUBLIC_STATION_WS_TOKEN || 'STATION';
-
     const { isConnected } = useWebSocket({
-        url: `${api.getBaseUrl().replace(/^http/, 'ws')}/ws/${wsToken}`,
-        enabled: true,
+        url: wsToken ? `${api.getBaseUrl().replace(/^http/, 'ws')}/ws/${wsToken}` : '',
+        enabled: !!wsToken,
         onOpen: fetchAdmissions, // Resync on connect/reconnect
         onMessage: handleMessage
     });
