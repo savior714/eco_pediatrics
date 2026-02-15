@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from supabase._async.client import AsyncClient
+from postgrest.exceptions import APIError
 from typing import List
 from datetime import date
 import json
@@ -111,10 +112,26 @@ async def upsert_meal_request(
         data['status'] = 'PENDING'
 
     # Upsert with the updated logic
-    await execute_with_retry_async(
-        db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time")
-    )
-    
+    try:
+        await execute_with_retry_async(
+            db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time")
+        )
+    except APIError as e:
+        # Fallback for missing schema migration (PGRST204)
+        if (hasattr(e, 'code') and e.code == 'PGRST204') or "schema cache" in str(e):
+            get_logger().warning("Schema mismatch detected: 'requested_*_meal_type' columns missing. Retrying upsert without them. Please apply migration 004.")
+
+            # Remove problematic fields
+            data.pop('requested_pediatric_meal_type', None)
+            data.pop('requested_guardian_meal_type', None)
+
+            # Retry
+            await execute_with_retry_async(
+                db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time")
+            )
+        else:
+            raise e
+
     # 3. Targeted Broadcast with Hardening
     try:
         # Fetch details for targeted broadcast
