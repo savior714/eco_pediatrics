@@ -176,7 +176,8 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
 
         # Process Vitals
         from datetime import datetime, timedelta
-        
+        # Ensure we have local import or use top-level if available, but keeping it local as before to minimize diff scope
+        # (Though we might want to move it to top level, but let's stick to simple changes)
         six_hours_ago_iso = (datetime.now() - timedelta(hours=6)).isoformat()
 
         for v in all_vitals:
