@@ -143,21 +143,16 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                         if (exists) return prev;
                         return [formattedV, ...prev];
                     });
-                    // Optimized: Only refetch if we need full state sync (e.g. status changes)
-                    // Reducing frequency of API calls improves performance
-                    debouncedRefetch();
                     break;
                 }
                 case 'NEW_IV':
                     setIvRecords(prev => [message.data as any, ...prev]);
-                    debouncedRefetch();
                     break;
                 case 'IV_PHOTO_UPLOADED':
                     debouncedRefetch();
                     break;
                 case 'NEW_DOC_REQUEST':
                     setDocumentRequests(prev => [message.data as any, ...prev]);
-                    debouncedRefetch();
                     break;
                 case 'NEW_EXAM_SCHEDULE':
                     setExamSchedules(prev => [...prev, message.data as any].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
