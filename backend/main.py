@@ -97,9 +97,9 @@ app.include_router(meals.router, prefix="/api/v1/meals", tags=["Meals"])
 
 # Conditionally include dev router (Operation Safety)
 ENABLE_DEV = os.getenv("ENABLE_DEV_ROUTES", "false").lower() == "true"
-ENV = os.getenv("ENV", "production")
+ENV = os.getenv("ENV", "development").lower() # Default to development
 
-if ENABLE_DEV and ENV in ["local", "staging"]:
+if ENABLE_DEV and ENV in ["local", "staging", "development"]:
     app.include_router(dev.router, prefix="/api/v1/dev", tags=["Dev"])
     logger.info(f"Dev router mounted (ENABLE_DEV_ROUTES=true, ENV={ENV})")
 else:

@@ -3,7 +3,7 @@ from supabase._async.client import AsyncClient
 from datetime import datetime
 import json
 
-from dependencies import get_supabase, verify_admission_token
+from dependencies import get_supabase, get_admission_token_optional
 from utils import execute_with_retry_async
 from services.dashboard import fetch_dashboard_data
 from websocket_manager import manager
@@ -16,7 +16,7 @@ router = APIRouter()
 async def get_dashboard_data_by_token(
     token: str, 
     db: AsyncClient = Depends(get_supabase),
-    header_token: Optional[str] = Depends(verify_admission_token)
+    header_token: Optional[str] = Depends(get_admission_token_optional)
 ):
     """
     Fetch dashboard data using an access_token (Guardian view)

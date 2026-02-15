@@ -26,3 +26,10 @@ async def verify_admission_token(request: Request) -> str:
     if not token:
         raise HTTPException(status_code=401, detail="X-Admission-Token header missing")
     return token
+
+async def get_admission_token_optional(request: Request) -> Optional[str]:
+    """
+    Extracts X-Admission-Token from header if possible.
+    Returns None if missing (no error raised).
+    """
+    return request.headers.get("X-Admission-Token")
