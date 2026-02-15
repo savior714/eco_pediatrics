@@ -130,7 +130,7 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
     iv_map = {}
     vital_map = {}
     meal_map = {}
-    
+
     if admission_ids:
         # Define tasks
         async def fetch_iv():
@@ -167,7 +167,7 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
             fetch_vitals(),
             fetch_meals()
         )
-        
+
         # Process IVs
         for iv in all_ivs:
             aid = iv['admission_id']
@@ -176,10 +176,9 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
 
         # Process Vitals
         from datetime import datetime, timedelta
-        # Ensure we have local import or use top-level if available, but keeping it local as before to minimize diff scope
-        # (Though we might want to move it to top level, but let's stick to simple changes)
+        
         six_hours_ago_iso = (datetime.now() - timedelta(hours=6)).isoformat()
-    
+
         for v in all_vitals:
             aid = v['admission_id']
             

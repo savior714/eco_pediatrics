@@ -1,5 +1,7 @@
 from supabase._async.client import AsyncClient
 import asyncio
+from postgrest.exceptions import APIError
+from httpx import HTTPStatusError
 from logger import logger
 
 def mask_name(name: str) -> str:
@@ -30,30 +32,32 @@ async def execute_with_retry_async(query_builder):
         try:
             return await query_builder.execute()
         except Exception as e:
-            # Phase C: Retry Policy Refinement
-            # Check for non-retryable client errors (4xx)
-            is_client_error = False
+            # Check for non-retryable errors first
+            if isinstance(e, APIError):
+                # APIError.code could be a string status (e.g., "503") or a Postgres error code (e.g., "23505")
+                is_retryable = False
+                try:
+                    code_int = int(e.code)
+                    # Retry on 5xx Server Errors and 429 Too Many Requests
+                    if (500 <= code_int < 600) or (code_int == 429):
+                        is_retryable = True
+                except (ValueError, TypeError):
+                    pass
 
-            # Check for HTTP status code in response (e.g. httpx.HTTPStatusError)
-            if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
+                if not is_retryable:
+                    logger.error(f"DB API Error (Non-retryable): {str(e)}")
+                    raise e
+                else:
+                    logger.warning(f"DB API Error (Retryable): {str(e)}. Retrying...")
+
+            if isinstance(e, HTTPStatusError):
                 status = e.response.status_code
-                # 429 is Too Many Requests (Transient), so we should retry it.
+                # Fail on 4xx Client Errors, except 429 (Too Many Requests)
                 if 400 <= status < 500 and status != 429:
-                    is_client_error = True
+                    logger.error(f"DB HTTP Client Error (Non-retryable): {str(e)}")
+                    raise e
 
-            # Check for Postgrest APIError (often deterministic logic errors)
-            # If it has a 'code' attribute that looks like a PGRST error or 4xx
-            # But exclude 40xxx (Transaction Rollback) from client error, as they are retryable (e.g. 40001, 40P01)
-            if hasattr(e, 'code'):
-                code_str = str(e.code)
-                # PGRST codes or 4xx codes are client errors, EXCEPT 40xxx (Transaction/Rollback)
-                if (code_str.startswith('PGRST') or code_str.startswith('4')) and not code_str.startswith('40'):
-                    is_client_error = True
-
-            if is_client_error:
-                logger.error(f"DB Execute client error (non-retryable): {str(e)}")
-                raise e
-
+            # Retryable errors (5xx, Network, etc.)
             if attempt == max_retries - 1:
                 logger.critical(f"DB Async Execute failed after {max_retries} attempts: {str(e)}")
                 raise e
