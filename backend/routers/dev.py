@@ -13,8 +13,6 @@ async def discharge_all(db: AsyncClient = Depends(get_supabase)):
     Developer tool: Discharge all active patients.
     Sets status to 'DISCHARGED' and discharged_at to now for all IN_PROGRESS/OBSERVATION.
     """
-    from datetime import datetime
-    
     now = datetime.now().isoformat()
     
     # 1. Update all functionality
@@ -32,6 +30,8 @@ async def seed_patient_data(admission_id: str, db: AsyncClient = Depends(get_sup
     """
     Developer tool: Seed 72 hours of virtual data for a specific patient.
     """
+    now = datetime.now()
+
     # 1. Update Admission check_in_at to 72 hours ago
     start_time = now - timedelta(hours=72)
     await execute_with_retry_async(
