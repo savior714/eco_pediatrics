@@ -43,11 +43,19 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
 
     const [isRefreshing, setIsRefreshing] = useState(false);
 
+    const requestRef = useRef(0);
+
     const fetchDashboardData = useCallback(async () => {
         if (!token) return;
+
+        const currentRequestId = ++requestRef.current;
         setIsRefreshing(true);
         try {
             const data = await api.get<DashboardResponse>(`/api/v1/dashboard/${token}`);
+
+            // Sequence Guard: Ignore if a newer request was started
+            if (currentRequestId !== requestRef.current) return;
+
             if (data) {
                 // Admission Info
                 if (data.admission) {
@@ -78,9 +86,13 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                 setExamSchedules(data.exam_schedules || []);
             }
         } catch (err) {
-            console.error(err);
+            if (currentRequestId === requestRef.current) {
+                console.error(err);
+            }
         } finally {
-            setIsRefreshing(false);
+            if (currentRequestId === requestRef.current) {
+                setIsRefreshing(false);
+            }
         }
     }, [token]);
 
@@ -92,7 +104,7 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
         }
         debounceTimer.current = setTimeout(() => {
             fetchDashboardData();
-        }, 500); // 500ms debounce
+        }, 300); // 300ms debounce
     }, [fetchDashboardData]);
 
     // WebSocket Implementation using shared hook
