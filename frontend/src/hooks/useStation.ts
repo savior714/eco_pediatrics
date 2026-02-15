@@ -41,7 +41,7 @@ export function useStation(): UseStationReturn {
                             status: ((adm.latest_temp != null && adm.latest_temp >= 38.0) || adm.had_fever_in_6h) ? 'fever' : 'normal',
                             latest_meal: adm.latest_meal ?? undefined,
                             last_vital_at: adm.last_vital_at ?? undefined
-                        };
+                        } as Bed;
                     }
                     // Empty Slot
                     return {
