@@ -5,7 +5,7 @@ interface VitalModalProps {
     isOpen: boolean;
     onClose: () => void;
     admissionId: string;
-    onSuccess: (temp: number) => void;
+    onSuccess: (temp: number, recordedAt: string) => void;
 }
 
 export function VitalModal({ isOpen, onClose, admissionId, onSuccess }: VitalModalProps) {
@@ -19,14 +19,15 @@ export function VitalModal({ isOpen, onClose, admissionId, onSuccess }: VitalMod
         if (!temp) return;
 
         setSubmitting(true);
+        const now = new Date().toISOString();
         try {
             await api.post('/api/v1/vitals', {
                 admission_id: admissionId,
                 temperature: parseFloat(temp),
                 has_medication: false, // Default to false for quick input
-                recorded_at: new Date().toISOString()
+                recorded_at: now
             });
-            onSuccess(parseFloat(temp));
+            onSuccess(parseFloat(temp), now);
             onClose();
             setTemp('');
         } catch (error) {

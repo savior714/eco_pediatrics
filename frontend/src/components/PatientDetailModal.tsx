@@ -139,7 +139,8 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         documentRequests: fetchedDocRequests,
         examSchedules,
         isRefreshing,
-        fetchDashboardData
+        fetchDashboardData,
+        addOptimisticVital
     } = useVitals(bed?.token, isOpen);
 
     const handleMealEditSave = async (pediatric: string, guardian: string) => {
@@ -464,7 +465,8 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                     isOpen={vitalModalOpen}
                     onClose={() => setVitalModalOpen(false)}
                     admissionId={bed.id}
-                    onSuccess={(temp) => {
+                    onSuccess={(temp, recordedAt) => {
+                        addOptimisticVital(temp, recordedAt);
                         fetchDashboardData();
                         onVitalUpdate?.(temp);
                     }}

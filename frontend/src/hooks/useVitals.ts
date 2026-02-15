@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useWebSocket } from './useWebSocket';
 import { api } from '@/lib/api';
 import { VitalData, Bed, WsMessage, IVRecord, MealRequest, DocumentRequest, ExamScheduleItem, VitalDataResponse } from '@/types/domain';
 
@@ -16,6 +17,7 @@ interface UseVitalsReturn {
     isRefreshing: boolean;
     refetchDashboard: () => Promise<void>;
     fetchDashboardData: () => Promise<void>; // Alias
+    addOptimisticVital: (temp: number, recordedAt: string) => void;
 }
 
 interface DashboardResponse {
@@ -39,7 +41,6 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
     const [patientName, setPatientName] = useState<string | null>(null);
     const [roomNumber, setRoomNumber] = useState<string | null>(null);
 
-    const [isConnected, setIsConnected] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const fetchDashboardData = useCallback(async () => {
@@ -83,85 +84,83 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
         }
     }, [token]);
 
-    // WebSocket Connection
-    useEffect(() => {
-        if (!token || !enabled) return;
+    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-        const API_URL = api.getBaseUrl();
-        const WS_URL = API_URL.replace(/^http/, 'ws');
-        const ws = new WebSocket(`${WS_URL}/ws/${token}`);
+    const debouncedRefetch = useCallback(() => {
+        if (debounceTimer.current) {
+            clearTimeout(debounceTimer.current);
+        }
+        debounceTimer.current = setTimeout(() => {
+            fetchDashboardData();
+        }, 500); // 500ms debounce
+    }, [fetchDashboardData]);
 
-        ws.onopen = () => {
-            console.log(`Connected to Dashboard WS for ${token}`);
-            setIsConnected(true);
-        };
-
-        ws.onclose = () => {
-            console.log('Disconnected from Dashboard WS');
-            setIsConnected(false);
-        };
-
-        ws.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data) as WsMessage;
-                // Simple strategy: Refetch on any relevant update
-                // Optimization: Partial updates could be done here
-                switch (message.type) {
-                    case 'NEW_VITAL':
-                        // Formatting logic same as in fetchDashboardData
-                        const v = message.data as any;
-                        const formattedV = {
-                            time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                            temperature: v.temperature,
-                            has_medication: v.has_medication,
-                            medication_type: v.medication_type,
-                            recorded_at: v.recorded_at
-                        };
-                        setVitals(prev => [formattedV, ...prev]);
-                        fetchDashboardData();
-                        break;
-                    case 'NEW_IV':
-                        setIvRecords(prev => [message.data as any, ...prev]);
-                        fetchDashboardData();
-                        break;
-                    case 'IV_PHOTO_UPLOADED':
-                        // Handled by fetchDashboardData (or could add to ivRecords if it contains the data)
-                        fetchDashboardData();
-                        break;
-                    case 'NEW_DOC_REQUEST':
-                        setDocumentRequests(prev => [message.data as any, ...prev]);
-                        fetchDashboardData();
-                        break;
-                    case 'NEW_EXAM_SCHEDULE':
-                        setExamSchedules(prev => [...prev, message.data as any].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
-                        fetchDashboardData(); // Re-fetch to ensure sync
-                        break;
-                    case 'DELETE_EXAM_SCHEDULE':
-                        setExamSchedules(prev => prev.filter(ex => ex.id !== (message.data as any).id));
-                        fetchDashboardData();
-                        break;
-                    case 'ADMISSION_TRANSFERRED':
-                        fetchDashboardData();
-                        break;
-                    case 'ADMISSION_DISCHARGED':
-                        alert('환자가 퇴원되었습니다.');
-                        window.location.reload();
-                        break;
-                    case 'NEW_MEAL_REQUEST':
-                        // Filter by admission_id if available to prevent cross-patient refetch
-                        if (admissionId && message.data.admission_id && message.data.admission_id !== admissionId) {
-                            break;
-                        }
-                        fetchDashboardData();
-                        break;
+    // WebSocket Implementation using shared hook
+    // Memoize the message handler to avoid reconnection loops if it changes
+    const handleMessage = useCallback((event: MessageEvent) => {
+        try {
+            const message = JSON.parse(event.data) as WsMessage;
+            switch (message.type) {
+                case 'NEW_VITAL': {
+                    const v = message.data;
+                    const formattedV = {
+                        time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        temperature: v.temperature,
+                        has_medication: v.has_medication,
+                        medication_type: v.medication_type,
+                        recorded_at: v.recorded_at
+                    };
+                    setVitals(prev => {
+                        const exists = prev.some(existing => existing.recorded_at === v.recorded_at);
+                        if (exists) return prev;
+                        return [formattedV, ...prev];
+                    });
+                    debouncedRefetch();
+                    break;
                 }
-            } catch (e) {
-                console.error('WS Parse Error', e);
+                case 'NEW_IV':
+                    setIvRecords(prev => [message.data as any, ...prev]);
+                    debouncedRefetch();
+                    break;
+                case 'IV_PHOTO_UPLOADED':
+                    debouncedRefetch();
+                    break;
+                case 'NEW_DOC_REQUEST':
+                    setDocumentRequests(prev => [message.data as any, ...prev]);
+                    debouncedRefetch();
+                    break;
+                case 'NEW_EXAM_SCHEDULE':
+                    setExamSchedules(prev => [...prev, message.data as any].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
+                    debouncedRefetch();
+                    break;
+                case 'DELETE_EXAM_SCHEDULE':
+                    setExamSchedules(prev => prev.filter(ex => ex.id !== (message.data as any).id));
+                    debouncedRefetch();
+                    break;
+                case 'ADMISSION_TRANSFERRED':
+                    debouncedRefetch();
+                    break;
+                case 'ADMISSION_DISCHARGED':
+                    alert('환자가 퇴원되었습니다.');
+                    window.location.reload();
+                    break;
+                case 'NEW_MEAL_REQUEST':
+                    if (admissionId && message.data.admission_id === admissionId) {
+                        debouncedRefetch();
+                    }
+                    break;
             }
-        };
+        } catch (e) {
+            console.error('WS Parse Error', e);
+        }
+    }, [debouncedRefetch, admissionId, setVitals, setIvRecords, setDocumentRequests, setExamSchedules]);
 
-        return () => ws.close();
-    }, [token, enabled, fetchDashboardData, admissionId]);
+    const { isConnected } = useWebSocket({
+        url: token ? `${api.getBaseUrl().replace(/^http/, 'ws')}/ws/${token}` : '',
+        enabled: !!token && enabled,
+        onOpen: fetchDashboardData, // Resync on connect/reconnect
+        onMessage: handleMessage
+    });
 
     // Initial Fetch
     useEffect(() => {
@@ -169,6 +168,16 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
             fetchDashboardData();
         }
     }, [token, enabled, fetchDashboardData]);
+
+    const addOptimisticVital = useCallback((temp: number, recordedAt: string) => {
+        const newVital: VitalData = {
+            temperature: temp,
+            recorded_at: recordedAt,
+            time: new Date(recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            has_medication: false // defaulting to false as per VitalModal
+        };
+        setVitals(prev => [newVital, ...prev]);
+    }, []);
 
     return {
         vitals,
@@ -183,6 +192,7 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
         isConnected,
         isRefreshing,
         refetchDashboard: fetchDashboardData,
-        fetchDashboardData // Alias
+        fetchDashboardData, // Alias
+        addOptimisticVital
     };
 }

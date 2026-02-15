@@ -82,3 +82,9 @@
     - Modernized 1-line patient header with responsive design & indentation.
     - Standardized card headers with w-9 h-9 icon backgrounds across all components.
     - PC layout optimization (Left: Medical/IV, Right: Admin/Notices).
+86: 
+87: - [x] **Dashboard Sync & Resilience (2026-02-15)**:
+88:     - **Optimistic UI**: `PatientDetailModal`에서 체온 입력 시 즉시 반영 (`addOptimisticVital`).
+89:     - **Backend Meals Sorting**: 식단 조회 시 날짜/시간(저녁>점심>아침) 순 서버 정렬 보장.
+90:     - **WebSocket Resilience**: `useWebSocket` 훅 도입으로 지수 백오프(Exponential Backoff) 및 자동 재연결 표준화.
+91:     - **Developer Standards**: `docs/DEVELOPMENT_STANDARDS.md` 생성하여 핵심 로직(중복 제거, ID 체크 등) 문서화.

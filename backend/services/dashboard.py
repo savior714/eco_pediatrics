@@ -26,8 +26,22 @@ async def fetch_dashboard_data(db: AsyncClient, admission_id: str):
     iv_records = iv_records_res.data or []
     
     # 4. Meals
-    meals_res = await execute_with_retry_async(db.table("meal_requests").select("*").eq("admission_id", admission_id).order("id", desc=True).limit(5))
-    meals = meals_res.data or []
+    # Fetch more to sort by date/time in memory (ID desc is good proxy but not perfect if back-filled)
+    meals_res = await execute_with_retry_async(db.table("meal_requests").select("*").eq("admission_id", admission_id).order("id", desc=True).limit(20))
+    meals_raw = meals_res.data or []
+    
+    def meal_sort_key(m):
+        d = m.get('meal_date') or ''
+        t = m.get('meal_time')
+        # Priority: DINNER(3) > LUNCH(2) > BREAKFAST(1)
+        rank = 0
+        if t == 'BREAKFAST': rank = 1
+        elif t == 'LUNCH': rank = 2
+        elif t == 'DINNER': rank = 3
+        return (d, rank)
+
+    meals_raw.sort(key=meal_sort_key, reverse=True)
+    meals = meals_raw[:5]
 
     # 5. Exam Schedules
     exam_schedules_res = await execute_with_retry_async(db.table("exam_schedules").select("*").eq("admission_id", admission_id).order("scheduled_at"))

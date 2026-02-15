@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useWebSocket } from './useWebSocket';
 import { api } from '@/lib/api';
 import { Bed, Notification, LastUploadedIv, AdmissionSummary, WsMessage } from '@/types/domain';
 import { ROOM_NUMBERS, MEAL_MAP, DOC_MAP } from '@/constants/mappings';
@@ -19,22 +20,8 @@ export function useStation(): UseStationReturn {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [lastUploadedIv, setLastUploadedIv] = useState<LastUploadedIv | null>(null);
     const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
-    const [isConnected, setIsConnected] = useState(false);
 
-    // Initial Load
-    useEffect(() => {
-        // 1. Initialize empty beds
-        setBeds(ROOM_NUMBERS.map((room, i) => ({
-            id: '',
-            room: room,
-            name: `환자${i + 1}`,
-            temp: null,
-            drops: null,
-            status: 'normal',
-            token: ''
-        })));
-
-        // 2. Fetch real admissions
+    const fetchAdmissions = useCallback(() => {
         api.get<AdmissionSummary[]>('/api/v1/admissions')
             .then(admissions => {
                 if (!Array.isArray(admissions)) return;
@@ -63,86 +50,93 @@ export function useStation(): UseStationReturn {
             .catch(console.error);
     }, []);
 
-    // WebSocket
+    // Initial Load
     useEffect(() => {
-        const API_URL = api.getBaseUrl();
-        const WS_URL = API_URL.replace(/^http/, 'ws');
-        const ws = new WebSocket(`${WS_URL}/ws/STATION`);
+        // 1. Initialize empty beds
+        setBeds(ROOM_NUMBERS.map((room, i) => ({
+            id: '',
+            room: room,
+            name: `환자${i + 1}`,
+            temp: null,
+            drops: null,
+            status: 'normal',
+            token: ''
+        })));
 
-        ws.onopen = () => {
-            setIsConnected(true);
-        };
+        fetchAdmissions();
+    }, [fetchAdmissions]);
 
-        ws.onclose = () => {
-            setIsConnected(false);
-        };
+    // WebSocket Implementation using shared hook
+    const handleMessage = useCallback((event: MessageEvent) => {
+        try {
+            const message = JSON.parse(event.data) as WsMessage;
+            const id = Math.random().toString(36).substr(2, 9);
+            setLastUpdated(Date.now());
 
-        ws.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data) as WsMessage;
-                const id = Math.random().toString(36).substr(2, 9);
-                setLastUpdated(Date.now());
+            switch (message.type) {
+                case 'NEW_MEAL_REQUEST':
+                    if (message.data.request_type === 'STATION_UPDATE') break;
+                    setNotifications(prev => [{
+                        id,
+                        room: message.data.room,
+                        time: '방금',
+                        content: `식단 신청 (${MEAL_MAP[message.data.request_type] || message.data.request_type})`,
+                        type: 'meal'
+                    }, ...prev]);
+                    break;
 
-                switch (message.type) {
-                    case 'NEW_MEAL_REQUEST':
-                        if (message.data.request_type === 'STATION_UPDATE') break;
-                        setNotifications(prev => [{
-                            id,
-                            room: message.data.room,
-                            time: '방금',
-                            content: `식단 신청 (${MEAL_MAP[message.data.request_type] || message.data.request_type})`,
-                            type: 'meal'
-                        }, ...prev]);
-                        break;
+                case 'NEW_DOC_REQUEST':
+                    // data: { room, request_items: string[] }
+                    const items = (message.data.request_items as string[]).map(it => DOC_MAP[it] || it).join(', ');
+                    setNotifications(prev => [{
+                        id,
+                        room: message.data.room,
+                        time: '방금',
+                        content: `서류 신청 (${items})`,
+                        type: 'doc'
+                    }, ...prev]);
+                    break;
 
-                    case 'NEW_DOC_REQUEST':
-                        // data: { room, request_items: string[] }
-                        const items = (message.data.request_items as string[]).map(it => DOC_MAP[it] || it).join(', ');
-                        setNotifications(prev => [{
-                            id,
-                            room: message.data.room,
-                            time: '방금',
-                            content: `서류 신청 (${items})`,
-                            type: 'doc'
-                        }, ...prev]);
-                        break;
+                case 'IV_PHOTO_UPLOADED':
+                    setLastUploadedIv({
+                        admissionId: message.data.admission_id,
+                        url: message.data.photo_url
+                    });
+                    break;
 
-                    case 'IV_PHOTO_UPLOADED':
-                        setLastUploadedIv({
-                            admissionId: message.data.admission_id,
-                            url: message.data.photo_url
-                        });
-                        break;
+                case 'NEW_IV':
+                    const newDrops = message.data.infusion_rate;
+                    const room = message.data.room;
+                    setBeds(prev => prev.map(bed => {
+                        if (String(bed.room) === String(room)) {
+                            return { ...bed, drops: newDrops };
+                        }
+                        return bed;
+                    }));
+                    break;
 
-                    case 'NEW_IV':
-                        const newDrops = message.data.infusion_rate;
-                        const room = message.data.room;
-                        setBeds(prev => prev.map(bed => {
-                            if (String(bed.room) === String(room)) {
-                                return { ...bed, drops: newDrops };
-                            }
-                            return bed;
-                        }));
-                        break;
-
-                    case 'NEW_VITAL':
-                    case 'NEW_EXAM_SCHEDULE':
-                    case 'DELETE_EXAM_SCHEDULE':
-                        // Handled by setLastUpdated -> Modal refresh
-                        break;
-                    case 'ADMISSION_TRANSFERRED':
-                    case 'ADMISSION_DISCHARGED':
-                        // Re-fetch entire bed list to reflect room changes or discharge
-                        window.location.reload();
-                        break;
-                }
-            } catch (e) {
-                console.error('WS Parse Error', e);
+                case 'NEW_VITAL':
+                case 'NEW_EXAM_SCHEDULE':
+                case 'DELETE_EXAM_SCHEDULE':
+                    // Handled by setLastUpdated -> Modal refresh
+                    break;
+                case 'ADMISSION_TRANSFERRED':
+                case 'ADMISSION_DISCHARGED':
+                    // Re-fetch entire bed list to reflect room changes or discharge
+                    window.location.reload();
+                    break;
             }
-        };
+        } catch (e) {
+            console.error('WS Parse Error', e);
+        }
+    }, [setBeds, setNotifications, setLastUpdated, setLastUploadedIv]);
 
-        return () => ws.close();
-    }, []);
+    const { isConnected } = useWebSocket({
+        url: `${api.getBaseUrl().replace(/^http/, 'ws')}/ws/STATION`,
+        enabled: true,
+        onOpen: fetchAdmissions, // Resync on connect/reconnect
+        onMessage: handleMessage
+    });
 
     const removeNotification = useCallback((id: string) => {
         setNotifications(prev => prev.filter(n => n.id !== id));
