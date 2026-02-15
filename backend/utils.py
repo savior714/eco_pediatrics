@@ -38,7 +38,8 @@ async def execute_with_retry_async(query_builder):
                 is_retryable = False
                 try:
                     code_int = int(e.code)
-                    if 500 <= code_int < 600:
+                    # Retry on 5xx Server Errors and 429 Too Many Requests
+                    if (500 <= code_int < 600) or (code_int == 429):
                         is_retryable = True
                 except (ValueError, TypeError):
                     pass
@@ -47,11 +48,14 @@ async def execute_with_retry_async(query_builder):
                     logger.error(f"DB API Error (Non-retryable): {str(e)}")
                     raise e
                 else:
-                    logger.warning(f"DB API Error (Retryable 5xx): {str(e)}. Retrying...")
+                    logger.warning(f"DB API Error (Retryable): {str(e)}. Retrying...")
 
-            if isinstance(e, HTTPStatusError) and 400 <= e.response.status_code < 500:
-                logger.error(f"DB HTTP Client Error (Non-retryable): {str(e)}")
-                raise e
+            if isinstance(e, HTTPStatusError):
+                status = e.response.status_code
+                # Fail on 4xx Client Errors, except 429 (Too Many Requests)
+                if 400 <= status < 500 and status != 429:
+                    logger.error(f"DB HTTP Client Error (Non-retryable): {str(e)}")
+                    raise e
 
             # Retryable errors (5xx, Network, etc.)
             if attempt == max_retries - 1:

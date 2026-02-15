@@ -24,33 +24,42 @@ class ConnectionManager:
             if not self.active_connections[token]:
                 del self.active_connections[token]
 
-    async def _send_with_timeout(self, websocket: WebSocket, message: str, timeout: float = 2.0) -> WebSocket | None:
-        try:
-            await asyncio.wait_for(websocket.send_text(message), timeout=timeout)
-            return None
-        except Exception:
-            return websocket
-
     async def broadcast(self, message: str, token: str):
-        if token in self.active_connections:
-            # Broadcast to specific token connections (including STATION)
-            connections = self.active_connections[token]
-            tasks = [self._send_with_timeout(conn, message) for conn in connections]
+        # Safely get current connections (copy list to avoid mutation issues during iteration if needed, though here we just read)
+        # Note: active_connections might change during await
+        connections = self.active_connections.get(token)
 
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-
+        if connections:
+            # We work on a snapshot of connections to initiate sends
+            # But we must be careful when modifying self.active_connections after await
+            current_connections_snapshot = list(connections)
             to_remove = []
-            for res in results:
-                # If helper returned a WebSocket, it failed
-                if isinstance(res, WebSocket):
-                    to_remove.append(res)
-            
-            if to_remove and token in self.active_connections:
-                for dead_conn in to_remove:
-                    if dead_conn in self.active_connections[token]:
-                        self.active_connections[token].remove(dead_conn)
 
-                if not self.active_connections[token]:
+            async def send(connection):
+                try:
+                    # 2 second timeout to prevent blocking
+                    await asyncio.wait_for(connection.send_text(message), timeout=2.0)
+                    return None
+                except Exception:
+                    return connection
+
+            # Parallel send with timeout (Phase B)
+            if current_connections_snapshot:
+                results = await asyncio.gather(*(send(conn) for conn in current_connections_snapshot), return_exceptions=True)
+
+                for res in results:
+                    if isinstance(res, WebSocket):
+                        to_remove.append(res)
+            
+            # Cleanup dead connections
+            # Re-check if token still exists in active_connections because it might have been removed during await
+            if token in self.active_connections:
+                live_list = self.active_connections[token]
+                for dead_conn in to_remove:
+                    if dead_conn in live_list:
+                        live_list.remove(dead_conn)
+
+                if not live_list:
                     del self.active_connections[token]
         else:
             logger.debug(f"No active connections for token: {token}. Skipping broadcast.")

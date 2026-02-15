@@ -125,41 +125,50 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
     
     unique_admissions = list(unique_map.values())
     
-    # 3. Enrich with latest IV rate, Vitals, Meals (Parallel Query)
+    # 3. Enrich in parallel (Phase A)
     admission_ids = [adm['id'] for adm in unique_admissions]
-    
     iv_map = {}
     vital_map = {}
     meal_map = {}
 
     if admission_ids:
-        # Prepare tasks for concurrent execution
-        iv_task = execute_with_retry_async(
-            db.table("iv_records")
-            .select("admission_id, infusion_rate, photo_url, created_at")
-            .in_("admission_id", admission_ids)
-            .order("created_at", desc=True)
-        )
-        
-        vitals_task = execute_with_retry_async(
-            db.table("vital_signs")
-            .select("admission_id, temperature, recorded_at")
-            .in_("admission_id", admission_ids)
-            .order("recorded_at", desc=True)
-        )
+        # Define tasks
+        async def fetch_iv():
+            res = await execute_with_retry_async(
+                db.table("iv_records")
+                .select("admission_id, infusion_rate, photo_url, created_at")
+                .in_("admission_id", admission_ids)
+                .order("created_at", desc=True)
+                .order("id", desc=True) # Secondary sort for stability
+            )
+            return res.data or []
 
-        meal_task = execute_with_retry_async(
-            db.table("meal_requests")
-            .select("admission_id, request_type, pediatric_meal_type, guardian_meal_type, room_note, created_at")
-            .in_("admission_id", admission_ids)
-            .order("id", desc=True)
-        )
+        async def fetch_vitals():
+            res = await execute_with_retry_async(
+                db.table("vital_signs")
+                .select("admission_id, temperature, recorded_at")
+                .in_("admission_id", admission_ids)
+                .order("recorded_at", desc=True)
+            )
+            return res.data or []
+
+        async def fetch_meals():
+            res = await execute_with_retry_async(
+                db.table("meal_requests")
+                .select("admission_id, request_type, pediatric_meal_type, guardian_meal_type, room_note, created_at")
+                .in_("admission_id", admission_ids)
+                .order("id", desc=True)
+            )
+            return res.data or []
 
         # Execute in parallel
-        iv_res, vitals_res, meal_res = await asyncio.gather(iv_task, vitals_task, meal_task)
+        all_ivs, all_vitals, all_meals = await asyncio.gather(
+            fetch_iv(),
+            fetch_vitals(),
+            fetch_meals()
+        )
 
         # Process IVs
-        all_ivs = iv_res.data or []
         for iv in all_ivs:
             aid = iv['admission_id']
             if aid not in iv_map:
@@ -167,13 +176,13 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
 
         # Process Vitals
         from datetime import datetime, timedelta
-        all_vitals = vitals_res.data or []
         
         six_hours_ago_iso = (datetime.now() - timedelta(hours=6)).isoformat()
 
         for v in all_vitals:
             aid = v['admission_id']
             
+            # Initialize with latest
             if aid not in vital_map:
                 vital_map[aid] = {
                     'latest_temp': v['temperature'],
@@ -181,13 +190,13 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
                     'had_fever_in_6h': False
                 }
             
+            # Check fever
             if not vital_map[aid]['had_fever_in_6h']:
                 rec_at = v.get('recorded_at')
                 if rec_at and v['temperature'] >= 38.0 and rec_at >= six_hours_ago_iso:
                     vital_map[aid]['had_fever_in_6h'] = True
 
         # Process Meals
-        all_meals = meal_res.data or []
         for m in all_meals:
             aid = m['admission_id']
             if aid not in meal_map:
