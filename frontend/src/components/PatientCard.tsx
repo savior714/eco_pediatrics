@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from './Card';
 import { Thermometer, Droplet, QrCode } from 'lucide-react';
-import { calculateAge } from '@/utils/dateUtils';
+import { formatPatientDemographics } from '@/utils/dateUtils';
 
 interface PatientCardProps {
     name: string;
@@ -33,12 +33,9 @@ export function PatientCard({ name, roomNumber, temperature, infusionRate, statu
                     <div className="flex items-center gap-1.5 mt-0.5">
                         <p className={`${status === 'fever' ? 'text-red-900/70' : 'text-slate-600'} text-[11px] font-bold`}>{name}</p>
                         <span className="text-[10px] text-slate-300">|</span>
-                        <span className="text-[10px] text-slate-500 font-medium">{dob ? calculateAge(dob) : ''}</span>
-                        {gender && (
-                            <span className={`text-[10px] font-bold ${gender === 'M' ? 'text-blue-500' : 'text-rose-500'}`}>
-                                {gender === 'M' ? '남' : '여'}
-                            </span>
-                        )}
+                        <span className={`text-[10px] font-bold ${gender === 'M' ? 'text-blue-500' : gender === 'F' ? 'text-rose-500' : 'text-slate-500'}`}>
+                            {formatPatientDemographics(dob, gender)}
+                        </span>
                     </div>
                 </div>
                 {onQrClick && (

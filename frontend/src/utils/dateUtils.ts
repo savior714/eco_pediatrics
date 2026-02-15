@@ -16,7 +16,7 @@ export function calculateHospitalDay(checkInAt: string | null | undefined, targe
     // Example: Admitted 8 PM. Next day 1 AM. Diff 25h. 25/24 = 1.04. Floor + 1 = 2.
 
     const diffMs = current - startDayMidnight;
-    if (diffMs < 0) return 1; // Should not happen if checkInAt is valid, but fallback to Day 1
+    if (diffMs < 0) return 1;
 
     return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
 }
@@ -38,6 +38,31 @@ export function calculateAge(dob: string | null | undefined): string {
         return `${totalMonths}개월`;
     }
     return `${years}세`;
+}
+
+export function formatPatientDemographics(dob: string | null | undefined, gender: string | null | undefined): string {
+    if (!dob) return '';
+    const birthDate = new Date(dob);
+    const today = new Date();
+
+    let years = today.getFullYear() - birthDate.getFullYear();
+    let months = today.getMonth() - birthDate.getMonth();
+    if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
+        years--;
+        months += 12;
+    }
+
+    const totalMonths = years * 12 + months;
+    let ageStr = '';
+    if (totalMonths < 36) {
+        ageStr = `${totalMonths}개월`;
+    } else {
+        ageStr = `${years}세`;
+    }
+
+    if (!gender) return ageStr;
+    const genderStr = gender === 'M' ? '남' : gender === 'F' ? '여' : gender;
+    return `${ageStr}/${genderStr}`;
 }
 
 /** 현재 시각 기준 "앞으로의 3끼" 라벨 및 메타데이터. 6~13시 / 14~18시 / 19~5시 구간. */

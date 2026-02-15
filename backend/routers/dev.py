@@ -32,12 +32,23 @@ async def seed_patient_data(admission_id: str, db: AsyncClient = Depends(get_sup
     """
     Developer tool: Seed 72 hours of virtual data for a specific patient.
     """
-    # 1. Generate 72h Vitals (every 4 hours)
-    now = datetime.now()
+    # 1. Update Admission check_in_at to 72 hours ago
+    start_time = now - timedelta(hours=72)
+    await execute_with_retry_async(
+        db.table("admissions")
+        .update({"check_in_at": start_time.isoformat()})
+        .eq("id", admission_id)
+    )
+
+    # 2. Generate 72h Vitals (every 4 hours, starting from start_time)
     vitals = []
-    # 72 hours / 4 hours = 18 intervals + 1 current = 19 records
+    # 72 hours / 4 hours = 18 intervals
     for i in range(19):
-        recorded_at = (now - timedelta(hours=i*4)).isoformat()
+        recorded_at = (start_time + timedelta(hours=i*4)).isoformat()
+        # Only add if not in the future
+        if (start_time + timedelta(hours=i*4)) > now:
+            continue
+            
         temp = round(random.uniform(36.4, 38.8), 1)
         vitals.append({
             "admission_id": admission_id,
@@ -49,13 +60,13 @@ async def seed_patient_data(admission_id: str, db: AsyncClient = Depends(get_sup
     
     await execute_with_retry_async(db.table("vital_signs").insert(vitals))
     
-    # 2. Generate 2 IV Records
+    # 3. Generate 2 IV Records (starting after admission)
     ivs = [
         {
             "admission_id": admission_id,
             "infusion_rate": 40,
             "photo_url": "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80&w=400",
-            "created_at": (now - timedelta(hours=6)).isoformat()
+            "created_at": (start_time + timedelta(hours=1)).isoformat()
         },
         {
             "admission_id": admission_id,
@@ -66,7 +77,7 @@ async def seed_patient_data(admission_id: str, db: AsyncClient = Depends(get_sup
     ]
     await execute_with_retry_async(db.table("iv_records").insert(ivs))
     
-    # 3. Generate 2 Exam Schedules
+    # 4. Generate 2 Exam Schedules
     exams = [
         {
             "admission_id": admission_id,

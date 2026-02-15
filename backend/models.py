@@ -64,6 +64,7 @@ class AdmissionCreate(BaseModel):
     room_number: str
     dob: Optional[date] = None
     gender: Optional[GenderEnum] = None
+    check_in_at: Optional[datetime] = None
 
 class VitalSignCreate(BaseModel):
     admission_id: str

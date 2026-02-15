@@ -41,12 +41,32 @@ interface TemperatureGraphProps {
 
 export function TemperatureGraph({ data, checkInAt, className }: TemperatureGraphProps) {
     // 1. Calculate hospital days logic
-    const { chartData, totalWidthPercent, ticks, yDomain } = useMemo(() => {
-        if (!checkInAt || data.length === 0) return { chartData: data, totalWidthPercent: 100, ticks: [], yDomain: [35.5, 41] };
+    const { chartData, totalWidthPercent, gridTicks, labelTicks, yDomain } = useMemo(() => {
+        if (!checkInAt || data.length === 0) {
+            return {
+                chartData: data,
+                totalWidthPercent: 100,
+                gridTicks: [],
+                labelTicks: [],
+                yDomain: [35.5, 41]
+            };
+        }
 
         const startDate = new Date(checkInAt);
-        // Normalize start date to midnight of the check-in day for consistent day calculation
         const startDayMidnight = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
+
+        // Filter and process data to add 'hospitalDay' and precise timestamp
+        const processed = data
+            .filter(d => new Date(d.recorded_at).getTime() >= startDayMidnight) // Strictly filter out pre-admission data
+            .map(d => {
+                const date = new Date(d.recorded_at);
+                const ts = date.getTime();
+                return {
+                    ...d,
+                    hospitalDay: calculateHospitalDay(checkInAt, date),
+                    timestamp: ts
+                };
+            });
 
         // Calculate Y-axis domain based on data
         let minTemp = 35.5;
@@ -59,33 +79,36 @@ export function TemperatureGraph({ data, checkInAt, className }: TemperatureGrap
             if (maxData > 41) maxTemp = Math.ceil(maxData * 10) / 10 + 0.5;
         }
 
-        // Process data to add 'hospitalDay' and precise timestamp
-        const processed = data.map(d => {
-            const date = new Date(d.recorded_at);
-            const currentTime = date.getTime();
-
-            return {
-                ...d,
-                hospitalDay: calculateHospitalDay(checkInAt, date),
-                timestamp: currentTime
-            };
-        });
-
-        // Determine range for the X-axis
+        // Determine range for the X-axis (strictly from admission midnight)
         const lastDataPoint = processed[processed.length - 1];
-        const maxDayInData = lastDataPoint ? lastDataPoint.hospitalDay : 1;
-        const displayDays = Math.max(5, maxDayInData);
+        const lastTs = lastDataPoint ? lastDataPoint.timestamp : Date.now();
+        const diffMs = lastTs - startDayMidnight;
+        const daysInRange = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
+        const displayDays = Math.max(5, daysInRange);
 
-        // Generate ticks for each hospital day (starting from the exact check-in day)
-        const dayTicks = [];
+        // Generate ticks for each hospital day boundaries (midnight)
+        const gridTicks = [];
+        for (let i = 0; i <= displayDays; i++) {
+            gridTicks.push(startDayMidnight + (i * 24 * 60 * 60 * 1000));
+        }
+
+        // Generate ticks for labels (mid-day, 12:00 PM) for centering
+        const labelTicks = [];
         for (let i = 0; i < displayDays; i++) {
-            dayTicks.push(startDayMidnight + (i * 24 * 60 * 60 * 1000));
+            const tickMid = startDayMidnight + (i * 24 * 60 * 60 * 1000) + (12 * 60 * 60 * 1000);
+            labelTicks.push(tickMid);
         }
 
         // Horizontal scroll width calculation
         const widthPercent = Math.max(100, displayDays * 20); // 20% width per day
 
-        return { chartData: processed, totalWidthPercent: widthPercent, ticks: dayTicks, yDomain: [minTemp, maxTemp] };
+        return {
+            chartData: processed,
+            totalWidthPercent: widthPercent,
+            gridTicks,
+            labelTicks,
+            yDomain: [minTemp, maxTemp]
+        };
     }, [data, checkInAt]);
 
     // Generate unique ID for the gradient to prevent conflicts when multiple charts are present
@@ -146,7 +169,7 @@ export function TemperatureGraph({ data, checkInAt, className }: TemperatureGrap
                             data={chartData}
                             margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                         >
-                            <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f1f5f9" />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
 
                             <defs>
                                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -160,9 +183,9 @@ export function TemperatureGraph({ data, checkInAt, className }: TemperatureGrap
                             <XAxis
                                 dataKey="timestamp"
                                 type="number"
-                                domain={[ticks[0], ticks[ticks.length - 1]]}
+                                domain={[gridTicks[0], gridTicks[gridTicks.length - 1]]}
                                 scale="time"
-                                ticks={ticks}
+                                ticks={labelTicks}
                                 tickFormatter={(unixTime) => {
                                     if (!checkInAt) return '';
                                     return `${calculateHospitalDay(checkInAt, new Date(unixTime))}일차`;
@@ -172,6 +195,7 @@ export function TemperatureGraph({ data, checkInAt, className }: TemperatureGrap
                                 tickLine={false}
                                 axisLine={false}
                                 tick={{ dy: 10 }}
+                                padding={{ left: 0, right: 0 }}
                             />
                             <YAxis
                                 domain={yDomain}
@@ -200,7 +224,7 @@ export function TemperatureGraph({ data, checkInAt, className }: TemperatureGrap
                             />
 
                             {/* Day Separators (Vertical Lines for visually distinguishing columns) */}
-                            {ticks.map((tick, i) => (
+                            {gridTicks.map((tick, i) => (
                                 <ReferenceLine key={i} x={tick} stroke="#e2e8f0" strokeDasharray="3 3" />
                             ))}
 

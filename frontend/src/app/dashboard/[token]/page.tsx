@@ -9,7 +9,7 @@ import { Utensils, FileText, CalendarCheck, Bell, Smartphone, Monitor } from 'lu
 import { useVitals } from '@/hooks/useVitals';
 import { MealRequestModal } from '@/components/MealRequestModal';
 import { DocumentRequestModal } from '@/components/DocumentRequestModal';
-import { calculateHospitalDay, getNextThreeMealSlots, calculateAge } from '@/utils/dateUtils';
+import { calculateHospitalDay, getNextThreeMealSlots, formatPatientDemographics } from '@/utils/dateUtils';
 
 export default function Dashboard({ params }: { params: { token: string } }) {
     const { token } = params;
@@ -72,20 +72,12 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                                     {patientName || 'Loading...'}
                                 </h1>
                                 <p className="text-slate-500 text-sm md:text-base font-bold flex items-center gap-2 whitespace-nowrap" suppressHydrationWarning>
-                                    <span className="text-slate-400">{roomNumber || '...'}</span>
-                                    <span className="w-1 md:w-1.5 h-1 md:h-1.5 bg-slate-200 rounded-full shrink-0" />
-                                    <span className="text-teal-600 font-extrabold">{checkInAt ? `${calculateHospitalDay(checkInAt)}일차` : '...'}</span>
+                                    <span className="text-slate-400">{roomNumber ? `${roomNumber}호` : '...'}</span>
                                     {dob && (
                                         <>
                                             <span className="w-1 md:w-1.5 h-1 md:h-1.5 bg-slate-200 rounded-full shrink-0" />
-                                            <span className="text-slate-500">{calculateAge(dob)}</span>
-                                        </>
-                                    )}
-                                    {gender && (
-                                        <>
-                                            <span className="w-1 md:w-1.5 h-1 md:h-1.5 bg-slate-200 rounded-full shrink-0" />
-                                            <span className={gender === 'M' ? 'text-blue-500' : 'text-rose-500'}>
-                                                {gender === 'M' ? '남' : '여'}
+                                            <span className={`font-extrabold ${gender === 'M' ? 'text-blue-500' : gender === 'F' ? 'text-rose-500' : 'text-slate-500'}`}>
+                                                {formatPatientDemographics(dob, gender)}
                                             </span>
                                         </>
                                     )}

@@ -99,6 +99,9 @@ async def create_admission(admission: AdmissionCreate, db: AsyncClient = Depends
         "dob": admission.dob.isoformat() if admission.dob else None,
         "gender": admission.gender
     }
+    if admission.check_in_at:
+        data["check_in_at"] = admission.check_in_at.isoformat()
+
     response = await execute_with_retry_async(db.table("admissions").insert(data))
     new_admission = response.data[0]
     await create_audit_log(db, "NURSE", "CREATE", new_admission['id'])

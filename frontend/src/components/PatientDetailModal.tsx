@@ -3,7 +3,7 @@ import { X, Check, Clock, AlertCircle, CalendarCheck, Plus, Thermometer, Droplet
 import { Card } from './Card';
 import { IVUploadForm } from './IVUploadForm';
 import { TemperatureGraph } from './TemperatureGraph';
-import { getNextThreeMealSlots, calculateAge } from '@/utils/dateUtils';
+import { getNextThreeMealSlots, formatPatientDemographics } from '@/utils/dateUtils';
 import { Bed, Notification, ExamScheduleItem, VitalData, LastUploadedIv } from '@/types/domain';
 import { MEAL_MAP, DOC_MAP, EXAM_TYPE_OPTIONS } from '@/constants/mappings';
 import { api } from '@/lib/api';
@@ -68,13 +68,9 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         if (!window.confirm(`[Dev] ${bed.name} 환자에게 가상 데이터를 생성할까요?`)) return;
         try {
             await api.post(`/api/v1/dev/seed-patient/${bed.id}`, {});
-            // 1. Refresh internal data (vitals, meals, exam schedules)
             await fetchDashboardData();
-            // 2. Notify parent dashboard to update the patient card (temp/IV rate)
-            // Note: onVitalUpdate and onIVUploadSuccess trigger state refresh in the parent 'Station'
-            onVitalUpdate?.(36.5); // Placeholder to trigger re-fetch in parent
-            onIVUploadSuccess?.(40); // Placeholder to trigger re-fetch in parent
-
+            onVitalUpdate?.(36.5);
+            onIVUploadSuccess?.(40);
             alert('데이터 생성 및 동기화 완료');
         } catch (e) {
             alert('데이터 생성 실패');
@@ -94,7 +90,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         }
     };
 
-    // Derived state (safe access)
     const roomNotifications = useMemo(() => {
         if (!bed) return [];
         return notifications.filter(n => String(n.room) === String(bed.room));
@@ -162,8 +157,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         }
     };
 
-    // Auto-refresh removed. useVitals handles updates internally via WebSocket.
-    // Manual refetch only needed for user actions not covered by WS (none currently, WS covers all).
     useEffect(() => {
         if (isOpen) {
             fetchDashboardData();
@@ -179,25 +172,17 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
     const latestDocRequest = fetchedDocRequests.length > 0 ? fetchedDocRequests[0] : null;
     const currentDocLabelsModal = latestDocRequest?.request_items?.map((id: string) => DOC_MAP[id] || id) ?? [];
 
-    // Chart data: Prioritize props > fetched > empty (no mock data)
     const { chartVitals, chartCheckIn } = useMemo(() => {
         if (!bed) return { chartVitals: [], chartCheckIn: null };
-
-        // 1. Props from dashboard (if reused there)
         if (propVitals && propVitals.length > 0) {
             return { chartVitals: propVitals, chartCheckIn: propCheckInAt ?? null };
         }
-
-        // 2. Fetched real data
         if (fetchedVitals.length > 0) {
             return { chartVitals: fetchedVitals, chartCheckIn: fetchedCheckIn };
         }
-
-        // 3. No data - return empty to avoid misleading sine wave
         return { chartVitals: [], chartCheckIn: fetchedCheckIn || propCheckInAt || null };
     }, [bed, propVitals, propCheckInAt, fetchedVitals, fetchedCheckIn]);
 
-    // Derived: Latest Vital for Header Display
     const latestVital = fetchedVitals.length > 0 ? fetchedVitals[fetchedVitals.length - 1] : null;
     const displayTemp = latestVital ? latestVital.temperature : bed.temp;
     const displayVitalTime = latestVital ? latestVital.recorded_at : bed.last_vital_at;
@@ -205,8 +190,8 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
     const getTempBorderColor = () => {
         if (!displayVitalTime) return 'border-slate-200';
         const hours = (Date.now() - new Date(displayVitalTime).getTime()) / (1000 * 60 * 60);
-        if (hours >= 4) return 'border-red-500 ring-4 ring-red-100'; // 4h+ Red
-        if (hours >= 2) return 'border-orange-400 ring-4 ring-orange-100'; // 2h+ Orange
+        if (hours >= 4) return 'border-red-500 ring-4 ring-red-100';
+        if (hours >= 2) return 'border-orange-400 ring-4 ring-orange-100';
         return 'border-slate-200';
     };
 
@@ -228,13 +213,8 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                             <span className="text-xl text-slate-300 font-light">/</span>
                             <p className="text-slate-500 font-bold text-base mt-1">{bed.name}</p>
                             {bed.dob && (
-                                <span className="text-slate-400 text-sm mt-1 ml-1 font-medium italic">
-                                    ({calculateAge(bed.dob)})
-                                </span>
-                            )}
-                            {bed.gender && (
-                                <span className={`text-sm mt-1 ml-1 font-bold ${bed.gender === 'M' ? 'text-blue-500' : 'text-rose-500'}`}>
-                                    {bed.gender === 'M' ? '남' : '여'}
+                                <span className={`text-base mt-1 ml-1 font-bold ${bed.gender === 'M' ? 'text-blue-500' : bed.gender === 'F' ? 'text-rose-500' : 'text-slate-500'}`}>
+                                    ({formatPatientDemographics(bed.dob, bed.gender)})
                                 </span>
                             )}
                             {bed.status === 'fever' && (
@@ -272,12 +252,9 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                         </div>
                     </div>
 
-                    {/* Quick Vitals Summary + Meal Status + IV Check Top */}
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 mt-4">
-                        {/* Left Group: Vitals & Meals (7 Cols) -> 5 Sub-cols */}
                         <div className="lg:col-span-7">
                             <div className="grid grid-cols-5 gap-2 h-full">
-                                {/* 1. Temp (Clickable) */}
                                 <button
                                     onClick={() => setVitalModalOpen(true)}
                                     className={`col-span-1 bg-white rounded-[1.2rem] border-[1.5px] ${displayVitalTime && (Date.now() - new Date(displayVitalTime).getTime()) / 3600000 >= 2 ? getTempBorderColor() : 'border-slate-200'} shadow-sm flex flex-col justify-center items-center hover:bg-slate-50 transition-all py-1.5 px-1`}
@@ -291,7 +268,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                     </div>
                                 </button>
 
-                                {/* 2. Drops */}
                                 <div className="col-span-1 bg-white rounded-[1.2rem] border-[1.5px] border-slate-200 shadow-sm flex flex-col justify-center items-center py-1.5 px-1">
                                     <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-tight">속도</span>
                                     <div className="flex items-center gap-0.5">
@@ -300,7 +276,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                     </div>
                                 </div>
 
-                                {/* 3,4,5. Meals */}
                                 {getNextThreeMealSlots().map((slot) => {
                                     const meal = fetchedMeals.find(m => m.meal_date === slot.date && m.meal_time === slot.meal_time);
                                     const labelText = meal
@@ -330,7 +305,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                             </div>
                         </div>
 
-                        {/* Right Group: IV Form (5 Cols) */}
                         <div className="lg:col-span-5 h-full">
                             <div className="bg-white px-4 py-2 rounded-[1.5rem] border-[1.5px] border-slate-200 shadow-sm relative group/iv h-full flex flex-col justify-center">
                                 <div className="flex items-center justify-between mb-1 px-1">
@@ -355,10 +329,8 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                     </div>
                 </div>
 
-                {/* Body: Bottom Columns */}
                 <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        {/* 1st Column: Chart (Main Bottom Left) */}
                         <div className="lg:col-span-7 space-y-6">
                             <section className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
                                 <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
@@ -373,7 +345,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                             </section>
                         </div>
 
-                        {/* 2nd Column: Exam & Requests Stacked (Main Bottom Right) */}
                         <div className="lg:col-span-5 space-y-6 flex flex-col">
                             <section className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 flex-1">
                                 <div className="flex justify-between items-center mb-4">
@@ -410,7 +381,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                     ))}
                                     {examSchedules.length === 0 && <p className="text-xs text-slate-400 text-center py-4">등록된 일정이 없습니다.</p>}
                                 </div>
-
                             </section>
 
                             <section className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 flex-1">
