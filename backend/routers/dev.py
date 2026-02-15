@@ -30,12 +30,13 @@ async def discharge_all(db: AsyncClient = Depends(get_supabase)):
 @router.post("/seed-patient/{admission_id}")
 async def seed_patient_data(admission_id: str, db: AsyncClient = Depends(get_supabase)):
     """
-    Developer tool: Seed 24 hours of virtual data for a specific patient.
+    Developer tool: Seed 72 hours of virtual data for a specific patient.
     """
-    # 1. Generate 24h Vitals (every 4 hours)
+    # 1. Generate 72h Vitals (every 4 hours)
     now = datetime.now()
     vitals = []
-    for i in range(7): # 0, 4, 8, 12, 16, 20, 24 hours ago
+    # 72 hours / 4 hours = 18 intervals + 1 current = 19 records
+    for i in range(19):
         recorded_at = (now - timedelta(hours=i*4)).isoformat()
         temp = round(random.uniform(36.4, 38.8), 1)
         vitals.append({
