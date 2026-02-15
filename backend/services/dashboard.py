@@ -38,7 +38,8 @@ async def fetch_dashboard_data(db: AsyncClient, admission_id: str):
         if t == 'BREAKFAST': rank = 1
         elif t == 'LUNCH': rank = 2
         elif t == 'DINNER': rank = 3
-        return (d, rank)
+        # Tie-breaker: ID (descending)
+        return (d, rank, m.get('id', 0))
 
     meals_raw.sort(key=meal_sort_key, reverse=True)
     meals = meals_raw[:5]

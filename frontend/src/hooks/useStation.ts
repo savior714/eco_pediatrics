@@ -76,6 +76,8 @@ export function useStation(): UseStationReturn {
             switch (message.type) {
                 case 'NEW_MEAL_REQUEST':
                     if (message.data.request_type === 'STATION_UPDATE') break;
+
+                    // 1. Update Notification
                     setNotifications(prev => [{
                         id,
                         room: message.data.room,
@@ -83,6 +85,24 @@ export function useStation(): UseStationReturn {
                         content: `식단 신청 (${MEAL_MAP[message.data.request_type] || message.data.request_type})`,
                         type: 'meal'
                     }, ...prev]);
+
+                    // 2. Patch Bed State (Immediate UI Update)
+                    setBeds(prev => prev.map(bed => {
+                        if (String(bed.room) === String(message.data.room)) {
+                            return {
+                                ...bed,
+                                latest_meal: {
+                                    id: -1, // Placeholder
+                                    admission_id: message.data.admission_id,
+                                    request_type: message.data.request_type,
+                                    created_at: new Date().toISOString(),
+                                    meal_date: message.data.meal_date,
+                                    meal_time: message.data.meal_time
+                                }
+                            };
+                        }
+                        return bed;
+                    }));
                     break;
 
                 case 'NEW_DOC_REQUEST':
@@ -116,6 +136,25 @@ export function useStation(): UseStationReturn {
                     break;
 
                 case 'NEW_VITAL':
+                    const v = message.data;
+                    setBeds(prev => prev.map(bed => {
+                        // Match by admission_id if available, otherwise fallback to room if provided (though NEW_VITAL might not always have room)
+                        // Ideally match by admission_id.
+                        // However, beds state has admission_id as 'id'.
+                        if (bed.id === v.admission_id) {
+                            const isFever = v.temperature >= 38.0;
+                            return {
+                                ...bed,
+                                temp: v.temperature,
+                                last_vital_at: v.recorded_at,
+                                had_fever_in_6h: bed.had_fever_in_6h || isFever, // Keep true if already true, or set true if new fever
+                                status: (isFever || bed.had_fever_in_6h) ? 'fever' : 'normal'
+                            };
+                        }
+                        return bed;
+                    }));
+                    break;
+
                 case 'NEW_EXAM_SCHEDULE':
                 case 'DELETE_EXAM_SCHEDULE':
                     // Handled by setLastUpdated -> Modal refresh

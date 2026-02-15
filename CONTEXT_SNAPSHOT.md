@@ -88,3 +88,8 @@
 89:     - **Backend Meals Sorting**: 식단 조회 시 날짜/시간(저녁>점심>아침) 순 서버 정렬 보장.
 90:     - **WebSocket Resilience**: `useWebSocket` 훅 도입으로 지수 백오프(Exponential Backoff) 및 자동 재연결 표준화.
 91:     - **Developer Standards**: `docs/DEVELOPMENT_STANDARDS.md` 생성하여 핵심 로직(중복 제거, ID 체크 등) 문서화.
+    - **Sync Refinements (Phase A-D)**:
+        - `useStation`: `NEW_MEAL`/`NEW_VITAL` 수신 시 즉시 상태 패치 (체감 속도 향상).
+        - `PatientDetailModal`: 중복 `useEffect` 제거로 불필요한 네트워크 요청 방지.
+        - `useVitals`: `admissionIdRef` 도입으로 소켓 재연결 최적화.
+        - `Backend`: 식단 정렬 로직 강화 (Date > TimeRank > ID).

@@ -162,12 +162,13 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         }
     };
 
-    // Auto-refresh when a new notification arrives for this room OR when lastUpdated changes (new vital/iv)
+    // Auto-refresh removed. useVitals handles updates internally via WebSocket.
+    // Manual refetch only needed for user actions not covered by WS (none currently, WS covers all).
     useEffect(() => {
         if (isOpen) {
             fetchDashboardData();
         }
-    }, [isOpen, roomNotifications.length, lastUpdated, fetchDashboardData]);
+    }, [isOpen, fetchDashboardData]);
 
     const latestMeal = fetchedMeals.length > 0 ? fetchedMeals[0] : null;
     const currentMealLabelModal = latestMeal
