@@ -106,7 +106,9 @@ async def upsert_meal_request(
                     "admission_id": req.admission_id,
                     "request_type": req.request_type,
                     "meal_date": str(req.meal_date),
-                    "meal_time": req.meal_time.value
+                    "meal_time": req.meal_time.value,
+                    "pediatric_meal_type": req.pediatric_meal_type,
+                    "guardian_meal_type": req.guardian_meal_type
                 }
             })
 

@@ -90,11 +90,15 @@ export function useStation(): UseStationReturn {
                     if (message.data.request_type === 'STATION_UPDATE') break;
 
                     // 1. Update Notification
+                    const mealTypeDesc = message.data.pediatric_meal_type
+                        ? `${message.data.pediatric_meal_type}${message.data.guardian_meal_type ? ` / ${message.data.guardian_meal_type}` : ''}`
+                        : (MEAL_MAP[message.data.request_type] || message.data.request_type);
+
                     setNotifications(prev => [{
                         id,
                         room: message.data.room,
                         time: '방금',
-                        content: `식단 신청 (${MEAL_MAP[message.data.request_type] || message.data.request_type})`,
+                        content: `식단 신청 (${mealTypeDesc})`,
                         type: 'meal'
                     }, ...prev]);
 

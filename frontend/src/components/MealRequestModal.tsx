@@ -51,7 +51,7 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     admission_id: admissionId,
-                    request_type: 'STATION_UPDATE',
+                    request_type: pediatric === '일반식' ? 'GENERAL' : 'SOFT',
                     meal_date: slot.date,
                     meal_time: slot.meal_time,
                     pediatric_meal_type: pediatric,
