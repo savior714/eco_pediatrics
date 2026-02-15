@@ -44,7 +44,6 @@ function formatExamTime(iso: string): string {
 }
 
 export function PatientDetailModal({ isOpen, onClose, bed, notifications, onCompleteRequest, onIVUploadSuccess, onVitalUpdate, vitals: propVitals, checkInAt: propCheckInAt, lastUploadedIv, lastUpdated }: PatientDetailModalProps) {
-    const [examSchedules, setExamSchedules] = useState<ExamScheduleItem[]>([]);
     const [addExamModalOpen, setAddExamModalOpen] = useState(false);
     const [deletingExamId, setDeletingExamId] = useState<number | null>(null);
     const [transferModalOpen, setTransferModalOpen] = useState(false);
@@ -71,7 +70,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
             await api.post(`/api/v1/dev/seed-patient/${bed.id}`, {});
             // 1. Refresh internal data (vitals, meals, exam schedules)
             await fetchDashboardData();
-            refetchExams();
             // 2. Notify parent dashboard to update the patient card (temp/IV rate)
             // Note: onVitalUpdate and onIVUploadSuccess trigger state refresh in the parent 'Station'
             onVitalUpdate?.(36.5); // Placeholder to trigger re-fetch in parent
@@ -102,19 +100,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         return notifications.filter(n => String(n.room) === String(bed.room));
     }, [notifications, bed]);
 
-    useEffect(() => {
-        if (!isOpen || !bed?.id) return;
-        api.get<ExamScheduleItem[]>(`/api/v1/admissions/${bed.id}/exam-schedules`)
-            .then(data => setExamSchedules(Array.isArray(data) ? data : []))
-            .catch(() => setExamSchedules([]));
-    }, [isOpen, bed?.id]);
-
-    const refetchExams = () => {
-        if (!bed?.id) return;
-        api.get<ExamScheduleItem[]>(`/api/v1/admissions/${bed.id}/exam-schedules`)
-            .then(data => setExamSchedules(Array.isArray(data) ? data : []))
-            .catch(() => { });
-    };
 
     const handleAddExam = async (examData: { name: string; date: string; timeOfDay: 'am' | 'pm' }) => {
         if (!bed?.id) return;
@@ -129,7 +114,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                 note: ''
             });
 
-            refetchExams();
+            fetchDashboardData();
         } catch (e) {
             console.error(e);
             throw e;
@@ -141,7 +126,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         setDeletingExamId(scheduleId);
         try {
             await api.delete(`/api/v1/exam-schedules/${scheduleId}`);
-            refetchExams();
+            fetchDashboardData();
         } finally {
             setDeletingExamId(null);
         }
@@ -152,6 +137,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
         checkInAt: fetchedCheckIn,
         meals: fetchedMeals,
         documentRequests: fetchedDocRequests,
+        examSchedules,
         isRefreshing,
         fetchDashboardData
     } = useVitals(bed?.token, isOpen);

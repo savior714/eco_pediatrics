@@ -111,8 +111,17 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     case 'NEW_IV':
                     case 'IV_PHOTO_UPLOADED':
                     case 'NEW_DOC_REQUEST':
+                        setDocumentRequests(prev => [message.data as any, ...prev]);
+                        fetchDashboardData(); // Re-fetch to be sure
+                        break;
                     case 'NEW_EXAM_SCHEDULE':
+                        setExamSchedules(prev => [...prev, message.data as any].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
+                        fetchDashboardData(); // Re-fetch to ensure sync
+                        break;
                     case 'DELETE_EXAM_SCHEDULE':
+                        setExamSchedules(prev => prev.filter(ex => ex.id !== (message.data as any).id));
+                        fetchDashboardData();
+                        break;
                     case 'ADMISSION_TRANSFERRED':
                         fetchDashboardData();
                         break;

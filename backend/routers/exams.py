@@ -23,10 +23,16 @@ async def create_exam_schedule(schedule: ExamScheduleCreate, db: AsyncClient = D
     new_schedule = response.data[0]
 
     # Broadcast to guardian dashboard & station
-    adm_response = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", schedule.admission_id))
+    # 100% Real-time sync: Broadcast to token (guardian) and STATION (nurse)
+    adm_response = await execute_with_retry_async(
+        db.table("admissions")
+        .select("access_token, room_number")
+        .eq("id", schedule.admission_id)
+        .single()
+    )
     if adm_response.data:
-        token = adm_response.data[0]['access_token']
-        room = adm_response.data[0]['room_number']
+        token = adm_response.data['access_token']
+        room = adm_response.data['room_number']
         
         message = {
             "type": "NEW_EXAM_SCHEDULE",
@@ -35,7 +41,7 @@ async def create_exam_schedule(schedule: ExamScheduleCreate, db: AsyncClient = D
                 "room": room
             }
         }
-        await manager.broadcast(json.dumps(message), token)
+        await manager.broadcast(json.dumps(message), str(token))
         await manager.broadcast(json.dumps(message), "STATION")
 
     return new_schedule
@@ -58,10 +64,15 @@ async def delete_exam_schedule(schedule_id: int, db: AsyncClient = Depends(get_s
     await create_audit_log(db, "NURSE", "DELETE_EXAM", str(schedule_id))
 
     # 4. Broadcast removal to guardian dashboard & station
-    adm_res = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", admission_id))
+    adm_res = await execute_with_retry_async(
+        db.table("admissions")
+        .select("access_token, room_number")
+        .eq("id", admission_id)
+        .single()
+    )
     if adm_res.data:
-        token = adm_res.data[0]['access_token']
-        room = adm_res.data[0]['room_number']
+        token = adm_res.data['access_token']
+        room = adm_res.data['room_number']
         message = {
             "type": "DELETE_EXAM_SCHEDULE",
             "data": {
@@ -70,7 +81,7 @@ async def delete_exam_schedule(schedule_id: int, db: AsyncClient = Depends(get_s
                 "room": room
             }
         }
-        await manager.broadcast(json.dumps(message), token)
+        await manager.broadcast(json.dumps(message), str(token))
         await manager.broadcast(json.dumps(message), "STATION")
     
     return {"message": "Deleted successfully"}
