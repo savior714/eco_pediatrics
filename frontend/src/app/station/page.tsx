@@ -32,11 +32,18 @@ export default function Station() {
 
     const handleAdmit = async (name: string, birthday: string, gender: string) => {
         if (!admitRoom) return;
+
+        // Format birthday: 20200715 -> 2020-07-15
+        let formattedBirthday = birthday.trim();
+        if (/^\d{8}$/.test(formattedBirthday)) {
+            formattedBirthday = `${formattedBirthday.substring(0, 4)}-${formattedBirthday.substring(4, 6)}-${formattedBirthday.substring(6, 8)}`;
+        }
+
         try {
             await api.post('/api/v1/admissions', {
                 patient_name: name,
                 room_number: admitRoom,
-                dob: birthday,
+                dob: formattedBirthday,
                 gender: gender
             });
             // 1. Success Feedback
