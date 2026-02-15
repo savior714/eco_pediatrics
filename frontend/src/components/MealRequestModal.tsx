@@ -19,11 +19,21 @@ interface MealRequestModalProps {
 const PEDIATRIC_OPTIONS = ['일반식', '죽1', '죽2', '죽3'];
 const GUARDIAN_OPTIONS = ['일반식', '선택 안함'];
 
+interface SlotState {
+    pediatric: string;
+    guardian: string;
+}
+
 export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: MealRequestModalProps) {
     const slots = getNextThreeMealSlots();
     const [selectedSlotIdx, setSelectedSlotIdx] = useState(0);
-    const [pediatric, setPediatric] = useState('일반식');
-    const [guardian, setGuardian] = useState('선택 안함');
+
+    // Independent state for each of the 3 slots
+    const [selections, setSelections] = useState<Record<number, SlotState>>({
+        0: { pediatric: '일반식', guardian: '선택 안함' },
+        1: { pediatric: '일반식', guardian: '선택 안함' },
+        2: { pediatric: '일반식', guardian: '선택 안함' }
+    });
 
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<'SUCCESS' | 'ERROR' | null>(null);
@@ -32,35 +42,55 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
         if (isOpen) {
             setResult(null);
             setSelectedSlotIdx(0);
-            setPediatric('일반식');
-            setGuardian('선택 안함');
+            setSelections({
+                0: { pediatric: '일반식', guardian: '선택 안함' },
+                1: { pediatric: '일반식', guardian: '선택 안함' },
+                2: { pediatric: '일반식', guardian: '선택 안함' }
+            });
         }
     }, [isOpen]);
 
+    const updateSelection = (field: keyof SlotState, value: string) => {
+        setSelections(prev => ({
+            ...prev,
+            [selectedSlotIdx]: {
+                ...prev[selectedSlotIdx],
+                [field]: value
+            }
+        }));
+    };
+
+    const currentSelection = selections[selectedSlotIdx];
+
     const handleSubmit = async () => {
         if (!admissionId) return;
-        const slot = slots[selectedSlotIdx];
 
         setIsLoading(true);
         setResult(null);
 
         try {
             const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${API_BASE}/api/v1/meals/requests`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    admission_id: admissionId,
-                    request_type: pediatric === '일반식' ? 'GENERAL' : 'SOFT',
-                    meal_date: slot.date,
-                    meal_time: slot.meal_time,
-                    pediatric_meal_type: pediatric,
-                    guardian_meal_type: guardian,
-                    room_note: ''
-                })
+
+            // Submit all 3 slots sequentially
+            const promises = slots.map((slot, idx) => {
+                const sel = selections[idx];
+                return fetch(`${API_BASE}/api/v1/meals/requests`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        admission_id: admissionId,
+                        request_type: sel.pediatric === '일반식' ? 'GENERAL' : 'SOFT',
+                        meal_date: slot.date,
+                        meal_time: slot.meal_time,
+                        pediatric_meal_type: sel.pediatric,
+                        guardian_meal_type: sel.guardian,
+                        room_note: ''
+                    })
+                });
             });
 
-            if (!res.ok) throw new Error('Failed to request meal');
+            const responses = await Promise.all(promises);
+            if (responses.some(r => !r.ok)) throw new Error('Some meal requests failed');
 
             setResult('SUCCESS');
         } catch (error) {
@@ -107,10 +137,10 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
                                     <button
                                         key={opt}
                                         type="button"
-                                        onClick={() => setPediatric(opt)}
+                                        onClick={() => updateSelection('pediatric', opt)}
                                         className={cn(
                                             "px-4 py-2.5 rounded-xl text-xs font-bold border-2 transition-all active:scale-[0.98]",
-                                            pediatric === opt
+                                            currentSelection.pediatric === opt
                                                 ? "bg-teal-50 border-teal-500 text-teal-700 font-extrabold"
                                                 : "bg-white border-slate-100 text-slate-400 hover:border-slate-200"
                                         )}
@@ -132,10 +162,10 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
                                     <button
                                         key={opt}
                                         type="button"
-                                        onClick={() => setGuardian(opt)}
+                                        onClick={() => updateSelection('guardian', opt)}
                                         className={cn(
                                             "px-4 py-2.5 rounded-xl text-xs font-bold border-2 transition-all active:scale-[0.98]",
-                                            guardian === opt
+                                            currentSelection.guardian === opt
                                                 ? "bg-teal-50 border-teal-500 text-teal-700 font-extrabold"
                                                 : "bg-white border-slate-100 text-slate-400 hover:border-slate-200"
                                         )}
