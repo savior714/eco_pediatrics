@@ -25,27 +25,37 @@ export function useStation(): UseStationReturn {
         api.get<AdmissionSummary[]>('/api/v1/admissions')
             .then(admissions => {
                 if (!Array.isArray(admissions)) return;
-                setBeds(prev => prev.map(bed => {
-                    const adm = admissions.find((a) => String(a.room_number).trim() === String(bed.room).trim());
-                    if (adm) {
-                        const infusionRate = adm.latest_iv ? adm.latest_iv.infusion_rate : null;
-                        const temp = adm.latest_temp ?? null;
 
+                // Reconstruct state from scratch to prevent ghost data
+                const newBeds = ROOM_NUMBERS.map((room, i) => {
+                    const adm = admissions.find((a) => String(a.room_number).trim() === String(room).trim());
+                    if (adm) {
                         return {
-                            ...bed,
                             id: adm.id,
+                            room: room,
                             name: adm.display_name,
                             token: adm.access_token,
-                            drops: infusionRate,
-                            temp: temp,
+                            drops: adm.latest_iv ? adm.latest_iv.infusion_rate : null,
+                            temp: adm.latest_temp ?? null,
                             had_fever_in_6h: adm.had_fever_in_6h,
-                            status: ((temp !== null && temp >= 38.0) || adm.had_fever_in_6h) ? 'fever' : 'normal',
-                            latest_meal: adm.latest_meal,
-                            last_vital_at: adm.last_vital_at
+                            status: ((adm.latest_temp != null && adm.latest_temp >= 38.0) || adm.had_fever_in_6h) ? 'fever' : 'normal',
+                            latest_meal: adm.latest_meal ?? undefined,
+                            last_vital_at: adm.last_vital_at ?? undefined
                         };
                     }
-                    return bed;
-                }));
+                    // Empty Slot
+                    return {
+                        id: '',
+                        room: room,
+                        name: `환자${i + 1}`,
+                        temp: null,
+                        drops: null,
+                        status: 'normal' as const,
+                        token: ''
+                    } as Bed;
+                });
+
+                setBeds(newBeds);
             })
             .catch(console.error);
     }, []);
@@ -162,7 +172,7 @@ export function useStation(): UseStationReturn {
                 case 'ADMISSION_TRANSFERRED':
                 case 'ADMISSION_DISCHARGED':
                     // Re-fetch entire bed list to reflect room changes or discharge
-                    window.location.reload();
+                    fetchAdmissions();
                     break;
             }
         } catch (e) {

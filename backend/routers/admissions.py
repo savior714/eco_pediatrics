@@ -24,30 +24,36 @@ async def transfer_patient(admission_id: str, req: TransferRequest, db: AsyncCli
     if res.data:
         raise HTTPException(status_code=400, detail=f"Room {req.target_room} is currently occupied.")
 
-    # 2. Update room
+    # 2. Get current room (OLD) - BEFORE update
+    current_res = await execute_with_retry_async(db.table("admissions").select("room_number, access_token").eq("id", admission_id).single())
+    if not current_res.data:
+        raise HTTPException(status_code=404, detail="Admission not found")
+        
+    old_room = current_res.data['room_number']
+    token = current_res.data['access_token']
+
+    # 3. Update room (NEW)
     await execute_with_retry_async(
         db.table("admissions")
         .update({"room_number": req.target_room})
         .eq("id", admission_id)
     )
     
-    # 3. Audit
-    await create_audit_log(db, "NURSE", "TRANSFER", admission_id, f"To {req.target_room}")
+    # 4. Audit
+    await create_audit_log(db, "NURSE", "TRANSFER", admission_id, f"From {old_room} To {req.target_room}")
     
-    # 4. Broadcast
-    adm_res = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", admission_id))
-    if adm_res.data:
-        token = adm_res.data[0]['access_token']
-        old_room = adm_res.data[0]['room_number']
-        msg = {
-            "type": "ADMISSION_TRANSFERRED",
-            "data": {
-                "admission_id": admission_id,
-                "old_room": old_room,
-                "new_room": req.target_room
-            }
+    # 5. Broadcast
+    # Send to STATION (nurses need to see change in both rooms) and Patient (token)
+    msg = {
+        "type": "ADMISSION_TRANSFERRED",
+        "data": {
+            "admission_id": admission_id,
+            "old_room": old_room,
+            "new_room": req.target_room
         }
-        await manager.broadcast(json.dumps(msg), "STATION")
+    }
+    await manager.broadcast(json.dumps(msg), "STATION")
+    if token:
         await manager.broadcast(json.dumps(msg), str(token))
 
     return {"message": "Transferred successfully"}

@@ -24,13 +24,25 @@ async def record_iv(iv: IVRecordCreate, db: AsyncClient = Depends(get_supabase))
         new_iv = response.data[0]
         await create_audit_log(db, "NURSE", "CREATE_IV", str(new_iv['id']))
 
+        # 2. Broadcast to Station/Patient
+        # We need token and room to broadcast correctly
+        adm_response = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", iv.admission_id).single())
+        
+        token = None
+        room = None
+        
+        if adm_response.data:
+            token = adm_response.data.get('access_token')
+            room = adm_response.data.get('room_number')
+        
+        # Construct message
         message_data = {
             "id": new_iv.get('id'),
             "infusion_rate": new_iv.get('infusion_rate'),
             "photo_url": new_iv.get('photo_url'),
             "created_at": str(new_iv.get('created_at')) if new_iv.get('created_at') else None,
             "admission_id": iv.admission_id,
-            "room": None
+            "room": room 
         }
         
         message_to_send = {
@@ -38,26 +50,19 @@ async def record_iv(iv: IVRecordCreate, db: AsyncClient = Depends(get_supabase))
             "data": message_data
         }
 
-        # 1. Broadcast to Token channel (Guardian Dashboard)
-        adm_response = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", iv.admission_id))
-        if adm_response.data:
-            adm_info = adm_response.data[0]
-            token = adm_info.get('access_token')
-            room = adm_info.get('room_number')
-            
-            message_data["room"] = room
-            json_msg = json.dumps(message_to_send)
-            
-            if token:
-                await manager.broadcast(json_msg, token)
-            
-            # 2. Broadcast to Station channel
-            await manager.broadcast(json_msg, "STATION")
+        # Broadcast
+        json_msg = json.dumps(message_to_send)
+        await manager.broadcast(json_msg, "STATION")
+        if token:
+            await manager.broadcast(json_msg, token)
         
         return new_iv
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.critical(f"Error in record_iv: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error in record_iv: {str(e)}")
+        # Only raise 500 for truly unexpected errors, but don't mask generic HTTPErrors if they were raised deeper
+        raise HTTPException(status_code=500, detail=f"Internal Error: {str(e)}")
 
 @router.post("/upload/image")
 async def upload_image(file: UploadFile = File(...), token: str = None, db: AsyncClient = Depends(get_supabase)):

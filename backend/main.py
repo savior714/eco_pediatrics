@@ -83,16 +83,7 @@ app.add_middleware(
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-@app.websocket("/ws/{token}")
-async def websocket_endpoint(websocket: WebSocket, token: str):
-    logger.info(f"Connection attempt for token: {token}")
-    await manager.connect(websocket, token)
-    try:
-        while True:
-            await websocket.receive_text() # Keep connection alive, or handle client messages
-    except WebSocketDisconnect:
-        logger.info(f"Disconnected token: {token}")
-        manager.disconnect(websocket, token)
+
 
 
 # --- Include Routers ---
@@ -102,7 +93,55 @@ app.include_router(iv_records.router, prefix="/api/v1", tags=["IV Records"])
 app.include_router(vitals.router, prefix="/api/v1/vitals", tags=["Vitals"])
 app.include_router(exams.router, prefix="/api/v1", tags=["Exams"]) 
 app.include_router(meals.router, prefix="/api/v1/meals", tags=["Meals"])
-app.include_router(dev.router, prefix="/api/v1/dev", tags=["Dev"])
+
+
+# Conditionally include dev router
+if os.getenv("ENV") != "production":
+    app.include_router(dev.router, prefix="/api/v1/dev", tags=["Dev"])
+    logger.info("Dev router mounted (ENV != production)")
+else:
+    logger.info("Dev router disabled in production")
+
+# WS Token Validation
+async def verify_ws_token(token: str):
+    if token == "STATION":
+        return True # Allow station for now (Phase 1)
+    
+    # Check if token exists in admissions
+    if not hasattr(app.state, "supabase"):
+        return False # DB not ready
+        
+    try:
+        res = await app.state.supabase.table("admissions").select("id", count="exact").eq("access_token", token).execute()
+        # execute() for supabase-py async might differ, but execute_with_retry_async uses .execute()
+        # Wait, execute_with_retry_async is in utils. Let's use that if possible or just direct call if imported.
+        # But 'utils' is imported. However, 'app' is here. 
+        # Using raw supabase client here is fine for simple check.
+        # res.data or res.count
+        if res.data:
+            return True
+    except Exception as e:
+        logger.error(f"WS Token Validation Error: {e}")
+    
+    return False
+
+@app.websocket("/ws/{token}")
+async def websocket_endpoint(websocket: WebSocket, token: str):
+    # Validate Token Phase 1
+    is_valid = await verify_ws_token(token)
+    if not is_valid:
+        logger.warning(f"Connection rejected for invalid token: {token}")
+        await websocket.close(code=4003) # Forbidden
+        return
+
+    logger.info(f"Connection attempt for token: {token}")
+    await manager.connect(websocket, token)
+    try:
+        while True:
+            await websocket.receive_text() # Keep connection alive, or handle client messages
+    except WebSocketDisconnect:
+        logger.info(f"Disconnected token: {token}")
+        manager.disconnect(websocket, token)
 
 
 @app.get("/health")
