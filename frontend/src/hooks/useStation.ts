@@ -180,8 +180,10 @@ export function useStation(): UseStationReturn {
         }
     }, [setBeds, setNotifications, setLastUpdated, setLastUploadedIv, fetchAdmissions]);
 
+    const wsToken = process.env.NEXT_PUBLIC_STATION_WS_TOKEN || 'STATION';
+
     const { isConnected } = useWebSocket({
-        url: `${api.getBaseUrl().replace(/^http/, 'ws')}/ws/STATION`,
+        url: `${api.getBaseUrl().replace(/^http/, 'ws')}/ws/${wsToken}`,
         enabled: true,
         onOpen: fetchAdmissions, // Resync on connect/reconnect
         onMessage: handleMessage

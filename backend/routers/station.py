@@ -3,7 +3,7 @@ from supabase._async.client import AsyncClient
 from datetime import datetime
 import json
 
-from dependencies import get_supabase
+from dependencies import get_supabase, verify_admission_token
 from utils import execute_with_retry_async
 from services.dashboard import fetch_dashboard_data
 from websocket_manager import manager
@@ -34,17 +34,24 @@ async def get_dashboard_data_by_token(token: str, db: AsyncClient = Depends(get_
 
 
 @router.post("/documents/requests", response_model=DocumentRequest)
-async def request_document(request: DocumentRequestCreate, db: AsyncClient = Depends(get_supabase)):
-    # Verify admission is active (Security Boundary)
+async def request_document(
+    request: DocumentRequestCreate, 
+    db: AsyncClient = Depends(get_supabase),
+    token: str = Depends(verify_admission_token)
+):
+    # Verify admission is active AND token matches (Security Boundary)
     adm_res = await execute_with_retry_async(
         db.table("admissions")
-        .select("room_number")
+        .select("room_number, access_token")
         .eq("id", request.admission_id)
         .in_("status", ["IN_PROGRESS", "OBSERVATION"])
         .single()
     )
     if not adm_res.data:
         raise HTTPException(status_code=403, detail="Invalid admission ID or patient already discharged")
+        
+    if adm_res.data["access_token"] != token:
+        raise HTTPException(status_code=403, detail="Admission token mismatch")
 
     data = request.dict()
     response = await execute_with_retry_async(db.table("document_requests").insert(data))

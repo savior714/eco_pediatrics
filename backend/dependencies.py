@@ -16,3 +16,13 @@ async def get_supabase(request: Request) -> AsyncClient:
     if not client:
         raise HTTPException(status_code=500, detail="Supabase client not initialized")
     return client
+
+async def verify_admission_token(request: Request) -> str:
+    """
+    Extracts and validates X-Admission-Token from header.
+    Returns the token if present, otherwise raises 401.
+    """
+    token = request.headers.get("X-Admission-Token")
+    if not token:
+        raise HTTPException(status_code=401, detail="X-Admission-Token header missing")
+    return token

@@ -32,6 +32,18 @@
 1. `backend/.env` 생성 후 Supabase URL/KEY 설정 (참고: `backend/.env.example`)
 2. **백엔드**: `start_backend.bat` 실행 → http://localhost:8000
 3. **프론트**: `start_frontend.bat` 실행 → http://localhost:3000
+
+## 운영 설정 (Deployment Configuration)
+
+안전한 운영을 위해 아래 환경 변수 설정을 권장합니다.
+
+| 환경 변수 | 설명 | 권장 값 (운영/로컬) |
+| :--- | :--- | :--- |
+| `ENV` | 애플리케이션 환경 구분 | `production` / `local` |
+| `ENABLE_DEV_ROUTES` | 개발용 API (`/api/v1/dev`) 활성화 여부 | `false` / `true` |
+| `STATION_WS_TOKEN` | 스테이션 대시보드 WebSocket 인증 토큰 | 임의의 보안 문자열 / `STATION` |
+| `NEXT_PUBLIC_STATION_WS_TOKEN` | (프론트) 스테이션 연결용 토큰 (백엔드와 일치 필수) | `STATION_WS_TOKEN`과 동일 |
+
 4. **테스트 데이터(Seed)**  
    - 전체 통합 테스트 데이터: `POST http://localhost:8000/api/v1/seed/full-test-data` (입원+바이탈+일정 일괄 생성)
    - 자세한 내용은 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) 참고.
