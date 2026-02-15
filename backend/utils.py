@@ -1,5 +1,7 @@
 from supabase._async.client import AsyncClient
 import asyncio
+from postgrest.exceptions import APIError
+from httpx import HTTPStatusError
 from logger import logger
 
 def mask_name(name: str) -> str:
@@ -30,6 +32,15 @@ async def execute_with_retry_async(query_builder):
         try:
             return await query_builder.execute()
         except Exception as e:
+            # Check for non-retryable errors first
+            if isinstance(e, APIError):
+                logger.error(f"DB API Error (Non-retryable): {str(e)}")
+                raise e
+            if isinstance(e, HTTPStatusError) and 400 <= e.response.status_code < 500:
+                logger.error(f"DB HTTP Client Error (Non-retryable): {str(e)}")
+                raise e
+
+            # Retryable errors (5xx, Network, etc.)
             if attempt == max_retries - 1:
                 logger.critical(f"DB Async Execute failed after {max_retries} attempts: {str(e)}")
                 raise e
