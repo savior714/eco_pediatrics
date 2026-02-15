@@ -24,10 +24,10 @@ export function PatientCard({ name, roomNumber, temperature, infusionRate, statu
 
     return (
         <Card
-            className={`relative transition-all duration-300 ${statusStyles[status]} ${onCardClick ? 'cursor-pointer' : ''} !p-2`}
+            className={`relative transition-all duration-300 ${statusStyles[status]} ${onCardClick ? 'cursor-pointer' : ''} !p-3 pb-2 pt-4`}
             onClick={onCardClick}
         >
-            <div className="flex justify-between items-start mb-1">
+            <div className="flex justify-between items-start mb-2">
                 <div>
                     <h4 className={`text-lg font-bold ${status === 'fever' ? 'text-red-700' : 'text-slate-800'}`}>{roomNumber}</h4>
                     <div className="flex items-center gap-1.5 mt-0.5">
@@ -49,7 +49,7 @@ export function PatientCard({ name, roomNumber, temperature, infusionRate, statu
                 )}
             </div>
 
-            <div className="grid grid-cols-2 gap-1.5 mt-1">
+            <div className="grid grid-cols-2 gap-1.5 mt-2.5">
                 <div className="bg-slate-100/50 p-1.5 rounded-lg flex flex-col items-center justify-center">
                     <div className="flex items-center gap-1 text-slate-500 text-[10px] mb-0.5 font-medium">
                         <Thermometer size={12} className="text-status-danger" /> 체온
