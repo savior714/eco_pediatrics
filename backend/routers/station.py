@@ -66,11 +66,12 @@ async def request_document(
     response = await execute_with_retry_async(db.table("document_requests").insert(data))
     new_request = response.data[0]
     
-    # Broadcast to station
+    # Broadcast to station with generated ID
     room = adm_res.data['room_number']
     message = {
         "type": "NEW_DOC_REQUEST",
         "data": {
+            "id": new_request['id'],
             "room": room,
             "request_items": request.request_items,
             "created_at": datetime.now().isoformat()
@@ -78,3 +79,35 @@ async def request_document(
     }
     await manager.broadcast(json.dumps(message), "STATION")
     return new_request
+
+@router.patch("/documents/requests/{request_id}", response_model=DocumentRequest)
+async def update_document_request_status(
+    request_id: int,
+    status: str,
+    db: AsyncClient = Depends(get_supabase)
+):
+    """Update document request status (e.g., PENDING -> COMPLETED)"""
+    response = await execute_with_retry_async(
+        db.table("document_requests")
+        .update({"status": status})
+        .eq("id", request_id)
+    )
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return response.data[0]
+
+@router.patch("/meals/requests/{request_id}", response_model=MealRequest)
+async def update_meal_request_status(
+    request_id: int,
+    status: str,
+    db: AsyncClient = Depends(get_supabase)
+):
+    """Update meal request status"""
+    response = await execute_with_retry_async(
+        db.table("meal_requests")
+        .update({"status": status})
+        .eq("id", request_id)
+    )
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return response.data[0]

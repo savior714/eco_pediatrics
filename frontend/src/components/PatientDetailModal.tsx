@@ -18,7 +18,7 @@ interface PatientDetailModalProps {
     onClose: () => void;
     bed: Bed;
     notifications: Notification[];
-    onCompleteRequest: (id: string) => void;
+    onCompleteRequest?: (id: string, type: string, admissionId: string) => void;
     lastUploadedIv?: LastUploadedIv | null;
     onIVUploadSuccess?: (rate?: number) => void;
     onVitalUpdate?: (temp: number) => void;
@@ -412,16 +412,17 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                     요청 사항 ({roomNotifications.length})
                                 </h3>
                                 <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
-                                    {roomNotifications.map(note => (
-                                        <div key={note.id} className="p-3 bg-white rounded-xl border-[1.5px] border-slate-600 shadow-sm flex items-center justify-between gap-3">
+                                    {roomNotifications.map(notif => (
+                                        <div key={notif.id} className="p-3 bg-white rounded-xl border-[1.5px] border-slate-600 shadow-sm flex items-center justify-between gap-3">
                                             <div className="min-w-0 flex-1">
-                                                <span className="text-[10px] font-bold text-slate-400 block mb-0.5">{note.time}</span>
-                                                <p className="text-xs text-slate-700 line-clamp-2 leading-snug">{note.content}</p>
+                                                <span className="text-[10px] font-bold text-slate-400 block mb-0.5">{notif.time}</span>
+                                                <p className="text-xs text-slate-700 line-clamp-2 leading-snug">{notif.content}</p>
                                             </div>
                                             <button
-                                                onClick={() => onCompleteRequest(note.id)}
-                                                className="shrink-0 px-3 py-1.5 bg-green-500 text-white text-[10px] font-bold rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+                                                onClick={() => onCompleteRequest?.(notif.id, notif.type, bed.id)}
+                                                className="px-4 py-2 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 transition-all flex items-center gap-1.5"
                                             >
+                                                <Check size={16} />
                                                 완료
                                             </button>
                                         </div>

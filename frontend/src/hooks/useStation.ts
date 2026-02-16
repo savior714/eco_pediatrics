@@ -98,12 +98,13 @@ export function useStation(): UseStationReturn {
                         : (MEAL_MAP[message.data.request_type] || message.data.request_type);
 
                     setNotifications(prev => [{
-                        id,
+                        id: String(message.data.id), // Use actual DB ID
                         room: message.data.room,
                         time: '방금',
                         content: `식단 신청 (${mealTypeDesc})`,
-                        type: 'meal'
-                    }, ...prev]);
+                        type: 'meal',
+                        admissionId: message.data.admission_id // Store for removal patch
+                    } as any, ...prev]);
 
                     // 2. Patch Bed State (Immediate UI Update)
                     setBeds(prev => prev.map(bed => {
@@ -111,7 +112,7 @@ export function useStation(): UseStationReturn {
                             return {
                                 ...bed,
                                 latest_meal: {
-                                    id: Math.floor(Math.random() * 1000),
+                                    id: Math.floor(Math.random() * 1000), // This ID is for internal use, not DB ID
                                     admission_id: message.data.admission_id,
                                     request_type: message.data.request_type,
                                     pediatric_meal_type: message.data.pediatric_meal_type,
@@ -131,12 +132,13 @@ export function useStation(): UseStationReturn {
                     // data: { room, request_items: string[] }
                     const items = (message.data.request_items as string[]).map(it => DOC_MAP[it] || it).join(', ');
                     setNotifications(prev => [{
-                        id,
+                        id: String(message.data.id), // Use actual DB ID
                         room: message.data.room,
                         time: '방금',
                         content: `서류 신청 (${items})`,
-                        type: 'doc'
-                    }, ...prev]);
+                        type: 'doc',
+                        admissionId: message.data.admission_id // Store for removal patch
+                    } as any, ...prev]);
                     break;
 
                 case 'IV_PHOTO_UPLOADED':
@@ -201,8 +203,20 @@ export function useStation(): UseStationReturn {
         onMessage: handleMessage
     });
 
-    const removeNotification = useCallback((id: string) => {
+    const removeNotification = useCallback(async (id: string, type?: string, admissionId?: string) => {
         setNotifications(prev => prev.filter(n => n.id !== id));
+
+        // If it's a doc or meal request and it's a numeric DB ID, update status
+        if (admissionId && !isNaN(Number(id))) {
+            try {
+                const endpoint = type === 'doc' ? 'documents' : 'meals';
+                // Pass status as query param or body as per backend implementation
+                // backend/routers/station.py update_document_request_status uses query param 'status'
+                await api.patch(`/api/v1/${endpoint}/requests/${id}?status=COMPLETED`, {});
+            } catch (e) {
+                console.error('Status Update Failed', e);
+            }
+        }
     }, []);
 
     return {

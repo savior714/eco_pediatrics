@@ -51,6 +51,14 @@ class ApiClient {
         });
     }
 
+    patch<T>(endpoint: string, body: any, options?: RequestInit): Promise<T> {
+        return this.request<T>(endpoint, {
+            ...options,
+            method: 'PATCH',
+            body: JSON.stringify(body),
+        });
+    }
+
     delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
         return this.request<T>(endpoint, { ...options, method: 'DELETE' });
     }

@@ -40,6 +40,20 @@ export default function Station() {
         }
 
         try {
+            // Age validation (International age >= 19 check)
+            const birthDate = new Date(formattedBirthday);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+
+            if (age >= 19) {
+                alert('만 19세 이상 성인은 입원이 불가능합니다.');
+                return;
+            }
+
             await api.post('/api/v1/admissions', {
                 patient_name: name,
                 room_number: admitRoom,
@@ -207,7 +221,7 @@ export default function Station() {
                     onClose={() => setSelectedRoom(null)}
                     bed={selectedBed}
                     notifications={notifications}
-                    onCompleteRequest={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
+                    onCompleteRequest={(id: string, type?: string, admissionId?: string) => removeNotification(id, type, admissionId)}
                     lastUploadedIv={lastUploadedIv}
                     onIVUploadSuccess={(rate) => {
                         if (rate !== undefined && selectedRoom) {

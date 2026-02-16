@@ -7,15 +7,7 @@ interface AddExamModalProps {
     onSave: (examData: { name: string; date: string; timeOfDay: 'am' | 'pm' }) => Promise<void>;
 }
 
-const EXAM_TYPE_OPTIONS = [
-    '심장초음파',
-    '복부초음파',
-    'X-ray',
-    '채혈',
-    '소변검사',
-    '심전도',
-    '호흡기검사'
-];
+import { EXAM_TYPE_OPTIONS } from '@/constants/mappings';
 
 export function AddExamModal({ isOpen, onClose, onSave }: AddExamModalProps) {
     const [name, setName] = useState('');

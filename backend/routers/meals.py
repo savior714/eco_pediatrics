@@ -144,14 +144,15 @@ async def upsert_meal_request(
             )
             admission_data = adm_res.data if adm_res and adm_res.data else None
             
-            if admission_data:
+            if admission_data and new_req_data:
                 msg = {
                     "type": "NEW_MEAL_REQUEST",
                     "data": {
+                        "id": new_req_data['id'],
                         "room": admission_data.get("room_number"),
                         "admission_id": req.admission_id,
                         "request_type": req.request_type,
-                        "meal_date": str(req.meal_date),
+                        "meal_date": req.meal_date.isoformat(),
                         "meal_time": req.meal_time.value,
                         "pediatric_meal_type": req.pediatric_meal_type,
                         "guardian_meal_type": req.guardian_meal_type

@@ -18,10 +18,11 @@ export const EXAM_TYPE_OPTIONS = [
     '복부 X-Ray',
     '초음파',
     '소변검사',
-    '대변검사',
     '혈액검사',
+    '심전도 검사',
     'PCR 검사',
-    '신속항원 검사',
+    '신속항원검사',
+    '대변검사',
 ] as const;
 
 export const ROOM_NUMBERS = [

@@ -275,28 +275,33 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
                                 stroke="none"
                                 isAnimationActive={false}
                                 dot={(props: any) => {
-                                    const { cx, cy, payload } = props;
+                                    const { cx, cy, payload, index } = props;
                                     if (!payload.has_medication) return <path d="" />;
 
                                     const value = payload.medication_type || 'M';
                                     const color = value === 'A' ? '#fb923c' : '#8b5cf6';
 
+                                    // Prevent overlapping by alternating Y position
+                                    const yOffset = (index % 2 === 0) ? 0 : 15;
+                                    const adjustedCy = cy + yOffset;
+
+                                    // Calculate Temperature point Y coordinate to limit the vertical line
+                                    // Recharts passes yScale in props.yAxis.scale
+                                    const tempCy = props.yAxis.scale(payload.temperature);
+
                                     return (
                                         <g key={`med-${payload.recorded_at}`}>
-                                            {/* Connector Dot on the actual Line */}
-                                            {/* (We could add a small dot here if needed, but keeping it clean) */}
-
-                                            {/* Vertical Line */}
+                                            {/* Vertical Line - Ends at temp line point */}
                                             <line
-                                                x1={cx} y1={cy + 10}
-                                                x2={cx} y2={cy + 250} // Approximate height to reach the temp line
+                                                x1={cx} y1={adjustedCy + 10}
+                                                x2={cx} y2={tempCy}
                                                 stroke={color}
                                                 strokeDasharray="2 2"
                                                 strokeOpacity={0.3}
                                             />
 
                                             {/* Label Box */}
-                                            <g transform={`translate(${cx - 8}, ${cy - 10})`}>
+                                            <g transform={`translate(${cx - 8}, ${adjustedCy - 10})`}>
                                                 <rect
                                                     width="16"
                                                     height="16"
@@ -337,7 +342,7 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
 function arePropsEqual(prev: TemperatureGraphProps, next: TemperatureGraphProps) {
     if (prev.checkInAt !== next.checkInAt) return false;
     if (prev.className !== next.className) return false;
-    
+
     // Most common case: Stable prop reference (e.g. parent re-render from unrelated state)
     // In this case, standard React.memo behavior is sufficient and O(1).
     if (prev.data === next.data) return true;

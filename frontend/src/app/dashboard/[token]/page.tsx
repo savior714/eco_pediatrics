@@ -85,14 +85,19 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                             </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                            <div className="relative h-14 w-60">
+                            <a
+                                href="https://ddocdoc.com/hospital/5ed4ab03c9cecac803996054"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="relative h-14 w-60 active:scale-95 transition-transform"
+                            >
                                 <Image
                                     src="/eco_logo.png"
                                     alt="Eco Pediatrics"
                                     fill
                                     className="object-contain object-right"
                                 />
-                            </div>
+                            </a>
                         </div>
                     </div>
                 </header>
