@@ -70,7 +70,7 @@ async def seed_patient_data(admission_id: str, db: AsyncClient = Depends(get_sup
         },
         {
             "admission_id": admission_id,
-            "infusion_rate": 60,
+            "infusion_rate": 40,
             "photo_url": "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80&w=400",
             "created_at": (now - timedelta(minutes=30)).isoformat()
         }

@@ -1,86 +1,79 @@
-# Eco-Pediatrics Guardian Dashboard
+# Eco-Pediatrics Guardian Dashboard (에코 소아과 보호자 대시보드)
 
-소아과 병동 입원 보호자를 위한 실시간 모니터링 및 요청 서비스 플랫폼입니다.
+소아과 병동 입원 환아 보호자와 간호 스테이션을 위한 실시간 의료 모니터링 및 커뮤니케이션 플랫폼입니다.
 
-## 주요 기능
-- **실시간 활력징후 모니터링**: 환아의 체온을 실시간 그래프로 확인 (5일치 스크롤, 38° 기준 색상 구분)
-- **식사 신청 및 관리**: 현재 신청된 식단(환아/보호자) 확인 및 슬롯별(조식/중식/석식) 유형 변경
-- **필요 서류 신청**: 영수증, 세부내역서, 진단서 등 여러 서류를 한 번에 신청
-- **수액 상태 모니터링**: 수액 주입 속도(cc/hr) 및 간호사 확인 상태 실시간 공유
-- **앞으로의 검사 일정**: 스테이션에서 등록한 예정 검사 일정 표시 (API·DB 연동)
-- **병동 공지사항**: 병동의 주요 공지사항을 대시보드에서 바로 확인
+## 🌟 프로젝트 소개
 
-보호자 대시보드는 **모바일(스마트폰 QR 접속)** 에 최적화되어 있으며, PC 뷰도 지원합니다.
+보호자는 스마트폰(QR 접속)으로 언제 어디서나 자녀의 체온, 수액 상태, 식단, 검사 일정을 확인할 수 있으며, 간호 스테이션은 병동 전체 현황을 실시간으로 관제하고 효율적으로 관리할 수 있습니다.
 
-## 기술 스택
-- **Frontend**: Next.js (App Router), Tailwind CSS v4, Lucide React, Recharts
-- **Backend**: FastAPI, Python 3.x, WebSockets, Loguru
-- **Database**: Supabase (PostgreSQL)
+## 🚀 주요 기능 (2026-02-15 업데이트)
 
-## 아키텍처 (2026-02-14 리팩토링)
-- **Backend**: Layered Architecture
-  - `routers/`: 도메인별 엔드포인트 분리 (Admissions, Station, IV, Vitals, Exams, Meals)
-  - `services/`: 비즈니스 로직 분리 (Dashboard Data Fetching 등)
-  - `utils.py`, `dependencies.py`: 공용 유틸리티 및 의존성 주입 분리
-  - Global Exception Handling & Structured Logging 적용
-- **Frontend**:
-  - `hooks/useStation.ts`: 스테이션 상태 및 WebSocket 동기화 로직 분리
-  - `lib/api.ts`: 중앙화된 API 클라이언트 추상화
-  - `types/domain.ts`: 도메인 타입 정의 통합 관리
+### 1. 보호자용 모바일 대시보드 (Mobile First)
+*   **실시간 활력징후(Vitals)**: 38°C 기준 색상 구분 및 약물(해열제 - A/I) 투여 아이콘이 표시된 직관적인 체온 그래프 제공.
+*   **수액(IV) 모니터링**: 투여 중인 수액의 속도(cc/hr) 및 잔량 확인, 수액 교체 사진 전송 기능.
+*   **식단 관리**: 환아 및 보호자 식사 신청, 조/중/석식 메뉴 확인 및 변경 (서버 정렬 보장).
+*   **일정 및 알림**: 예정된 검사 일정(X-Ray, 초음파 등 8종, 오전/오후 구분) 및 병동 공지사항 실시간 확인.
+*   **간편 서류 신청**: 진단서, 입퇴원 확인서 등 필요 서류 원터치 신청.
+*   **반응형 UI**: Optimistic UI 적용으로 네트워크 지연 없이 즉각적인 사용자 경험 제공.
 
-## 시작하기
-1. `backend/.env` 생성 후 Supabase URL/KEY 설정 (참고: `backend/.env.example`)
-2. **백엔드**: `start_backend.bat` 실행 → http://localhost:8000
-3. **프론트**: `start_frontend.bat` 실행 → http://localhost:3000
+### 2. 간호 스테이션 (Nurse Station)
+*   **통합 관제**: 전체 병상(Bed)의 환자 상태, 요청 사항, 퇴원 예정 여부를 한눈에 파악하는 그리드 뷰.
+*   **상세 환자 관리**: 병상 클릭 시 체온/수액 기록 입력, 검사 일정 등록, 전실/퇴원 처리 모달 제공.
+*   **실시간 동기화**: WebSocket 기반으로 보호자 앱과 데이터가 100% 실시간 연동 (자동 재연결 및 지수 백오프 적용).
+*   **입원/퇴원 관리**: 병상 배정, 전실(Transfer), 퇴원 처리를 원클릭으로 수행.
 
-## 운영 설정 (Deployment Configuration)
+## 🛠 기술 스택
 
-안전한 운영을 위해 아래 환경 변수 설정을 권장합니다.
+| 분류 | 기술 |
+| :--- | :--- |
+| **Frontend** | Next.js 14 (App Router), Tailwind CSS v4, Lucide React, Recharts, Framer Motion |
+| **Backend** | FastAPI (Python 3.10+), WebSockets, Loguru, Pydantic |
+| **Database** | Supabase (PostgreSQL), Row Level Security (RLS) |
+| **Infra/DevOps** | Batch Scripts (Windows), Docker (Optional) |
 
-| 환경 변수 | 설명 | 권장 값 (운영/로컬) |
-| :--- | :--- | :--- |
-| `ENV` | 애플리케이션 환경 구분 | `production` / `local` |
-| `ENABLE_DEV_ROUTES` | 개발용 API (`/api/v1/dev`) 활성화 여부 | `false` / `true` |
-| `STATION_WS_TOKEN` | 스테이션 대시보드 WebSocket 인증 토큰 | 임의의 보안 문자열 / `STATION` |
-| `NEXT_PUBLIC_STATION_WS_TOKEN` | (프론트) 스테이션 연결용 토큰 (백엔드와 일치 필수) | `STATION_WS_TOKEN`과 동일 |
+## 🏗 시스템 아키텍처 (Refactored 2026-02-14)
 
-4. **테스트 데이터(Seed)**  
-   - 전체 통합 테스트 데이터: `POST http://localhost:8000/api/v1/seed/full-test-data` (입원+바이탈+일정 일괄 생성)
-   - 자세한 내용은 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) 참고.
+본 프로젝트는 **Layered Architecture**를 따르며, 유지보수성과 확장성을 고려하여 설계되었습니다.
 
----
+*   **Backend**: `routers`(도메인 진입) -> `services`(비즈니스 로직) -> `utils`(공통 기능) 구조로 분리.
+    *   **Global Error Handling**: 표준화된 예외 처리 및 구조화된 로깅 도입.
+    *   **Data Integrity**: Pydantic 모델을 통한 엄격한 입출력 검증.
+*   **Frontend**: `hooks`(상태/로직) -> `components`(UI) -> `lib/api`(통신) 계층화.
+    *   **WebSocket Resilience**: 연결 끊김 시 자동 재연결 및 상태 복구 로직 내장.
 
-## 개발 내역 상세 정리 (최신 업데이트 반영)
+## 💻 시작 가이드 (Getting Started)
 
-아래는 프로젝트 진행 과정에서 누적된 주요 개발 내용을 기능 단위로 통합 정리한 내용입니다.
+### 사전 요구사항
+*   Python 3.10+
+*   Node.js 18+
+*   Supabase 프로젝트 (URL/Key)
 
-### 1) 코어 아키텍처 및 안정화
-- 백엔드를 `routers/ + services` 구조로 분리하여 코드 가독성과 유지보수성을 확보했습니다.
-- FastAPI 전역 예외 처리와 `loguru` 기반의 구조화된 로깅을 도입했습니다.
-- 프론트엔드와 백엔드 간의 데이터 규격(DTO)을 Pydantic으로 표준화하여 타입 안정성을 강화했습니다.
+### 설치 및 실행
 
-### 2) 입원 및 병상 운영 시스템
-- 실제 데이터 기반의 실시간 병상 렌더링 시스템을 구축했습니다.
-- 병상 전실(Transfer), 퇴원 처리, 신규 입원 등의 운영 인터페이스를 완성했습니다.
+1.  **환경 변수 설정**:
+    *   `backend/.env` (참고: `backend/.env.example`)
+    *   `frontend/.env.local`
 
-### 3) 실시간 바이탈 및 수액 모니터링
-- Recharts 기반의 체온 차트에 38도 기준 그라데이션 및 약물(A/I/M) 아이콘 표시 기능을 구현했습니다.
-- 수액 주입 속도를 임상 표준인 `cc/hr` 단위로 통일하고 실시간 사진 업로드 확인 기능을 추가했습니다.
+2.  **백엔드 실행**:
+    ```bash
+    ./start_backend.bat
+    # 또는 python backend/main.py
+    ```
 
-### 4) 식사 및 영양 지원 (실무형 모델)
-- 환아뿐만 아니라 보호자 식사까지 관리 가능한 확장된 모델(`meal_requests`)을 도입했습니다.
-- 스테이션용 식단 매트릭스 UI와 보호자용 슬롯별 식단 변경 기능을 연동했습니다.
+3.  **프론트엔드 실행**:
+    ```bash
+    ./start_frontend.bat
+    # 또는 cd frontend && npm run dev
+    ```
 
-### 5) 검사 일정 및 행정 지원
-- 예정된 검사 일정을 오전/오후로 나누어 등록하고 보호자에게 실시간 공유하는 기능을 구현했습니다.
-- 다중 서류 신청 및 실시간 요청 알림 시스템을 구축했습니다.
+### 테스트 데이터 생성 (Seeding)
+개발 편의를 위해 더미 데이터를 생성할 수 있습니다.
 
-### 6) UI/UX 고도화 및 디자인 표준화
-- **Standardized Headers**: 모든 대시보드 박스에 일관된 아이콘 패턴(w-9 h-9 백그라운드)을 적용했습니다.
-- **Modernized Layout**: 환자 헤더를 1행으로 슬림화하고, PC 뷰 레이아웃을 최적화(의료 정보 좌측, 행정 정보 우측)했습니다.
-- **Mobile First**: QR 접속 환경을 고려한 터치 영역 최적화 및 Safe Area 대응을 완료했습니다.
+*   **전체 데이터 생성**: `POST /api/v1/seed/full-test-data` (입원, 바이탈, 검사 일정 포함)
+*   **병상 데이터 생성**: `POST /api/v1/seed/station-admissions`
 
-## 관련 문서
-- [Context Snapshot](./CONTEXT_SNAPSHOT.md): 프로젝트 현재 상태 및 주요 설계 결정
-- [Next Steps](./NEXT_STEPS.md): 향후 구현 예정인 기능 및 작업 목록
-- [Troubleshooting](./TROUBLESHOOTING.md): 발생했던 문제 및 해결 방법
+## 📂 문서 (Documentation)
+
+*   [CONTEXT_SNAPSHOT.md](./CONTEXT_SNAPSHOT.md): 프로젝트의 상세 개발 현황 및 히스토리 (최신)
+*   [TROUBLESHOOTING.md](./TROUBLESHOOTING.md): 주요 이슈 및 해결 가이드
+*   [NEXT_STEPS.md](./NEXT_STEPS.md): 향후 개발 계획

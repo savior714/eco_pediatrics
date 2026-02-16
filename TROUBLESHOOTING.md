@@ -91,3 +91,24 @@
   1. **`src/utils/dateUtils.ts` 도입**: `calculateHospitalDay` 함수를 만들어 입원일의 **자정(00:00:00)**을 기준으로 캘린더 날짜가 바뀌면 즉시 일수가 증가하도록 표준화.
   2. **동적 그라데이션 계산(재수정)**: `TemperatureGraph.tsx` 그라데이션이 적용되는 대상(Line Path)의 크기는 실제 데이터 범위(`dataMin`~`dataMax`)에 맞춰집니다. 따라서 그라데이션 위치(`offset`)를 `yDomain`이 아닌 **실제 데이터의 최소/최대값**을 기준으로 계산하도록 수정하여, 데이터 분포가 좁거나 편중된 경우에도 38도 경계가 정확히 일치하도록 조치했습니다.
   3. **Gradient ID 충돌 및 문법 해결**: 여러 차트(대시보드, 모달 등)가 동시에 존재할 경우 `tempColor`라는 고정 ID를 공유하여 그라데이션 설정이 덮어씌워지는 문제가 있었습니다. 또한 `React.useId()`가 생성하는 콜론(`:`)이 포함된 ID는 CSS/SVG `url()` 참조 시 문법 오류를 일으킬 수 있어, 콜론을 제거(`replace(/:/g, '')`)한 고유 ID를 사용하도록 수정했습니다.
+
+## 13-10. SDK 설치 후에도 io.h 에러 지속 시
+
+- **원인**: 다중 VS 버전 설치로 인한 컴파일러-SDK 경로 미스매치, 또는 Yanked된 패키지(`numpy 2.4.0`)의 강제 빌드 시도.
+- **해결**:
+  1. `requirements.txt`에 `numpy==2.4.2` 사용 (Python 3.14 wheel 지원, 빌드 없이 설치).
+  2. **Developer Command Prompt**를 사용하여 빌드 환경 변수(`INCLUDE`, `LIB`) 강제 로드.
+     - 윈도우 시작 메뉴에서 "Developer Command Prompt for VS 2022" 검색 후 실행.
+     - 해당 터미널에서 `cd backend` → `.venv\Scripts\activate` → `pip install -r requirements.txt`
+  3. `.venv` 삭제 후 재생성하여 깨진 빌드 아티팩트 제거.
+
+## 13-11. Compiler cl cannot compile programs (VS 버전 미스매치)
+
+- **증상**: SDK 설치 후에도 `cl` 컴파일러 테스트 실패. `ERROR: Compiler cl cannot compile programs.` 메시지 발생.
+- **원인**:
+  1. **C++ 유니버설(UWP)**은 앱 개발용이며, NumPy 등 C 확장 빌드에 필요한 데스크톱 헤더(`stdio.h`, `io.h`)를 포함하지 않음.
+  2. 로그 상의 `Activating VS 18.3.0`과 실제 SDK가 설치된 VS 버전(2019 등)이 불일치.
+- **해결**:
+  1. **Visual Studio Installer** → [수정] → **C++를 사용한 데스크톱 개발** (Desktop development with C++, **UWP 아님**) 체크. MSVC v143/v144, Windows 11 SDK 확인.
+  2. **Developer Command Prompt for VS 2022/2025**에서 프로젝트로 이동 후 `pip install numpy==2.2.3` 실행.
+  3. **우회(권장)**: `requirements.txt`에서 `numpy==2.4.2` 사용. Python 3.14용 wheel 제공으로 빌드 불필요.

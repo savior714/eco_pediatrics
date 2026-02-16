@@ -70,7 +70,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
             await api.post(`/api/v1/dev/seed-patient/${bed.id}`, {});
             await fetchDashboardData();
             onVitalUpdate?.(36.5);
-            onIVUploadSuccess?.(40);
             alert('데이터 생성 및 동기화 완료');
         } catch (e) {
             alert('데이터 생성 실패');
