@@ -169,7 +169,6 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
             : (MEAL_MAP[latestMeal.request_type] ?? latestMeal.request_type))
         : null;
     const latestDocRequest = fetchedDocRequests.length > 0 ? fetchedDocRequests[0] : null;
-    const currentDocLabelsModal = latestDocRequest?.request_items?.map((id: string) => DOC_MAP[id] || id) ?? [];
 
     const { chartVitals, chartCheckIn } = useMemo(() => {
         if (!bed) return { chartVitals: [], chartCheckIn: null };
@@ -352,7 +351,7 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                                         <Calendar size={16} className="text-primary" />
-                                        오늘의 검사 일정
+                                        예정된 검사 일정
                                     </h3>
                                     <button
                                         onClick={() => setAddExamModalOpen(true)}
@@ -391,15 +390,24 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                     신청된 서류
                                 </h3>
                                 <div className="bg-white rounded-xl border-[1.5px] border-slate-600 p-4 shadow-sm">
-                                    {currentDocLabelsModal.length > 0 ? (
-                                        <ul className="space-y-1 text-xs text-slate-600">
-                                            {currentDocLabelsModal.map((label: string) => (
-                                                <li key={label} className="flex items-center gap-2">
-                                                    <span className="w-1 h-1 rounded-full bg-sky-400 shrink-0" />
-                                                    {label}
-                                                </li>
+                                    {fetchedDocRequests.filter(r => r.status === 'COMPLETED').length > 0 ? (
+                                        <div className="space-y-3">
+                                            {fetchedDocRequests.filter(r => r.status === 'COMPLETED').map((req) => (
+                                                <div key={req.id} className="space-y-1">
+                                                    <div className="text-[10px] text-slate-400 font-bold">
+                                                        {new Date(req.created_at).toLocaleDateString()} 신청분
+                                                    </div>
+                                                    <ul className="space-y-1 text-xs text-slate-600">
+                                                        {req.request_items.map((it: string) => (
+                                                            <li key={it} className="flex items-center gap-2">
+                                                                <span className="w-1 h-1 rounded-full bg-sky-400 shrink-0" />
+                                                                {DOC_MAP[it] || it}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
                                             ))}
-                                        </ul>
+                                        </div>
                                     ) : (
                                         <p className="text-xs text-slate-400">신청된 서류 없음</p>
                                     )}

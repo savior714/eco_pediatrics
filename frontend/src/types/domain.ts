@@ -107,5 +107,6 @@ export interface DocumentRequest {
     id: number;
     admission_id: string;
     request_items: string[];
+    status: string;
     created_at: string;
 }

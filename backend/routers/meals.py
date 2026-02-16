@@ -113,9 +113,10 @@ async def upsert_meal_request(
 
     # Upsert with the updated logic
     try:
-        await execute_with_retry_async(
-            db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time")
+        upsert_res = await execute_with_retry_async(
+            db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time").select("*")
         )
+        new_req_data = upsert_res.data[0] if upsert_res and upsert_res.data else None
     except Exception as e:
         # Fallback for missing schema migration (PGRST204)
         if is_pgrst204_error(e):
@@ -126,9 +127,10 @@ async def upsert_meal_request(
             data.pop('requested_guardian_meal_type', None)
 
             # Retry
-            await execute_with_retry_async(
-                db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time")
+            upsert_res = await execute_with_retry_async(
+                db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time").select("*")
             )
+            new_req_data = upsert_res.data[0] if upsert_res and upsert_res.data else None
         else:
             raise e
 
@@ -154,8 +156,8 @@ async def upsert_meal_request(
                         "request_type": req.request_type,
                         "meal_date": req.meal_date.isoformat(),
                         "meal_time": req.meal_time.value,
-                        "pediatric_meal_type": req.pediatric_meal_type,
-                        "guardian_meal_type": req.guardian_meal_type
+                        "pediatric_meal_type": new_req_data.get('pediatric_meal_type'),
+                        "guardian_meal_type": new_req_data.get('guardian_meal_type')
                     }
                 }
                 token = admission_data.get("access_token")
