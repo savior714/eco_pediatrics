@@ -133,10 +133,12 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
         from datetime import datetime, timedelta, timezone
 
         # ⚡ Bolt Optimization: Limit fetch history to prevent large payloads
-        # Vitals/Meals: Last 3 days covers fever check (6h) and recent history
-        # IVs: Last 7 days covers most active IVs (longer duration possible but rare without update)
+        # Vitals: Last 5 days (covers longer admissions for fever check)
+        # Meals: Last 3 days covers recent history
+        # IVs: Last 7 days covers most active IVs
         now_utc = datetime.now(timezone.utc)
-        cutoff_recent = (now_utc - timedelta(days=3)).isoformat()
+        cutoff_vitals = (now_utc - timedelta(days=5)).isoformat()
+        cutoff_meals = (now_utc - timedelta(days=3)).isoformat()
         cutoff_iv = (now_utc - timedelta(days=7)).isoformat()
 
         # Define tasks
@@ -156,7 +158,7 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
                 db.table("vital_signs")
                 .select("admission_id, temperature, recorded_at")
                 .in_("admission_id", admission_ids)
-                .gte("recorded_at", cutoff_recent)
+                .gte("recorded_at", cutoff_vitals)
                 .order("recorded_at", desc=True)
             )
             return res.data or []
@@ -166,7 +168,7 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
                 db.table("meal_requests")
                 .select("admission_id, request_type, pediatric_meal_type, guardian_meal_type, room_note, created_at")
                 .in_("admission_id", admission_ids)
-                .gte("created_at", cutoff_recent)
+                .gte("created_at", cutoff_meals)
                 .order("id", desc=True)
             )
             return res.data or []
