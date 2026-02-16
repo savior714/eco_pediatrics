@@ -133,10 +133,10 @@ async def list_admissions(db: AsyncClient = Depends(get_supabase)):
         from datetime import datetime, timedelta, timezone
 
         # ⚡ Bolt Optimization: Limit fetch history to prevent large payloads
-        # Vitals/Meals: Last 3 days covers fever check (6h) and recent history
+        # Vitals/Meals: Last 5 days covers fever check (6h) and recent history
         # IVs: Last 7 days covers most active IVs (longer duration possible but rare without update)
         now_utc = datetime.now(timezone.utc)
-        cutoff_recent = (now_utc - timedelta(days=3)).isoformat()
+        cutoff_recent = (now_utc - timedelta(days=5)).isoformat()
         cutoff_iv = (now_utc - timedelta(days=7)).isoformat()
 
         # Define tasks
