@@ -1,6 +1,8 @@
 import asyncio
 import pytest
 import sys
+import os
+from unittest.mock import MagicMock
 
 # Mock classes to simulate WebSocket behavior without running full server
 class MockWebSocket:
@@ -17,10 +19,6 @@ class MockWebSocket:
         self.messages.append(data)
         print(f"[{self.name}] Received: {data}")
 
-import sys
-import os
-from unittest.mock import MagicMock
-
 # Mock loguru before importing backend modules
 mock_logger = MagicMock()
 sys.modules["loguru"] = MagicMock()
@@ -32,7 +30,8 @@ sys.path.append(os.path.join(os.getcwd(), 'backend'))
 from websocket_manager import manager
 
 @pytest.mark.anyio
-async def test_sanity():
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
+async def test_sanity(anyio_backend):
     print("--- Starting WebSocket Sanity Test ---")
     
     # 1. Connect STATION client
@@ -50,28 +49,15 @@ async def test_sanity():
     
     # 4. Broadcast to STATION (The bug fix verification)
     print("Broadcasting to STATION...")
-    try:
-        await manager.broadcast("Hello Station", "STATION")
-        if "Hello Station" in ws_station.messages:
-            print("SUCCESS: Station received message")
-        else:
-            print("FAILURE: Station did not receive message")
-            sys.exit(1)
-    except AttributeError as e:
-        print(f"CRITICAL FAILURE: AttributeError during broadcast: {e}")
-        print("Likely 'station_connections' bug still exists.")
-        sys.exit(1)
+    await manager.broadcast("Hello Station", "STATION")
+    assert "Hello Station" in ws_station.messages, "Station did not receive message"
         
     # 5. Broadcast to Patient
     print("Broadcasting to TOKEN_123...")
     await manager.broadcast("Hello Patient", "TOKEN_123")
-    if "Hello Patient" in ws_patient.messages:
-        print("SUCCESS: Patient received message")
-    else:
-        print("FAILURE: Patient did not receive message")
-        sys.exit(1)
+    assert "Hello Patient" in ws_patient.messages, "Patient did not receive message"
 
-    print("--- Test Failed? No, it passed! ---")
+    print("--- Test passed! ---")
 
 if __name__ == "__main__":
-    asyncio.run(test_sanity())
+    asyncio.run(test_sanity("asyncio"))

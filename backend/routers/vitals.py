@@ -3,7 +3,7 @@ from supabase._async.client import AsyncClient
 import json
 
 from dependencies import get_supabase
-from utils import execute_with_retry_async, create_audit_log
+from utils import execute_with_retry_async, create_audit_log, broadcast_to_station_and_patient
 from models import VitalSign, VitalSignCreate
 from websocket_manager import manager
 
@@ -24,21 +24,14 @@ async def record_vital(vital: VitalSignCreate, db: AsyncClient = Depends(get_sup
         token = record['access_token']
         room_number = record['room_number']
         
-        # 1. To Patient Dashboard
+        # Broadcast with room info included for both (consistent with dev.py)
         message = {
-            "type": "NEW_VITAL",
-            "data": new_vital
-        }
-        await manager.broadcast(json.dumps(message), token)
-
-        # 2. To Nurse Station
-        station_message = {
             "type": "NEW_VITAL",
             "data": {
                 "room": room_number,
                 **new_vital
             }
         }
-        await manager.broadcast(json.dumps(station_message), "STATION")
+        await broadcast_to_station_and_patient(manager, message, token)
 
     return new_vital

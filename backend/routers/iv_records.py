@@ -6,7 +6,7 @@ import shutil
 import os
 
 from dependencies import get_supabase
-from utils import execute_with_retry_async, create_audit_log
+from utils import execute_with_retry_async, create_audit_log, broadcast_to_station_and_patient
 from models import IVRecord, IVRecordCreate
 from websocket_manager import manager
 from logger import logger
@@ -52,10 +52,7 @@ async def record_iv(iv: IVRecordCreate, db: AsyncClient = Depends(get_supabase))
         }
 
         # Broadcast
-        json_msg = json.dumps(message_to_send)
-        await manager.broadcast(json_msg, "STATION")
-        if token:
-            await manager.broadcast(json_msg, token)
+        await broadcast_to_station_and_patient(manager, message_to_send, token)
         
         return new_iv
     except HTTPException:
@@ -113,10 +110,7 @@ async def upload_image(file: UploadFile = File(...), token: str = None, db: Asyn
                 "photo_url": image_url
             }
         }
-        # Broadcast to STATION channel so nurses see it
-        await manager.broadcast(json.dumps(message), "STATION")
-        
-        # Also broadcast to the specific token channel if needed
-        await manager.broadcast(json.dumps(message), token)
+        # Broadcast
+        await broadcast_to_station_and_patient(manager, message, token)
 
     return {"url": image_url}
