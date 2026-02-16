@@ -124,3 +124,43 @@ async def seed_patient_data(admission_id: str, db: AsyncClient = Depends(get_sup
         await broadcast_to_station_and_patient(manager, ex_msg, token)
     
     return {"message": f"Successfully seeded 72h data for patient {admission_id}"}
+
+@router.post("/seed-meals")
+async def seed_all_meals(target_date: str = None, db: AsyncClient = Depends(get_supabase)):
+    """
+    Developer tool: Seed '일반식' for all active patients for a specific date.
+    """
+    if not target_date:
+        target_date = datetime.now().strftime("%Y-%m-%d")
+    
+    # 1. Get all active admissions
+    res = await execute_with_retry_async(
+        db.table("admissions")
+        .select("id")
+        .in_("status", ["IN_PROGRESS", "OBSERVATION"])
+    )
+    admissions = res.data or []
+    
+    if not admissions:
+        return {"message": "No active admissions to seed meals for."}
+    
+    # 2. Prepare meal records for each patient (B, L, D)
+    meal_records = []
+    for adm in admissions:
+        for meal_time in ["BREAKFAST", "LUNCH", "DINNER"]:
+            meal_records.append({
+                "admission_id": adm["id"],
+                "meal_date": target_date,
+                "meal_time": meal_time,
+                "request_type": "STATION_UPDATE",
+                "pediatric_meal_type": "일반식",
+                "guardian_meal_type": "일반식",
+                "status": "APPROVED"
+            })
+    
+    # 3. Bulk upsert to avoid duplicates
+    await execute_with_retry_async(
+        db.table("meal_requests").upsert(meal_records, on_conflict="admission_id,meal_date,meal_time")
+    )
+    
+    return {"message": f"Successfully seeded meals for {len(admissions)} patients on {target_date}"}

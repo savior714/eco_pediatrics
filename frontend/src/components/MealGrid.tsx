@@ -166,8 +166,25 @@ export function MealGrid({ beds }: MealGridProps) {
                         );
                     })}
                 </div>
-                <div className="text-xs text-slate-400 mb-1">
-                    {loading ? '로딩중...' : '자동 저장됨'}
+                <div className="flex gap-2 items-center mb-1">
+                    <button
+                        onClick={async () => {
+                            if (!window.confirm(`[Dev] ${formatDisplayDate(activeDate)}의 모든 환자 식단을 생성할까요?`)) return;
+                            try {
+                                await api.post(`/api/v1/dev/seed-meals?target_date=${formatDate(activeDate)}`, {});
+                                fetchMatrix();
+                                alert('식단 생성 완료');
+                            } catch (e) {
+                                alert('생성 실패');
+                            }
+                        }}
+                        className="px-3 py-1.5 text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 font-bold"
+                    >
+                        식단 일괄 생성 (Dev)
+                    </button>
+                    <div className="text-xs text-slate-400">
+                        {loading ? '로딩중...' : '자동 저장됨'}
+                    </div>
                 </div>
             </div>
 

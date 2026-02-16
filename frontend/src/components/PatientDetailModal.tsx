@@ -209,12 +209,12 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                 <div className={`px-8 py-6 shrink-0 ${bed.status === 'fever' ? 'bg-red-50' : 'bg-slate-50'} border-b border-slate-100`}>
                     <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
-                            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{bed.room}호</h2>
+                            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{bed.name}</h2>
                             <span className="text-xl text-slate-300 font-light">/</span>
-                            <p className="text-slate-500 font-bold text-base mt-1">{bed.name}</p>
+                            <p className="text-slate-500 font-bold text-base mt-1">{bed.room}호</p>
                             {bed.dob && (
                                 <span className={`text-base mt-1 ml-1 font-bold ${bed.gender === 'M' ? 'text-blue-500' : bed.gender === 'F' ? 'text-rose-500' : 'text-slate-500'}`}>
-                                    ({formatPatientDemographics(bed.dob, bed.gender)})
+                                    / ({formatPatientDemographics(bed.dob, bed.gender)})
                                 </span>
                             )}
                             {bed.status === 'fever' && (
@@ -296,9 +296,11 @@ export function PatientDetailModal({ isOpen, onClose, bed, notifications, onComp
                                                 <Edit2 size={10} />
                                             </button>
                                             <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-tight">{slot.label}</span>
-                                            <span className="text-lg font-bold text-slate-700 line-clamp-1 break-keep text-center leading-tight">
-                                                {labelText}
-                                            </span>
+                                            <div className="text-[11px] font-bold text-slate-700 flex flex-col items-center leading-tight">
+                                                <span>{meal?.pediatric_meal_type || '환아식 미신청'}</span>
+                                                <span className="text-slate-300 font-light my-[-2px]">/</span>
+                                                <span>{meal?.guardian_meal_type || '보호자식 미신청'}</span>
+                                            </div>
                                         </div>
                                     );
                                 })}
