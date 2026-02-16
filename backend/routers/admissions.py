@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from supabase._async.client import AsyncClient
 from typing import List
-import json
 import asyncio
 from websocket_manager import manager
 
