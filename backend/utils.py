@@ -82,11 +82,12 @@ async def broadcast_to_station_and_patient(manager, message_dict: dict, token: s
     """
     try:
         msg_str = json.dumps(message_dict)
-        # 1. Broadcast to STATION
-        await manager.broadcast(msg_str, "STATION")
-        # 2. Broadcast to specific Patient (if token exists)
+        # Parallel: Broadcast to STATION and Patient
+        tasks = [manager.broadcast(msg_str, "STATION")]
         if token:
-            await manager.broadcast(msg_str, str(token))
+            tasks.append(manager.broadcast(msg_str, str(token)))
+        
+        await asyncio.gather(*tasks)
     except Exception as e:
         logger.error(f"Broadcast helper failed: {e}")
 

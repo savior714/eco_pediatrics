@@ -133,35 +133,37 @@ async def upsert_meal_request(
             raise e
 
     # 3. Targeted Broadcast with Hardening
-    try:
-        # Fetch details for targeted broadcast
-        adm_res = await execute_with_retry_async(
-            db.table("admissions")
-            .select("access_token, room_number")
-            .eq("id", req.admission_id)
-            .single()
-        )
-        admission_data = adm_res.data if adm_res and adm_res.data else None
-        
-        if admission_data:
-            msg = {
-                "type": "NEW_MEAL_REQUEST",
-                "data": {
-                    "room": admission_data.get("room_number"),
-                    "admission_id": req.admission_id,
-                    "request_type": req.request_type,
-                    "meal_date": str(req.meal_date),
-                    "meal_time": req.meal_time.value,
-                    "pediatric_meal_type": req.pediatric_meal_type,
-                    "guardian_meal_type": req.guardian_meal_type
+    async def prepare_and_broadcast():
+        try:
+            # Fetch details for targeted broadcast
+            adm_res = await execute_with_retry_async(
+                db.table("admissions")
+                .select("access_token, room_number")
+                .eq("id", req.admission_id)
+                .single()
+            )
+            admission_data = adm_res.data if adm_res and adm_res.data else None
+            
+            if admission_data:
+                msg = {
+                    "type": "NEW_MEAL_REQUEST",
+                    "data": {
+                        "room": admission_data.get("room_number"),
+                        "admission_id": req.admission_id,
+                        "request_type": req.request_type,
+                        "meal_date": str(req.meal_date),
+                        "meal_time": req.meal_time.value,
+                        "pediatric_meal_type": req.pediatric_meal_type,
+                        "guardian_meal_type": req.guardian_meal_type
+                    }
                 }
-            }
-            token = admission_data.get("access_token")
-            await broadcast_to_station_and_patient(manager, msg, token)
-                
-    except Exception as e:
-        get_logger().error(f"Failed to broadcast meal request: {e}")
-        # Safe early return or continue - we already saved to DB
+                token = admission_data.get("access_token")
+                await broadcast_to_station_and_patient(manager, msg, token)
+        except Exception as e:
+            from logger import get_logger
+            get_logger().error(f"Failed to broadcast meal request: {e}")
+
+    await prepare_and_broadcast()
     
     return
 

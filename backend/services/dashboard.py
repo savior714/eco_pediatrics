@@ -62,6 +62,7 @@ async def fetch_dashboard_data(db: AsyncClient, admission_id: str):
     document_requests = doc_res.data or []
 
     # Fire and forget audit log to avoid blocking response
+    # The inner function handles its own exceptions
     asyncio.create_task(create_audit_log(db, "GUARDIAN", "VIEW", admission_id))
 
     return {

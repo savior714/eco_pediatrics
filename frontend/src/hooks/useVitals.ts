@@ -156,11 +156,11 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     break;
                 case 'NEW_EXAM_SCHEDULE':
                     setExamSchedules(prev => [...prev, message.data as any].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
-                    debouncedRefetch();
+                    // Removed debouncedRefetch() - local state is already synced
                     break;
                 case 'DELETE_EXAM_SCHEDULE':
                     setExamSchedules(prev => prev.filter(ex => ex.id !== (message.data as any).id));
-                    debouncedRefetch();
+                    // Removed debouncedRefetch() - local state is already synced
                     break;
                 case 'ADMISSION_TRANSFERRED':
                     debouncedRefetch();

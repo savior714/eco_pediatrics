@@ -23,36 +23,39 @@ async def record_iv(iv: IVRecordCreate, db: AsyncClient = Depends(get_supabase))
             raise HTTPException(status_code=500, detail="Failed to save IV record")
             
         new_iv = response.data[0]
-        await create_audit_log(db, "NURSE", "CREATE_IV", str(new_iv['id']))
+        # 2. Parallel: Audit & Preparation for Broadcast
+        async def handle_post_record():
+            # We need token and room to broadcast correctly
+            adm_response = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", iv.admission_id).single())
+            
+            token = None
+            room = None
+            
+            if adm_response.data:
+                token = adm_response.data.get('access_token')
+                room = adm_response.data.get('room_number')
+            
+            # Construct message
+            message_data = {
+                "id": new_iv.get('id'),
+                "infusion_rate": new_iv.get('infusion_rate'),
+                "photo_url": new_iv.get('photo_url'),
+                "created_at": str(new_iv.get('created_at')) if new_iv.get('created_at') else None,
+                "admission_id": iv.admission_id,
+                "room": room 
+            }
+            
+            message_to_send = {
+                "type": "NEW_IV",
+                "data": message_data
+            }
+            
+            await broadcast_to_station_and_patient(manager, message_to_send, token)
 
-        # 2. Broadcast to Station/Patient
-        # We need token and room to broadcast correctly
-        adm_response = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", iv.admission_id).single())
-        
-        token = None
-        room = None
-        
-        if adm_response.data:
-            token = adm_response.data.get('access_token')
-            room = adm_response.data.get('room_number')
-        
-        # Construct message
-        message_data = {
-            "id": new_iv.get('id'),
-            "infusion_rate": new_iv.get('infusion_rate'),
-            "photo_url": new_iv.get('photo_url'),
-            "created_at": str(new_iv.get('created_at')) if new_iv.get('created_at') else None,
-            "admission_id": iv.admission_id,
-            "room": room 
-        }
-        
-        message_to_send = {
-            "type": "NEW_IV",
-            "data": message_data
-        }
-
-        # Broadcast
-        await broadcast_to_station_and_patient(manager, message_to_send, token)
+        await asyncio.gather(
+            create_audit_log(db, "NURSE", "CREATE_IV", str(new_iv['id'])),
+            handle_post_record()
+        )
         
         return new_iv
     except HTTPException:

@@ -40,10 +40,7 @@ async def transfer_patient(admission_id: str, req: TransferRequest, db: AsyncCli
         .eq("id", admission_id)
     )
     
-    # 4. Audit
-    await create_audit_log(db, "NURSE", "TRANSFER", admission_id, f"From {old_room} To {req.target_room}")
-    
-    # 5. Broadcast
+    # 4. Audit & Broadcast in parallel
     msg = {
         "type": "ADMISSION_TRANSFERRED",
         "data": {
@@ -52,7 +49,10 @@ async def transfer_patient(admission_id: str, req: TransferRequest, db: AsyncCli
             "new_room": req.target_room
         }
     }
-    await broadcast_to_station_and_patient(manager, msg, token)
+    await asyncio.gather(
+        create_audit_log(db, "NURSE", "TRANSFER", admission_id, f"From {old_room} To {req.target_room}"),
+        broadcast_to_station_and_patient(manager, msg, token)
+    )
 
     return {"message": "Transferred successfully"}
 
@@ -67,9 +67,7 @@ async def discharge_patient(admission_id: str, db: AsyncClient = Depends(get_sup
         .eq("id", admission_id)
     )
     
-    await create_audit_log(db, "NURSE", "DISCHARGE", admission_id)
-    
-    # 4. Broadcast
+    # 4. Broadcast & Audit
     adm_res = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", admission_id))
     if adm_res.data:
         token = adm_res.data[0]['access_token']
@@ -81,7 +79,12 @@ async def discharge_patient(admission_id: str, db: AsyncClient = Depends(get_sup
                 "room": room
             }
         }
-        await broadcast_to_station_and_patient(manager, msg, token)
+        await asyncio.gather(
+            create_audit_log(db, "NURSE", "DISCHARGE", admission_id),
+            broadcast_to_station_and_patient(manager, msg, token)
+        )
+    else:
+        await create_audit_log(db, "NURSE", "DISCHARGE", admission_id)
 
     return {"message": "Discharged successfully"}
 

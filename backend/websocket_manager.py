@@ -69,11 +69,13 @@ class ConnectionManager:
             logger.debug(f"No active connections for token: {token}. Skipping broadcast.")
 
     async def broadcast_all(self, message: str):
+        tasks = []
         for token, connections in self.active_connections.items():
             for connection in connections:
-                try:
-                    await connection.send_text(message)
-                except Exception:
-                    pass
+                tasks.append(connection.send_text(message))
+        
+        if tasks:
+            # Parallel send to all, ignore individual errors for broadcast_all robustness
+            await asyncio.gather(*tasks, return_exceptions=True)
 
 manager = ConnectionManager()
