@@ -3,7 +3,6 @@ from typing import Optional, List
 from supabase._async.client import AsyncClient
 from datetime import datetime
 import json
-
 from dependencies import get_supabase, get_admission_token_optional, verify_admission_token
 from utils import execute_with_retry_async
 from services.dashboard import fetch_dashboard_data
