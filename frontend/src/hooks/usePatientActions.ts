@@ -106,7 +106,8 @@ export function usePatientActions({ bed, onClose, fetchDashboardData, meals }: U
             handleSeedData,
             handleTransfer,
             apiAddExam,
-            apiDeleteExam
+            apiDeleteExam,
+            apiMealUpdate
         }
     };
 }

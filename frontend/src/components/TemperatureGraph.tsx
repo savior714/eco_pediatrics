@@ -279,7 +279,7 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
                                 isAnimationActive={false}
                                 dot={(props: any) => {
                                     const { cx, cy, payload, index } = props;
-                                    if (!payload.has_medication) return <path d="" />;
+                                    if (!payload.has_medication) return <path key={`med-empty-${index}`} d="" />;
 
                                     const value = payload.medication_type || 'M';
                                     const color = value === 'A' ? '#fb923c' : '#8b5cf6';

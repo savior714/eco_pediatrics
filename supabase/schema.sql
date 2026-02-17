@@ -169,9 +169,25 @@ FOR SELECT USING (
     AND admissions.status = 'IN_PROGRESS'
   )
 );
+CREATE POLICY "Allow insert for active admissions" ON public.vital_signs
+FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM admissions 
+    WHERE admissions.id = admission_id 
+    AND admissions.status = 'IN_PROGRESS'
+  )
+);
 
 CREATE POLICY "Enable read for active sessions" ON public.iv_records 
 FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM admissions 
+    WHERE admissions.id = admission_id 
+    AND admissions.status = 'IN_PROGRESS'
+  )
+);
+CREATE POLICY "Allow insert for active admissions" ON public.iv_records
+FOR INSERT WITH CHECK (
   EXISTS (
     SELECT 1 FROM admissions 
     WHERE admissions.id = admission_id 
@@ -192,6 +208,14 @@ CREATE POLICY "Staff can view all audit logs" ON public.audit_logs FOR SELECT TO
 
 -- 12. 검사 일정: 누구나 조회 가능, 관리는 의료진만
 CREATE POLICY "Enable read for all users" ON public.exam_schedules FOR SELECT USING (true);
+CREATE POLICY "Allow insert for active admissions" ON public.exam_schedules
+FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM admissions 
+    WHERE admissions.id = admission_id 
+    AND admissions.status = 'IN_PROGRESS'
+  )
+);
 CREATE POLICY "Staff can manage all exam schedules" ON public.exam_schedules FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- Common Meal Plans & Overrides Policies
