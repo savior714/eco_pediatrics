@@ -185,7 +185,9 @@ CREATE POLICY "Staff can manage all vital_signs" ON public.vital_signs FOR ALL T
 CREATE POLICY "Staff can manage all iv_records" ON public.iv_records FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- 11. 감사 로그 보안
-CREATE POLICY "Enable insert for all users" ON public.audit_logs FOR INSERT WITH CHECK (true);
+-- 누구나 로그를 남길 수는 있지만, 액터 타입이 정의된 형식(NURSE, GUARDIAN)인 경우만 허용하여 무분별한 삽입 방지
+CREATE POLICY "Enable insert for all users" ON public.audit_logs 
+FOR INSERT WITH CHECK (actor_type IN ('NURSE', 'GUARDIAN'));
 CREATE POLICY "Staff can view all audit logs" ON public.audit_logs FOR SELECT TO authenticated USING (auth.role() = 'authenticated');
 
 -- 12. 검사 일정: 누구나 조회 가능, 관리는 의료진만
