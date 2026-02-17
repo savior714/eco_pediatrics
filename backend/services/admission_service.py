@@ -68,7 +68,28 @@ async def create_admission(db: AsyncClient, admission: AdmissionCreate, ip_addre
             "p_actor_type": "NURSE",
             "p_ip_address": ip_address
         }).execute()
-        return res.data
+        
+        # Normalize RPC result (some environments return list of one)
+        data = res.data
+        if isinstance(data, list):
+            if not data:
+                raise HTTPException(status_code=500, detail="RPC returned empty list")
+            data = data[0]
+            
+        admission_id = data.get("id")
+        if not admission_id:
+            logger.error(f"RPC success but no ID returned: {data}")
+            raise HTTPException(status_code=500, detail="Admission created but ID missing in response")
+            
+        # Re-fetch full row to ensure response_model validation passes (PGRST205 compatibility)
+        full_row = await db.table("admissions").select("*").eq("id", admission_id).single().execute()
+        if not full_row.data:
+            logger.error(f"Created admission {admission_id} not found immediately after creation")
+            raise HTTPException(status_code=500, detail="Created admission record not found")
+            
+        return full_row.data
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = str(e)
         # APIError(RLS violation 등)인 경우 더 상세한 메시지 제공
