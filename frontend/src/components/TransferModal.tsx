@@ -44,7 +44,7 @@ export function TransferModal({ isOpen, onClose, currentRoom, onTransfer }: Tran
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-center p-4 border-b border-slate-100">
                     <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                         <ArrowRight size={20} className="text-blue-600" />

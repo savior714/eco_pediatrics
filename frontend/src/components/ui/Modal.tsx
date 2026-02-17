@@ -42,11 +42,14 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
                 onClick={onClose}
                 aria-hidden
             />
-            <div className={cn(
-                "bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm max-h-[90dvh] overflow-hidden relative z-10 transform transition-all duration-300",
-                isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-4",
-                className
-            )}>
+            <div
+                className={cn(
+                    "bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm max-h-[90dvh] overflow-hidden relative z-10 transform transition-all duration-300",
+                    isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-4",
+                    className
+                )}
+                onClick={(e) => e.stopPropagation()}
+            >
                 {title && (
                     <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
                         <h3 className="font-bold text-lg text-slate-800">{title}</h3>

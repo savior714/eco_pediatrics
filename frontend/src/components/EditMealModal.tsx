@@ -48,7 +48,7 @@ export function EditMealModal({
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
-            <div className="bg-white rounded-[1.5rem] w-full max-w-sm shadow-2xl relative overflow-hidden flex flex-col">
+            <div className="bg-white rounded-[1.5rem] w-full max-w-sm shadow-2xl relative overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
                 <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <div>
                         <h3 className="text-lg font-bold text-slate-800">{label} 식사 수정</h3>

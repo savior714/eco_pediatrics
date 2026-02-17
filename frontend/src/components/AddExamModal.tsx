@@ -41,7 +41,7 @@ export function AddExamModal({ isOpen, onClose, onSave }: AddExamModalProps) {
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
-            <div className="bg-white rounded-[1.5rem] w-full max-w-sm shadow-2xl relative overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white rounded-[1.5rem] w-full max-w-sm shadow-2xl relative overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                 <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <div className="flex items-center gap-2">
                         <div className="p-2 bg-violet-100 text-violet-600 rounded-xl">
