@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { X, UserPlus } from 'lucide-react';
 
+import Portal from './common/Portal';
+
 interface AdmitSubModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -39,73 +41,82 @@ export function AdmitSubModal({ isOpen, onClose, roomNumber, onAdmit }: AdmitSub
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-between items-center p-4 border-b border-slate-100">
-                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <UserPlus size={20} className="text-teal-600" />
-                        입원 수속 ({roomNumber}호)
-                    </h3>
-                    <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="text-slate-400 hover:text-slate-600">
-                        <X size={20} />
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">환자 이름</label>
-                        <input
-                            type="text"
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                            placeholder="이름 입력 (예: 김우주)"
-                            className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all"
-                            autoFocus
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">생년월일</label>
-                        <input
-                            type="text"
-                            value={birthday}
-                            onChange={e => setBirthday(e.target.value)}
-                            placeholder="YYYY-MM-DD"
-                            className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">성별</label>
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setGender('M')}
-                                className={`flex-1 py-3 rounded-xl font-bold transition-all ${gender === 'M' ? 'bg-blue-500 text-white shadow-sm' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}
-                            >
-                                남아 (M)
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setGender('F')}
-                                className={`flex-1 py-3 rounded-xl font-bold transition-all ${gender === 'F' ? 'bg-rose-500 text-white shadow-sm' : 'bg-slate-50 text-slate-400 border border-slate-200'}`}
-                            >
-                                여아 (F)
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="pt-2">
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="w-full py-3 bg-teal-600 text-white rounded-xl font-bold text-lg hover:bg-teal-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                            {isLoading ? '처리 중...' : '입원 완료'}
+        <Portal>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 min-h-screen" onClick={(e) => e.stopPropagation()}>
+                <div
+                    className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={(e) => { e.stopPropagation(); onClose(); }}
+                />
+                <div
+                    className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10 border border-slate-200 animate-in zoom-in-95 duration-200"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50">
+                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <UserPlus size={20} className="text-teal-600" />
+                            입원 수속 ({roomNumber}호)
+                        </h3>
+                        <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-200 rounded-full transition-colors">
+                            <X size={20} />
                         </button>
                     </div>
-                </form>
+
+                    <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-6">
+                        <div className="space-y-2">
+                            <label className="block text-xs font-bold text-slate-500 ml-1">환자 이름</label>
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                                placeholder="이름 입력 (예: 김우주)"
+                                className="w-full p-3.5 border-2 border-slate-100 rounded-xl focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 outline-none transition-all font-medium text-slate-700"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="block text-xs font-bold text-slate-500 ml-1">생년월일</label>
+                            <input
+                                type="text"
+                                value={birthday}
+                                onChange={e => setBirthday(e.target.value)}
+                                placeholder="YYYY-MM-DD"
+                                className="w-full p-3.5 border-2 border-slate-100 rounded-xl focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 outline-none transition-all font-medium text-slate-700"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="block text-xs font-bold text-slate-500 ml-1">성별</label>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setGender('M')}
+                                    className={`flex-1 py-3.5 rounded-xl font-bold border-2 transition-all ${gender === 'M' ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-white text-slate-400 border-slate-100'}`}
+                                >
+                                    남아 (M)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setGender('F')}
+                                    className={`flex-1 py-3.5 rounded-xl font-bold border-2 transition-all ${gender === 'F' ? 'bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-500/20' : 'bg-white text-slate-400 border-slate-100'}`}
+                                >
+                                    여아 (F)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="pt-2">
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="w-full py-4 bg-teal-600 text-white rounded-xl font-bold text-lg hover:bg-teal-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20"
+                            >
+                                {isLoading ? '처리 중...' : '입원 완료'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </div>
+        </Portal>
     );
 }
