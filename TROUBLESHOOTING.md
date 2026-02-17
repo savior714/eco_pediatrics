@@ -146,4 +146,8 @@
 - **authenticated 역할의 전방위 허용 경고**:
   - **문제**: `FOR ALL TO authenticated USING (true)` 사용 시 린터가 보안 우회로 경고.
   - **해결**: `FOR ALL` 대신 작업별 권한을 검토하고, `USING (auth.role() = 'authenticated')` 조건을 명시하여 "무조건 허용"이 아닌 "명시적 역할 확인" 단계를 추가.
-- **참고**: 보안 강화를 위해 운영 환경에서는 `USING (true)` 대신 `auth.uid()`나 `access_token` 기반의 세부 정책 수립 권장.
+- **비로그인 QR 접근 아키텍처**:
+  - **접근 방식**: 별도의 계정 로그인 대신, 입원 시 생성되는 고유 **UUID(`access_token`)**가 포함된 QR 코드를 통해 대시보드에 접근합니다.
+  - **보안 전략**:
+    - **RLS (Row Level Security)**: 모든 데이터 조회 및 삽입은 해당 `admission_id`가 실제 입원 상태(`status = 'IN_PROGRESS'`)인 경우에만 허용되도록 데이터베이스 레벨에서 강제됩니다.
+    - **Defense in Depth**: 백엔드 프록시 검증과 DB RLS 필터링의 2중 보안 계층을 통해 데이터 노출을 원천 차단합니다.

@@ -222,3 +222,10 @@ CREATE UNIQUE INDEX idx_unique_active_room
 ON admissions (room_number)
 WHERE status IN ('IN_PROGRESS', 'OBSERVATION');
 ```
+
+## 5. Security & Access Control (Secured QR)
+보호자용 대시보드는 사용자 편의를 위해 **비로그인(Anonymous)** 방식을 채택하며, 보안은 다음 계층에서 담보합니다.
+
+- **Unique Entry (UUID Token)**: 입원 시마다 고유한 `access_token`을 생성하여 QR 코드에 내장.
+- **RLS Enforcement**: 모든 DB 쿼리는 `admissions.status = 'IN_PROGRESS'` 필터를 데이터베이스 레벨(Row Level Security)에서 강제 적용하여 퇴원 후 접근을 차단.
+- **Audit Logging**: 모든 접근 시 클라이언트 IP와 액션을 감사 로그(`audit_logs`)에 기록.
