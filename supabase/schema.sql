@@ -159,7 +159,7 @@ WITH CHECK (auth.role() = 'authenticated');
 -- 10. 입원, 바이탈, 수액 기록에 대한 읽기 권한 (대시보드 필수)
 -- 보호자: 현재 입원 중인 데이터만 조회 가능
 CREATE POLICY "Enable read for active admissions" ON public.admissions 
-FOR SELECT USING (status = 'IN_PROGRESS');
+FOR SELECT USING (status = 'IN_PROGRESS' OR status = 'OBSERVATION');
 
 CREATE POLICY "Enable read for active sessions" ON public.vital_signs 
 FOR SELECT USING (

@@ -12,11 +12,13 @@ CREATE OR REPLACE FUNCTION transfer_patient_transaction(
     p_actor_type TEXT,
     p_ip_address TEXT
 ) RETURNS JSON AS $$
+-- // ... existing declarations ....
 DECLARE
     v_old_room TEXT;
     v_token UUID;
     v_status TEXT;
 BEGIN
+-- // ... existing logic ....
     -- Validation: Check Target Room Availability
     IF EXISTS (
         SELECT 1 FROM admissions
@@ -52,7 +54,7 @@ BEGIN
         'token', v_token
     );
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 3. discharge_patient_transaction RPC
 CREATE OR REPLACE FUNCTION discharge_patient_transaction(
@@ -80,7 +82,7 @@ BEGIN
         'token', v_token
     );
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 5. create_admission_transaction RPC
 CREATE OR REPLACE FUNCTION create_admission_transaction(
@@ -122,7 +124,8 @@ BEGIN
         'access_token', v_token
     );
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
 
 -- 4. view_station_dashboard (N+1 Fetching Optimization & Order)
 CREATE OR REPLACE VIEW view_station_dashboard AS
