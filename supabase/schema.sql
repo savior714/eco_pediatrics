@@ -119,15 +119,18 @@ CREATE POLICY "Enable insert for all users" ON public.meal_requests FOR INSERT W
 CREATE POLICY "Enable read for all users" ON public.document_requests FOR SELECT USING (true);
 CREATE POLICY "Enable insert for all users" ON public.document_requests FOR INSERT WITH CHECK (true);
 
--- 입원, 바이탈, 수액 기록에 대한 읽기 권한 추가 (대시보드 필수)
+-- 10. 입원, 바이탈, 수액 기록에 대한 읽기 권한 추가 (대시보드 필수)
+-- 보안 강화: access_token은 민감한 정보이므로 SELECT 시 주의가 필요하나, 
+-- 현재 구조상 QR 접속을 위해 필요함. 운영 환경에서는 토큰을 제외한 View 사용 권장.
 CREATE POLICY "Enable read for all users" ON public.admissions FOR SELECT USING (true);
 CREATE POLICY "Enable read for all users" ON public.vital_signs FOR SELECT USING (true);
 CREATE POLICY "Enable read for all users" ON public.iv_records FOR SELECT USING (true);
 
--- 감사 로그에 대한 삽입 권한 허용
+-- 11. 감사 로그 보안 (쓰기 전용)
+-- 누구나 로그를 남길 수는 있지만(INSERT), anon 사용자는 조회 불가능하도록 SELECT 정책을 정의하지 않음
 CREATE POLICY "Enable insert for all users" ON public.audit_logs FOR INSERT WITH CHECK (true);
 
--- 검사 일정에 대한 모든 권한 허용 (삭제 포함)
+-- 12. 검사 일정에 대한 모든 권한 허용 (삭제 포함)
 CREATE POLICY "Enable all access for exam_schedules" ON public.exam_schedules FOR ALL USING (true) WITH CHECK (true);
 
 -- Common Meal Plans & Overrides Policies
