@@ -8,15 +8,14 @@ from websocket_manager import manager
 from utils import execute_with_retry_async, mask_name, create_audit_log, broadcast_to_station_and_patient
 from models import AdmissionCreate, TransferRequest
 
-async def transfer_patient(db: AsyncClient, admission_id: str, req: TransferRequest):
+async def transfer_patient(db: AsyncClient, admission_id: str, req: TransferRequest, ip_address: str = "127.0.0.1"):
     # Call RPC for atomic transfer and audit logging
-    # Note: ip_address could be passed from request if available
     try:
         res = await db.rpc("transfer_patient_transaction", {
             "p_admission_id": admission_id,
             "p_target_room": req.target_room,
             "p_actor_type": "NURSE",
-            "p_ip_address": "127.0.0.1" 
+            "p_ip_address": ip_address
         }).execute()
         
         data = res.data
@@ -34,12 +33,12 @@ async def transfer_patient(db: AsyncClient, admission_id: str, req: TransferRequ
         logger.error(f"Transfer RPC failed: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
-async def discharge_patient(db: AsyncClient, admission_id: str):
+async def discharge_patient(db: AsyncClient, admission_id: str, ip_address: str = "127.0.0.1"):
     try:
         res = await db.rpc("discharge_patient_transaction", {
             "p_admission_id": admission_id,
             "p_actor_type": "NURSE",
-            "p_ip_address": "127.0.0.1"
+            "p_ip_address": ip_address
         }).execute()
         
         data = res.data
@@ -56,25 +55,26 @@ async def discharge_patient(db: AsyncClient, admission_id: str):
         logger.error(f"Discharge RPC failed: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
-async def create_admission(db: AsyncClient, admission: AdmissionCreate):
+async def create_admission(db: AsyncClient, admission: AdmissionCreate, ip_address: str = "127.0.0.1"):
     masked_name = mask_name(admission.patient_name)
-    data = {
-        "patient_name_masked": masked_name,
-        "room_number": admission.room_number,
-        "status": "IN_PROGRESS",
-        "dob": admission.dob.isoformat() if admission.dob else None,
-        "gender": admission.gender
-    }
-    if admission.check_in_at:
-        data["check_in_at"] = admission.check_in_at.isoformat()
-
-    response = await execute_with_retry_async(db.table("admissions").insert(data))
-    new_admission = response.data[0]
-    await create_audit_log(db, "NURSE", "CREATE", new_admission['id'])
-    return new_admission
+    try:
+        res = await db.rpc("create_admission_transaction", {
+            "p_patient_name_masked": masked_name,
+            "p_room_number": admission.room_number,
+            "p_dob": admission.dob.isoformat() if admission.dob else None,
+            "p_gender": admission.gender,
+            "p_check_in_at": admission.check_in_at.isoformat() if admission.check_in_at else None,
+            "p_actor_type": "NURSE",
+            "p_ip_address": ip_address
+        }).execute()
+        return res.data
+    except Exception as e:
+        logger.error(f"Create admission RPC failed: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 async def list_active_admissions_enriched(db: AsyncClient):
     # Use SQL View to fetch pre-calculated dashboard state (No N+1)
+    # Order is now handled by the SQL View (ORDER BY check_in_at DESC)
     res = await execute_with_retry_async(db.table("view_station_dashboard").select("*"))
     data = res.data or []
     
@@ -105,6 +105,4 @@ async def list_active_admissions_enriched(db: AsyncClient):
         }
         enriched.append(row)
         
-    # Sort by check_in_at descending
-    enriched.sort(key=lambda x: x.get('check_in_at') or '', reverse=True)
     return enriched

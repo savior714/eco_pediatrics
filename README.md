@@ -50,14 +50,21 @@
 2.  **백엔드 실행**:
     ```bash
     ./start_backend.bat
-    # 또는 python backend/main.py
+    # 또는 python backend/main.py (기본 포트 8000)
     ```
 
 3.  **프론트엔드 실행**:
     ```bash
     ./start_frontend.bat
-    # 또는 cd frontend && npm run dev
+    # 또는 cd frontend && npm run dev -- -p 3001
     ```
+
+4.  **Tauri 앱 실행 (데스크톱)**:
+    ```bash
+    cd frontend
+    npm run tauri dev
+    ```
+    *주의: Tauri v2 권한 설정 변경 시 앱을 완전히 종료 후 재실행해야 합니다.*
 
 ### 테스트 데이터 생성 (Seeding)
 개발 편의를 위해 더미 데이터를 생성할 수 있습니다.

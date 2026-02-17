@@ -2,8 +2,9 @@
 // Export constant for use elsewhere if needed, but prefer using api instance
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
-// Detect Tauri environment
-const isTauri = typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__;
+// Detect Tauri environment (Tauri v2 compatible)
+const isTauri = typeof window !== 'undefined' &&
+    ((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__);
 
 // Lazy-load Tauri plugins to avoid issues in browser/node environments
 const getTauriFetch = async () => {
@@ -36,8 +37,9 @@ class ApiClient {
 
         // Use Tauri Native Fetch if available (Bypasses CORS/CSP)
         const fetchFn = await getTauriFetch();
+        const fetchType = fetchFn === window.fetch ? 'Browser Fetch' : 'Tauri Native Fetch';
 
-        await tauriLog('info', `Requesting: ${options?.method || 'GET'} ${url}`);
+        await tauriLog('info', `Requesting [${fetchType}]: ${options?.method || 'GET'} ${url}`);
 
         try {
             const res = await fetchFn(url, {
@@ -63,7 +65,9 @@ class ApiClient {
             const text = await res.text();
             return text ? JSON.parse(text) : ({} as T);
         } catch (err: any) {
-            await tauriLog('error', `Fetch Fatal: ${options?.method || 'GET'} ${url} -> ${err.message}`);
+            const detail = err instanceof Error ? err.message : JSON.stringify(err);
+            await tauriLog('error', `Fetch Fatal: ${options?.method || 'GET'} ${url} -> ${detail}`);
+            console.error('Fetch Fatal Detail:', err);
             throw err;
         }
     }

@@ -78,8 +78,6 @@ export default function Station() {
                                 );
                             }
 
-                            const isFever = bed.had_fever_in_6h || (bed.temp !== null && bed.temp >= 38.0);
-                            const status = isFever ? 'fever' : 'normal';
                             return (
                                 <PatientCard
                                     key={bed.room}
@@ -87,7 +85,7 @@ export default function Station() {
                                     roomNumber={bed.room}
                                     temperature={bed.temp !== null ? bed.temp.toFixed(1) : '-'}
                                     infusionRate={bed.drops ?? '-'}
-                                    status={status}
+                                    status={bed.status}
                                     onCardClick={() => actions.setSelectedRoom(bed.room)}
                                     onQrClick={(e) => {
                                         e.stopPropagation();

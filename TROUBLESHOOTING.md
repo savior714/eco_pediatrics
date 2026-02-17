@@ -112,3 +112,21 @@
   1. **Visual Studio Installer** → [수정] → **C++를 사용한 데스크톱 개발** (Desktop development with C++, **UWP 아님**) 체크. MSVC v143/v144, Windows 11 SDK 확인.
   2. **Developer Command Prompt for VS 2022/2025**에서 프로젝트로 이동 후 `pip install numpy==2.2.3` 실행.
   3. **우회(권장)**: `requirements.txt`에서 `numpy==2.4.2` 사용. Python 3.14용 wheel 제공으로 빌드 불필요.
+
+## 14. Tauri v2 HTTP 권한 이슈 (url not allowed on the configured scope)
+- **문제**: Tauri 앱에서 백엔드로의 API 요청(Fetch) 시 `Fetch Fatal: url not allowed on the configured scope` 또는 `http.fetch_send not allowed` 에러 발생.
+- **원인**: Tauri v2의 강화된 보안 모델로 인해, 네이티브 Fetch 사용 시 명시적인 URL 허용 목록(Scope)과 명령어 권한(Permissions)이 설정되지 않아 차단됨.
+- **해결**:
+  1. **윈도우 레이블 매칭**: `src-tauri/tauri.conf.json`의 `windows` 설정에 `"label": "main"`을 추가하여 권한 설정과 창을 매칭시킴.
+  2. **Capabilities 설정**: `src-tauri/capabilities/default.json`의 `permissions` 배열에 `http:default` 권한을 객체 구조로 추가하고 URL 스코프를 지정함.
+     ```json
+     {
+       "identifier": "http:default",
+       "allow": [
+         { "url": "http://127.0.0.1:8000/*" },
+         { "url": "http://localhost:8000/*" }
+       ]
+     }
+     ```
+  3. **재시작 필수**: 설정 파일 수정 후 반드시 실행 중인 터미널을 종료하고 `npm run tauri dev`를 다시 실행해야 함 (Hot-reload 미적용 영역).
+  4. **포트 충돌 방지**: Next.js 개발 서버를 3001번으로 고정하고, Tauri의 `devUrl`도 이에 맞춤.

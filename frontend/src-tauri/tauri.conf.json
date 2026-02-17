@@ -5,20 +5,23 @@
   "identifier": "com.eco-pediatrics.manager",
   "build": {
     "frontendDist": "../out",
-    "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:3001",
+    "beforeDevCommand": "npm run dev -- -p 3001",
     "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Eco-Pediatrics Station Control",
         "width": 1440,
         "height": 900,
         "resizable": true,
         "fullscreen": false,
+        "maximized": true,
         "alwaysOnTop": false,
-        "devtools": true
+        "devtools": true,
+        "url": "/station"
       }
     ],
     "security": {

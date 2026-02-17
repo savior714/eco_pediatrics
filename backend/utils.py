@@ -1,6 +1,7 @@
 from supabase._async.client import AsyncClient
 import asyncio
 import json
+import random
 from postgrest.exceptions import APIError
 from httpx import HTTPStatusError
 from logger import logger
@@ -36,7 +37,6 @@ async def execute_with_retry_async(query_builder):
         - 4xx Client Errors (except 429)
     - Backoff: Exponential with jitter (base 0.5s, cap 3s)
     """
-    import random
     max_retries = 3
     
     for attempt in range(max_retries):

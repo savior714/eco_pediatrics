@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from supabase._async.client import AsyncClient
 from typing import List
 
@@ -11,16 +11,19 @@ from schemas import DashboardResponse
 router = APIRouter()
 
 @router.post("/{admission_id}/transfer")
-async def transfer_patient(admission_id: str, req: TransferRequest, db: AsyncClient = Depends(get_supabase)):
-    return await admission_service.transfer_patient(db, admission_id, req)
+async def transfer_patient(admission_id: str, req: TransferRequest, request: Request, db: AsyncClient = Depends(get_supabase)):
+    ip_address = request.client.host if request.client else "127.0.0.1"
+    return await admission_service.transfer_patient(db, admission_id, req, ip_address)
 
 @router.post("/{admission_id}/discharge")
-async def discharge_patient(admission_id: str, db: AsyncClient = Depends(get_supabase)):
-    return await admission_service.discharge_patient(db, admission_id)
+async def discharge_patient(admission_id: str, request: Request, db: AsyncClient = Depends(get_supabase)):
+    ip_address = request.client.host if request.client else "127.0.0.1"
+    return await admission_service.discharge_patient(db, admission_id, ip_address)
 
 @router.post("", response_model=Admission)
-async def create_admission(admission: AdmissionCreate, db: AsyncClient = Depends(get_supabase)):
-    return await admission_service.create_admission(db, admission)
+async def create_admission(admission: AdmissionCreate, request: Request, db: AsyncClient = Depends(get_supabase)):
+    ip_address = request.client.host if request.client else "127.0.0.1"
+    return await admission_service.create_admission(db, admission, ip_address)
 
 @router.get("", response_model=List[dict])
 async def list_admissions(db: AsyncClient = Depends(get_supabase)):
