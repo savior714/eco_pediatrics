@@ -39,14 +39,14 @@ export function AdmitSubModal({ isOpen, onClose, roomNumber, onAdmit }: AdmitSub
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in" onClick={(e) => e.stopPropagation()}>
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-center p-4 border-b border-slate-100">
                     <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                         <UserPlus size={20} className="text-teal-600" />
                         입원 수속 ({roomNumber}호)
                     </h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+                    <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="text-slate-400 hover:text-slate-600">
                         <X size={20} />
                     </button>
                 </div>

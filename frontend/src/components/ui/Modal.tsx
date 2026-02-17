@@ -32,14 +32,20 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
     if (!isVisible && !isOpen) return null;
 
     return (
-        <div className={cn(
-            "fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 transition-opacity duration-300",
-            "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
-            isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        )}>
+        <div
+            className={cn(
+                "fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 transition-opacity duration-300",
+                "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
+                isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+            )}
+            onClick={(e) => e.stopPropagation()}
+        >
             <div
                 className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                onClick={onClose}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                }}
                 aria-hidden
             />
             <div

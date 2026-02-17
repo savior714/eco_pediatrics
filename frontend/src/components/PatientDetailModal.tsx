@@ -76,8 +76,14 @@ export function PatientDetailModal({
     if (!isOpen || !bed) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/25 backdrop-blur-sm transition-opacity" onClick={onClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+            <div
+                className="absolute inset-0 bg-slate-900/25 backdrop-blur-sm transition-opacity"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                }}
+            />
 
             <div
                 className="bg-white rounded-[2rem] w-[75%] max-w-none max-h-[85vh] shadow-2xl overflow-hidden flex flex-col transition-all duration-300"
