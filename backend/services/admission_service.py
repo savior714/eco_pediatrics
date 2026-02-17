@@ -81,13 +81,8 @@ async def create_admission(db: AsyncClient, admission: AdmissionCreate, ip_addre
             logger.error(f"RPC success but no ID returned: {data}")
             raise HTTPException(status_code=500, detail="Admission created but ID missing in response")
             
-        # Re-fetch full row to ensure response_model validation passes (PGRST205 compatibility)
-        full_row = await db.table("admissions").select("*").eq("id", admission_id).single().execute()
-        if not full_row.data:
-            logger.error(f"Created admission {admission_id} not found immediately after creation")
-            raise HTTPException(status_code=500, detail="Created admission record not found")
-            
-        return full_row.data
+        logger.info(f"Successfully created admission: {data}")
+        return data
     except HTTPException:
         raise
     except Exception as e:

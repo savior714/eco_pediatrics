@@ -150,5 +150,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- 6. Force Schema Cache Reload
+-- 6. Audit Logs RLS Fix
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable insert for all" ON audit_logs;
+CREATE POLICY "Enable insert for all" ON public.audit_logs FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Enable select for service role" ON audit_logs;
+CREATE POLICY "Enable select for service role" ON public.audit_logs FOR SELECT USING (true);
+
+-- 7. Force Schema Cache Reload
 NOTIFY pgrst, 'reload schema';
