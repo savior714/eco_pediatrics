@@ -67,7 +67,18 @@ class ApiClient {
         } catch (err: any) {
             const detail = err instanceof Error ? err.message : JSON.stringify(err);
             await tauriLog('error', `Fetch Fatal: ${options?.method || 'GET'} ${url} -> ${detail}`);
-            console.error('Fetch Fatal Detail:', err);
+            const isConnectionError = /sending request|ECONNREFUSED|Failed to fetch|NetworkError/i.test(detail);
+            if (isConnectionError) {
+                console.error(
+                    'Fetch Fatal Detail: 백엔드에 연결할 수 없습니다. 백엔드가 실행 중인지 확인하세요.\n' +
+                    `  URL: ${url}\n` +
+                    '  예: backend 폴더에서 uv run uvicorn main:app --port 8000 --host 0.0.0.0\n' +
+                    '  (Windows 포트 이슈 시 8080 사용 및 NEXT_PUBLIC_API_URL=http://localhost:8080 설정)',
+                    err
+                );
+            } else {
+                console.error('Fetch Fatal Detail:', err);
+            }
             throw err;
         }
     }

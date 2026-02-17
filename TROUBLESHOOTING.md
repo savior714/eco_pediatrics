@@ -151,3 +151,35 @@
   - **보안 전략**:
     - **RLS (Row Level Security)**: 모든 데이터 조회 및 삽입은 해당 `admission_id`가 실제 입원 상태(`status = 'IN_PROGRESS'`)인 경우에만 허용되도록 데이터베이스 레벨에서 강제됩니다.
     - **Defense in Depth**: 백엔드 프록시 검증과 DB RLS 필터링의 2중 보안 계층을 통해 데이터 노출을 원천 차단합니다.
+
+## 16. Tauri에서 환자 서브모달 레이어 깨짐 (스테이션 → 환자 클릭 시)
+- **문제**: `tauri dev`로 스테이션 대시보드에서 환자 그리드를 눌러 개별 환자 서브모달을 열면, 모달이 제대로 보이지 않거나 배경 UI가 모달 위에 겹쳐 보임.
+- **원인**: `PatientDetailModal`이 Portal 없이 스테이션 페이지 DOM 안에만 렌더되어, Tauri WebView의 stacking context(부모의 `overflow-hidden`, `transform` 등) 영향으로 `fixed`/`z-50`이 기대대로 동작하지 않음.
+- **해결**:
+  1. **Portal 적용**: `PatientDetailModal` 전체를 `Portal`로 감싸 `document.body`에 렌더하도록 변경.
+  2. **z-index·stacking**: 모달 루트에 `z-[9999]`, `isolate` 적용. 흰색 카드에 `relative z-10`, 상단 식단/IV 영역에 `relative z-0`, 체온 차트 스크롤 영역에 `relative z-10` 및 `min-h-0` 적용하여 내부 레이어 순서 고정.
+  3. 모달 열릴 때 `document.body.style.overflow = 'hidden'`으로 스크롤 잠금.
+
+## 17. Fetch "error sending request" / 백엔드 연결 불가 및 Supabase env 미설정
+- **문제**: Tauri 또는 브라우저에서 `error sending request for url (http://127.0.0.1:8000/api/v1/...)` 또는 콘솔에 "백엔드에 연결할 수 없습니다" 표시. 백엔드 실행 시 `ValueError: SUPABASE_URL and SUPABASE_KEY must be set` 발생.
+- **원인**:
+  1. 백엔드 서버가 해당 포트에서 기동되지 않음(연결 거부).
+  2. `backend/.env`가 없거나, 프로젝트 루트에서 uvicorn 실행 시 `backend/.env`를 읽지 못함.
+  3. Supabase 환경 변수 미설정.
+- **해결**:
+  1. **백엔드 기동**: `backend` 폴더에서 `uv run uvicorn main:app --port 8000 --host 0.0.0.0` 실행. (Windows 포트 이슈 시 8080 사용 및 `frontend/.env.local`에 `NEXT_PUBLIC_API_URL=http://localhost:8080` 설정, Tauri capabilities에 8080 URL 허용 추가.)
+  2. **Supabase env**: `backend/.env.example`을 복사해 `backend/.env` 생성 후, Supabase 대시보드 → Project Settings → API에서 Project URL과 anon key를 `SUPABASE_URL`, `SUPABASE_KEY`로 설정.
+  3. **database.py**: `.env`를 `database.py` 기준 backend 디렉터리에서 로드하도록 수정하여, 루트에서 uvicorn 실행 시에도 `backend/.env`를 읽도록 함. env 미설정 시 에러 메시지에 ".env.example을 .env로 복사 후 Supabase 키 설정" 안내 추가.
+  4. **api.ts**: 연결 실패 시 한글 안내 및 백엔드 기동 예시 명령을 콘솔에 출력하도록 개선.
+
+## 18. 환자 서브모달 내 식단·IV 영역이 체온 차트 위에 겹쳐 보이는 문제
+- **문제**: Portal 적용 후에도 서브모달 안에서 식단 카드(오늘 아침/점심/저녁) 및 IV 수액 영역이 체온 차트 위에 그려져 레이어가 깨져 보임.
+- **원인**: 모달 내부에서 스크롤 영역(`overflow-y-auto`)과 상단 고정 영역(VitalStatusGrid)이 별도 stacking context를 갖는 경우, Tauri/WebView에서 페인트 순서가 뒤섞임.
+- **해결**: 상단 식단/IV 래퍼에 `relative z-0`, 체온 차트가 들어 있는 스크롤 영역에 `relative z-10` 및 `min-h-0`을 부여해, 항상 차트 영역이 식단/IV 위에 그려지도록 함. 모달 루트의 `z-[9999]`·`isolate` 유지.
+
+## 19. 환자 서브모달 UI 정리 (슬래시 제거·테두리 복구)
+- **문제**: 식단 카드에서 "환아식 미신청 / 보호자식 미신청" 사이의 `/` 구분이 불필요함. 서브모달 섹션 카드 테두리가 흐릿하거나 일관되지 않음.
+- **해결**:
+  1. **VitalStatusGrid**: 환아식·보호자식 텍스트 사이의 `/` 제거. 두 줄로만 표시(환아식 → 다음 줄 보호자식), `gap-0.5`로 간격 유지.
+  2. **PatientDetailModal**: 상단 영역 하단 테두리 `border-slate-100` → `border-slate-200`. 체온 기록 섹션을 `bg-white`·`border border-slate-200`·`shadow-sm` 카드 스타일로 통일. 차트 영역은 `rounded-xl border border-slate-200 bg-slate-50/50` 적용.
+  3. **PatientDetailSidebar**: "예정된 검사 일정" → "오늘의 검사 일정"으로 문구 변경. 검사 일정·신청된 서류·요청 사항 섹션을 `bg-white`·`border border-slate-200`·`shadow-sm`로 통일해 흰 카드와 회색 테두리 복구.

@@ -3,6 +3,7 @@ import { Thermometer } from 'lucide-react';
 import { TemperatureGraph } from './TemperatureGraph';
 import { Bed, Notification, VitalData, LastUploadedIv } from '@/types/domain';
 import { api } from '@/lib/api';
+import Portal from './common/Portal';
 import { TransferModal } from './TransferModal';
 import { VitalModal } from './VitalModal';
 import { EditMealModal } from './EditMealModal';
@@ -59,6 +60,13 @@ export function PatientDetailModal({
         }
     }, [isOpen, bed?.token, fetchDashboardData, lastUpdated]);
 
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+            return () => { document.body.style.overflow = ''; };
+        }
+    }, [isOpen]);
+
     const roomNotifications = useMemo(() => {
         if (!bed) return [];
         return notifications.filter(n => String(n.room) === String(bed.room));
@@ -79,7 +87,11 @@ export function PatientDetailModal({
     if (!isOpen || !bed) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+        <Portal>
+        <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 isolate"
+            onClick={(e) => e.stopPropagation()}
+        >
             <div
                 className="absolute inset-0 bg-slate-900/25 backdrop-blur-sm transition-opacity"
                 onClick={(e) => {
@@ -89,7 +101,7 @@ export function PatientDetailModal({
             />
 
             <div
-                className="bg-white rounded-[2rem] w-[75%] max-w-none max-h-[85vh] shadow-2xl overflow-hidden flex flex-col transition-all duration-300"
+                className="relative z-10 bg-white rounded-[2rem] w-[75%] max-w-none max-h-[85vh] shadow-2xl overflow-hidden flex flex-col transition-all duration-300"
                 onClick={(e) => e.stopPropagation()}
             >
                 <PatientDetailHeader
@@ -100,7 +112,7 @@ export function PatientDetailModal({
                     onSeedData={actions.handleSeedData}
                 />
 
-                <div className="px-8 bg-slate-50 border-b border-slate-100 pb-6 shrink-0">
+                <div className="relative z-0 px-8 bg-slate-50 border-b border-slate-200 pb-6 shrink-0">
                     <VitalStatusGrid
                         bed={bed}
                         displayTemp={displayTemp}
@@ -113,10 +125,10 @@ export function PatientDetailModal({
                     />
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+                <div className="relative z-10 flex-1 overflow-y-auto p-6 scrollbar-hide min-h-0">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                         <div className="lg:col-span-7 space-y-6">
-                            <section className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
+                            <section className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
                                 <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
                                     <Thermometer size={16} className="text-rose-500" />
                                     체온 기록 (24h)
@@ -124,7 +136,7 @@ export function PatientDetailModal({
                                 <TemperatureGraph
                                     data={chartVitals}
                                     checkInAt={chartCheckIn}
-                                    className="h-auto min-h-[340px] border-[1.5px] border-slate-200 shadow-sm"
+                                    className="h-auto min-h-[340px] rounded-xl border border-slate-200 bg-slate-50/50"
                                 />
                             </section>
                         </div>
@@ -187,5 +199,6 @@ export function PatientDetailModal({
                 onApiSave={actions.apiAddExam}
             />
         </div>
+        </Portal>
     );
 }

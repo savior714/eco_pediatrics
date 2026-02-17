@@ -32,11 +32,11 @@ export function PatientDetailSidebar({
 }: PatientDetailSidebarProps) {
     return (
         <div className="lg:col-span-5 space-y-6 flex flex-col">
-            <section className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 flex-1">
+            <section className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex-1">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                         <Calendar size={16} className="text-violet-500" />
-                        예정된 검사 일정
+                        오늘의 검사 일정
                     </h3>
                     <button
                         onClick={onAddExam}
@@ -69,12 +69,12 @@ export function PatientDetailSidebar({
                 </div>
             </section>
 
-            <section className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 flex-1">
+            <section className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex-1">
                 <h3 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
                     <FileText size={16} className="text-sky-500" />
                     신청된 서류
                 </h3>
-                <div className="bg-white rounded-xl border-[1.5px] border-slate-200 p-4 shadow-sm">
+                <div className="bg-slate-50/50 rounded-xl border border-slate-200 p-4">
                     {documentRequests.filter(r => r.status === 'COMPLETED').length > 0 ? (
                         <div className="space-y-3">
                             {documentRequests.filter(r => r.status === 'COMPLETED').map((req) => (
@@ -99,7 +99,7 @@ export function PatientDetailSidebar({
                 </div>
             </section>
 
-            <section className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 flex-1">
+            <section className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex-1">
                 <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
                     <Bell size={16} className="text-amber-500" />
                     요청 사항 ({roomNotifications.length})

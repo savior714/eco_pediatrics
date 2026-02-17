@@ -76,9 +76,8 @@ export function VitalStatusGrid({
                                     <Edit2 size={10} />
                                 </button>
                                 <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-tight">{slot.label}</span>
-                                <div className={`text-[11px] font-bold text-slate-700 flex flex-col items-center leading-tight ${meal?.isOptimistic ? 'opacity-50' : ''}`}>
+                                <div className={`text-[11px] font-bold text-slate-700 flex flex-col items-center leading-tight gap-0.5 ${meal?.isOptimistic ? 'opacity-50' : ''}`}>
                                     <span>{meal?.pediatric_meal_type || '환아식 미신청'}</span>
-                                    <span className="text-slate-300 font-light my-[-2px]">/</span>
                                     <span>{meal?.guardian_meal_type || '보호자식 미신청'}</span>
                                 </div>
                             </div>
