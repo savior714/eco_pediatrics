@@ -167,7 +167,9 @@ async def list_active_admissions_enriched(db: AsyncClient):
                 rec_at_dt = datetime.fromisoformat(v['recorded_at'].replace('Z', '+00:00'))
                 if rec_at_dt.tzinfo is None: rec_at_dt = rec_at_dt.replace(tzinfo=timezone.utc)
                 if rec_at_dt >= six_hours_ago: vital_map[aid]['had_fever_in_6h'] = True
-            except: pass
+            except Exception as e:
+                from logger import get_logger
+                get_logger().error(f"Error parsing date or determining fever for admission {aid}: {e}")
 
     meal_map = {m['admission_id']: m for m in all_meals}
 
