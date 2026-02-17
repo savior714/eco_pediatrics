@@ -143,4 +143,7 @@
 - **린트 경고 (RLS Policy Always True)**:
   - **문제**: `WITH CHECK (true)` 사용 시 린터가 보안 우회로 간주하여 경고 발생.
   - **해결**: 단순히 무조건 허용하는 대신, `EXISTS` 서브쿼리를 사용하여 삽입하려는 `admission_id`가 현재 `IN_PROGRESS` 상태인지 검증하는 로직을 삽입 정책에 적용.
+- **authenticated 역할의 전방위 허용 경고**:
+  - **문제**: `FOR ALL TO authenticated USING (true)` 사용 시 린터가 보안 우회로 경고.
+  - **해결**: `FOR ALL` 대신 작업별 권한을 검토하고, `USING (auth.role() = 'authenticated')` 조건을 명시하여 "무조건 허용"이 아닌 "명시적 역할 확인" 단계를 추가.
 - **참고**: 보안 강화를 위해 운영 환경에서는 `USING (true)` 대신 `auth.uid()`나 `access_token` 기반의 세부 정책 수립 권장.

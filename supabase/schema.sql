@@ -113,7 +113,7 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 -- 3. 필요한 경우 정책 추가 (여기서는 모든 사용자의 삽입 권한을 명시적으로 허용)
 
 -- 식단 및 서류 신청에 대한 권한 허용
--- 보호자: 조회 및 신청 가능 / 의료진: 모든 관리 권한
+-- 보호자: 조회 및 신청 가능 / 의료진(Staff): 모든 관리 권한
 CREATE POLICY "Enable read for all users" ON public.meal_requests FOR SELECT USING (true);
 CREATE POLICY "Allow insert for active admissions" ON public.meal_requests
 FOR INSERT WITH CHECK (
@@ -123,7 +123,10 @@ FOR INSERT WITH CHECK (
     AND admissions.status = 'IN_PROGRESS'
   )
 );
-CREATE POLICY "Enable manage for authenticated" ON public.meal_requests FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Staff can manage all meal requests" ON public.meal_requests 
+FOR ALL TO authenticated 
+USING (auth.role() = 'authenticated') 
+WITH CHECK (auth.role() = 'authenticated');
 
 CREATE POLICY "Enable read for all users" ON public.document_requests FOR SELECT USING (true);
 CREATE POLICY "Allow insert for active admissions" ON public.document_requests
@@ -134,33 +137,36 @@ FOR INSERT WITH CHECK (
     AND admissions.status = 'IN_PROGRESS'
   )
 );
-CREATE POLICY "Enable manage for authenticated" ON public.document_requests FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Staff can manage all document requests" ON public.document_requests 
+FOR ALL TO authenticated 
+USING (auth.role() = 'authenticated') 
+WITH CHECK (auth.role() = 'authenticated');
 
 -- 10. 입원, 바이탈, 수액 기록에 대한 읽기 권한 (대시보드 필수)
 CREATE POLICY "Enable read for all users" ON public.admissions FOR SELECT USING (true);
 CREATE POLICY "Enable read for all users" ON public.vital_signs FOR SELECT USING (true);
 CREATE POLICY "Enable read for all users" ON public.iv_records FOR SELECT USING (true);
 
--- 의료진은 위 데이터에 대해 모든 권한을 가짐
-CREATE POLICY "Enable manage for authenticated" ON public.admissions FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Enable manage for authenticated" ON public.vital_signs FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Enable manage for authenticated" ON public.iv_records FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- 의료진은 위 데이터에 대해 모든 관리 권한을 가짐
+CREATE POLICY "Staff can manage all admissions" ON public.admissions FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Staff can manage all vital_signs" ON public.vital_signs FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Staff can manage all iv_records" ON public.iv_records FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
--- 11. 감사 로그 보안 (쓰기 전용)
+-- 11. 감사 로그 보안
 CREATE POLICY "Enable insert for all users" ON public.audit_logs FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable read for authenticated" ON public.audit_logs FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Staff can view all audit logs" ON public.audit_logs FOR SELECT TO authenticated USING (auth.role() = 'authenticated');
 
 -- 12. 검사 일정: 누구나 조회 가능, 관리는 의료진만
 CREATE POLICY "Enable read for all users" ON public.exam_schedules FOR SELECT USING (true);
-CREATE POLICY "Enable manage for authenticated" ON public.exam_schedules FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Staff can manage all exam schedules" ON public.exam_schedules FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- Common Meal Plans & Overrides Policies
 ALTER TABLE common_meal_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE patient_meal_overrides ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Enable read access for all users" ON common_meal_plans FOR SELECT USING (true);
-CREATE POLICY "Enable manage for authenticated" ON common_meal_plans FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Staff can manage all common meal plans" ON common_meal_plans FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 CREATE POLICY "Enable read access for all users" ON patient_meal_overrides FOR SELECT USING (true);
 CREATE POLICY "Enable insert for all users" ON patient_meal_overrides FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable manage for authenticated" ON patient_meal_overrides FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Staff can manage all patient meal overrides" ON patient_meal_overrides FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
