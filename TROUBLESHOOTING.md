@@ -130,3 +130,14 @@
      ```
   3. **재시작 필수**: 설정 파일 수정 후 반드시 실행 중인 터미널을 종료하고 `npm run tauri dev`를 다시 실행해야 함 (Hot-reload 미적용 영역).
   4. **포트 및 CORS**: Next.js 개발 서버는 표준 3000번 포트를 사용하며, 만약 포트를 변경할 경우 백엔드의 `main.py` 내 `ALLOWED_ORIGINS`에도 해당 포트가 추가되어야 합니다 (미추가 시 보호자 대시보드 로딩 불가).
+
+## 15. Supabase RLS 무시/차단 이슈 (Row Level Security)
+- **문제**: 정책(Policy)은 설정되어 있으나 데이터가 로드되지 않거나("Loading..."), 보안 정책이 전혀 적용되지 않는 현상.
+- **원인**: 
+  1. 테이블 레벨에서 RLS 기능 자체가 활성화(`Disabled`)되지 않음.
+  2. `SELECT` 권한 없이 `INSERT` 권한만 설정된 경우 대시보드 페칭 실패.
+- **해결**:
+  1. **RLS 활성화**: `ALTER TABLE public.document_requests ENABLE ROW LEVEL SECURITY;` 명령을 SQL Editor에서 실행.
+  2. **조회 권한 추가**: 대시보드 연동을 위해 `FOR SELECT USING (true)` 정책을 반드시 추가.
+  3. **코드 일관성**: `supabase/schema.sql`에 모든 테이블의 `ENABLE ROW LEVEL SECURITY` 구문이 포함되어 있는지 확인.
+- **참고**: 보안 강화를 위해 운영 환경에서는 `USING (true)` 대신 `auth.uid()`나 `access_token` 기반의 세부 정책 수립 권장.

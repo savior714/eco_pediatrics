@@ -112,11 +112,19 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 -- 2. anon (클라이언트 직접 접근)은 기본적으로 모든 접근 차단
 -- 3. 필요한 경우 정책 추가 (여기서는 모든 사용자의 삽입 권한을 명시적으로 허용)
 
--- 식단 및 서류 신청에 대한 삽입 권한 허용
+-- 식단 및 서류 신청에 대한 권한 허용
+CREATE POLICY "Enable read for all users" ON public.meal_requests FOR SELECT USING (true);
 CREATE POLICY "Enable insert for all users" ON public.meal_requests FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Enable read for all users" ON public.document_requests FOR SELECT USING (true);
 CREATE POLICY "Enable insert for all users" ON public.document_requests FOR INSERT WITH CHECK (true);
 
--- 감사 로그에 대한 삽입 권한 허용한
+-- 입원, 바이탈, 수액 기록에 대한 읽기 권한 추가 (대시보드 필수)
+CREATE POLICY "Enable read for all users" ON public.admissions FOR SELECT USING (true);
+CREATE POLICY "Enable read for all users" ON public.vital_signs FOR SELECT USING (true);
+CREATE POLICY "Enable read for all users" ON public.iv_records FOR SELECT USING (true);
+
+-- 감사 로그에 대한 삽입 권한 허용
 CREATE POLICY "Enable insert for all users" ON public.audit_logs FOR INSERT WITH CHECK (true);
 
 -- 검사 일정에 대한 모든 권한 허용 (삭제 포함)
