@@ -113,35 +113,40 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 -- 3. 필요한 경우 정책 추가 (여기서는 모든 사용자의 삽입 권한을 명시적으로 허용)
 
 -- 식단 및 서류 신청에 대한 권한 허용
+-- 보호자: 조회 및 신청 가능 / 의료진: 모든 관리 권한
 CREATE POLICY "Enable read for all users" ON public.meal_requests FOR SELECT USING (true);
 CREATE POLICY "Enable insert for all users" ON public.meal_requests FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable manage for authenticated" ON public.meal_requests FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 CREATE POLICY "Enable read for all users" ON public.document_requests FOR SELECT USING (true);
 CREATE POLICY "Enable insert for all users" ON public.document_requests FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable manage for authenticated" ON public.document_requests FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
--- 10. 입원, 바이탈, 수액 기록에 대한 읽기 권한 추가 (대시보드 필수)
--- 보안 강화: access_token은 민감한 정보이므로 SELECT 시 주의가 필요하나, 
--- 현재 구조상 QR 접속을 위해 필요함. 운영 환경에서는 토큰을 제외한 View 사용 권장.
+-- 10. 입원, 바이탈, 수액 기록에 대한 읽기 권한 (대시보드 필수)
 CREATE POLICY "Enable read for all users" ON public.admissions FOR SELECT USING (true);
 CREATE POLICY "Enable read for all users" ON public.vital_signs FOR SELECT USING (true);
 CREATE POLICY "Enable read for all users" ON public.iv_records FOR SELECT USING (true);
 
--- 11. 감사 로그 보안 (쓰기 전용)
--- 누구나 로그를 남길 수는 있지만(INSERT), anon 사용자는 조회 불가능하도록 SELECT 정책을 정의하지 않음
-CREATE POLICY "Enable insert for all users" ON public.audit_logs FOR INSERT WITH CHECK (true);
+-- 의료진은 위 데이터에 대해 모든 권한을 가짐
+CREATE POLICY "Enable manage for authenticated" ON public.admissions FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Enable manage for authenticated" ON public.vital_signs FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Enable manage for authenticated" ON public.iv_records FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
--- 12. 검사 일정에 대한 모든 권한 허용 (삭제 포함)
-CREATE POLICY "Enable all access for exam_schedules" ON public.exam_schedules FOR ALL USING (true) WITH CHECK (true);
+-- 11. 감사 로그 보안 (쓰기 전용)
+CREATE POLICY "Enable insert for all users" ON public.audit_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable read for authenticated" ON public.audit_logs FOR SELECT TO authenticated USING (true);
+
+-- 12. 검사 일정: 누구나 조회 가능, 관리는 의료진만
+CREATE POLICY "Enable read for all users" ON public.exam_schedules FOR SELECT USING (true);
+CREATE POLICY "Enable manage for authenticated" ON public.exam_schedules FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- Common Meal Plans & Overrides Policies
 ALTER TABLE common_meal_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE patient_meal_overrides ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Enable read access for all users" ON common_meal_plans FOR SELECT USING (true);
-CREATE POLICY "Enable insert for all users" ON common_meal_plans FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable update for all users" ON common_meal_plans FOR UPDATE USING (true);
+CREATE POLICY "Enable manage for authenticated" ON common_meal_plans FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 CREATE POLICY "Enable read access for all users" ON patient_meal_overrides FOR SELECT USING (true);
 CREATE POLICY "Enable insert for all users" ON patient_meal_overrides FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable update for all users" ON patient_meal_overrides FOR UPDATE USING (true);
-CREATE POLICY "Enable delete for all users" ON patient_meal_overrides FOR DELETE USING (true);
+CREATE POLICY "Enable manage for authenticated" ON patient_meal_overrides FOR ALL TO authenticated USING (true) WITH CHECK (true);
