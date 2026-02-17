@@ -12,7 +12,7 @@ interface UseStationReturn {
     lastUploadedIv: LastUploadedIv | null;
     lastUpdated: number;
     isConnected: boolean;
-    removeNotification: (id: string) => void;
+    removeNotification: (id: string, type?: string, admissionId?: string) => void;
 }
 
 export function useStation(): UseStationReturn {

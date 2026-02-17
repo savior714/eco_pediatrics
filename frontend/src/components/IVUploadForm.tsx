@@ -69,7 +69,7 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
         }
     };
 
-    const mobileUploadUrl = token ? `${window.location.origin}/mobile/iv-upload/${token}` : '';
+    const mobileUploadUrl = token ? `${window.location.origin}/mobile/iv-upload?token=${token}` : '';
     const fullPhotoUrl = photoUrl ? (photoUrl.startsWith('/') ? `${API_BASE}${photoUrl}` : photoUrl) : '';
 
     return (

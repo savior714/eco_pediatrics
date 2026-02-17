@@ -92,4 +92,8 @@
         - `useStation`: `NEW_MEAL`/`NEW_VITAL` 수신 시 즉시 상태 패치 (체감 속도 향상).
         - `PatientDetailModal`: 중복 `useEffect` 제거로 불필요한 네트워크 요청 방지.
         - `useVitals`: `admissionIdRef` 도입으로 소켓 재연결 최적화.
-        - `Backend`: 식단 정렬 로직 강화 (Date > TimeRank > ID).
+- [x] **Modular Refactoring for AI Context Efficiency (2026-02-17)**:
+    - **Frontend**: `dashboard`, `station` 페이지의 비즈니스 로직을 `useDashboardStats`, `useStationActions` 훅으로 추출 및 컴포넌트 아토믹 분할.
+    - **Backend**: `admissions`, `meals`, `iv_records`, `dev` 라우터의 비즈니스 로직을 `services/` 레이어로 완전 이관 (Router Slimming).
+    - **Result**: 모든 파일이 500라인(20KB) 이하를 유지하며 AI 컨텍스트 효율성 극대화.
+    - **Stability**: 백엔드 단위 테스트 8건 전원 통과 (`pytest`) 및 프론트엔드 Lint 준수.

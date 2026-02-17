@@ -1,0 +1,283 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\savio\AppData\Local\Programs\Python\Python314\python.exe
+cachedir: .pytest_cache
+rootdir: C:\develop\eco_pediatrics\backend
+plugins: anyio-4.12.1, cov-7.0.0
+collecting ... collected 8 items
+
+tests/test_admissions_logic_mock.py::test_list_admissions_logic[asyncio] FAILED [ 12%]
+tests/test_admissions_logic_mock.py::test_fever_6h_boundary[asyncio] PASSED [ 25%]
+tests/test_dashboard_contract.py::test_dashboard_response_schema PASSED  [ 37%]
+tests/test_meals_schema_fallback.py::test_upsert_meal_request_fallback_on_schema_error[asyncio] FAILED [ 50%]
+tests/test_websocket_cleanup.py::test_broadcast_cleanup_on_failure[asyncio] PASSED [ 62%]
+tests/test_websocket_cleanup.py::test_broadcast_cleanup_on_timeout[asyncio] PASSED [ 75%]
+tests/test_websocket_cleanup.py::test_broadcast_cleanup_on_exception_in_gather[asyncio] PASSED [ 87%]
+tests/test_ws_sanity_local.py::test_sanity[asyncio] PASSED               [100%]
+
+================================== FAILURES ===================================
+_____________________ test_list_admissions_logic[asyncio] _____________________
+
+anyio_backend = 'asyncio', mock_db = <MagicMock id='1679166423792'>
+mock_execute = <AsyncMock id='1679237161920'>
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("anyio_backend", ["asyncio"])
+    async def test_list_admissions_logic(anyio_backend, mock_db, mock_execute):
+        # Scenario:
+        # Room 101 has 3 admissions:
+        # 1. Old (Discharged)
+        # 2. Newer (In Progress, but older check_in) - "Zombie"
+        # 3. Newest (In Progress) - Real
+    
+        now = datetime.now()
+        t1 = (now - timedelta(days=2)).isoformat()
+        t2 = (now - timedelta(days=1)).isoformat()
+        t3 = now.isoformat()
+    
+        mock_admissions_data = [
+            {"id": "adm_1", "room_number": "101", "status": "DISCHARGED", "check_in_at": t1},
+            {"id": "adm_2", "room_number": "101", "status": "IN_PROGRESS", "check_in_at": t2},
+            {"id": "adm_3", "room_number": "101", "status": "IN_PROGRESS", "check_in_at": t3}, # Should win
+            {"id": "adm_4", "room_number": "102", "status": "IN_PROGRESS", "check_in_at": t3}, # Distinct room
+        ]
+    
+        # Mock IV data response
+        mock_iv_data = [
+            {"admission_id": "adm_4", "infusion_rate": 20, "created_at": t3},
+            {"admission_id": "adm_3", "infusion_rate": 10, "created_at": t3},
+            {"admission_id": "adm_3", "infusion_rate": 5, "created_at": t2},
+        ]
+    
+        # Mock Vitals data response
+        mock_vitals_data = [
+            {"admission_id": "adm_3", "temperature": 38.5, "recorded_at": t3},
+            {"admission_id": "adm_4", "temperature": 36.5, "recorded_at": t3},
+        ]
+    
+        # Mock Meals data response
+        mock_meals_data = [
+            {"admission_id": "adm_3", "request_type": "BREAKFAST", "created_at": t3}
+        ]
+    
+        # Setup mocks for sequential calls
+        mock_execute.side_effect = [
+            MagicMock(data=mock_admissions_data), # 1. Admissions
+            MagicMock(data=mock_iv_data),         # 2. IVs
+            MagicMock(data=mock_vitals_data),      # 3. Vitals
+            MagicMock(data=mock_meals_data)       # 4. Meals
+        ]
+    
+        # Run the function
+        result = await list_active_admissions_enriched(mock_db)
+    
+        # Verify Deduplication
+        assert len(result) == 2, "Should have 2 unique admissions (Room 101, 102)"
+    
+        adm_101 = next(r for r in result if r['room_number'] == '101')
+        assert adm_101['id'] == "adm_3", f"Deduplication picked {adm_101['id']} instead of adm_3"
+    
+        # Verify IV Mapping
+>       assert adm_101.get('latest_iv', {}).get('infusion_rate') == 10, "IV mapping incorrect. Expected 10"
+E       AssertionError: IV mapping incorrect. Expected 10
+E       assert 5 == 10
+E        +  where 5 = <built-in method get of dict object at 0x00000186FA628F40>('infusion_rate')
+E        +    where <built-in method get of dict object at 0x00000186FA628F40> = {'admission_id': 'adm_3', 'created_at': '2026-02-16T12:04:57.080192', 'infusion_rate': 5}.get
+E        +      where {'admission_id': 'adm_3', 'created_at': '2026-02-16T12:04:57.080192', 'infusion_rate': 5} = <built-in method get of dict object at 0x00000186FA629100>('latest_iv', {})
+E        +        where <built-in method get of dict object at 0x00000186FA629100> = {'check_in_at': '2026-02-17T12:04:57.080192', 'display_name': '', 'had_fever_in_6h': True, 'id': 'adm_3', ...}.get
+
+tests\test_admissions_logic_mock.py:75: AssertionError
+_________ test_upsert_meal_request_fallback_on_schema_error[asyncio] __________
+
+db = <MagicMock id='1679238161344'>
+req = MealRequestCreate(admission_id='adm-123', request_type='PATIENT_REQUEST', pediatric_meal_type='REGULAR', guardian_meal_type='REGULAR', room_note=None, meal_date=datetime.date(2026, 2, 15), meal_time=<MealTime.LUNCH: 'LUNCH'>)
+
+    async def upsert_meal_request(db: AsyncClient, req: MealRequestCreate):
+        # logic for preserving existing plan
+        current_res = await execute_with_retry_async(
+            db.table("meal_requests")
+            .select("*")
+            .eq("admission_id", req.admission_id)
+            .eq("meal_date", req.meal_date.isoformat())
+            .eq("meal_time", req.meal_time.value)
+        )
+        current_data = current_res.data[0] if current_res and current_res.data else None
+    
+        data = req.model_dump(mode='json')
+        if req.request_type == 'STATION_UPDATE':
+            data['status'] = 'APPROVED'
+            data['requested_pediatric_meal_type'] = None
+            data['requested_guardian_meal_type'] = None
+        else:
+            if current_data:
+                data['pediatric_meal_type'] = current_data.get('pediatric_meal_type')
+                data['guardian_meal_type'] = current_data.get('guardian_meal_type')
+            else:
+                data['pediatric_meal_type'] = data['guardian_meal_type'] = None
+    
+            data['requested_pediatric_meal_type'] = req.pediatric_meal_type
+            data['requested_guardian_meal_type'] = req.guardian_meal_type
+            data['status'] = 'PENDING'
+    
+        try:
+>           upsert_res = await execute_with_retry_async(
+                db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time").select("*")
+            )
+
+services\meal_service.py:69: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='execute_with_retry_async' id='1679238164704'>
+args = (<MagicMock name='mock.table()' id='1679238161680'>,), kwargs = {}
+_call = call(<MagicMock name='mock.table()' id='1679238161680'>)
+effect = <list_iterator object at 0x00000186F86913F0>
+result = Error PGRST204:
+Message: Could not find the 'requested_guardian_meal_type' column of 'meal_requests' in the schema cache
+
+    async def _execute_mock_call(self, /, *args, **kwargs):
+        # This is nearly just like super(), except for special handling
+        # of coroutines
+    
+        _call = _Call((args, kwargs), two=True)
+        self.await_count += 1
+        self.await_args = _call
+        self.await_args_list.append(_call)
+    
+        effect = self.side_effect
+        if effect is not None:
+            if _is_exception(effect):
+                raise effect
+            elif not _callable(effect):
+                try:
+                    result = next(effect)
+                except StopIteration:
+                    # It is impossible to propagate a StopIteration
+                    # through coroutines because of PEP 479
+                    raise StopAsyncIteration
+                if _is_exception(result):
+>                   raise result
+E                   postgrest.exceptions.APIError: {'message': "Could not find the 'requested_guardian_meal_type' column of 'meal_requests' in the schema cache", 'code': 'PGRST204', 'hint': None, 'details': None}
+
+C:\Users\savio\AppData\Local\Programs\Python\Python314\Lib\unittest\mock.py:2335: APIError
+
+During handling of the above exception, another exception occurred:
+
+anyio_backend = 'asyncio'
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("anyio_backend", ["asyncio"])
+    async def test_upsert_meal_request_fallback_on_schema_error(anyio_backend):
+        # Mock data
+        req = MealRequestCreate(
+            admission_id="adm-123",
+            meal_date=date(2026, 2, 15),
+            meal_time=MealTime.LUNCH,
+            request_type="PATIENT_REQUEST",
+            pediatric_meal_type="REGULAR",
+            guardian_meal_type="REGULAR"
+        )
+    
+        # Mock DB client
+        mock_db = MagicMock()
+        mock_query_builder = MagicMock()
+    
+        # Setup chain: db.table("...").select/upsert...
+        mock_db.table.return_value = mock_query_builder
+        mock_query_builder.select.return_value = mock_query_builder
+        mock_query_builder.eq.return_value = mock_query_builder
+        mock_query_builder.gte.return_value = mock_query_builder
+        mock_query_builder.lte.return_value = mock_query_builder
+        mock_query_builder.order.return_value = mock_query_builder
+        mock_query_builder.single.return_value = mock_query_builder
+    
+        # Create an APIError instance simulating the schema error
+        error_dict = {
+            'message': "Could not find the 'requested_guardian_meal_type' column of 'meal_requests' in the schema cache",
+            'code': 'PGRST204',
+            'hint': None,
+            'details': None
+        }
+        schema_error = APIError(error_dict)
+    
+        # Patch execute_with_retry_async in services.meal_service
+        with patch("services.meal_service.execute_with_retry_async", new_callable=AsyncMock) as mock_execute:
+            mock_execute.side_effect = [
+                AsyncMock(data=[]),         # 1. Check existing
+                schema_error,               # 2. Upsert fails
+                AsyncMock(data={"id": "123"}), # 3. Upsert retry succeeds
+                AsyncMock(data=None)        # 4. Broadcast info fetch
+            ]
+    
+            captured_upsert_args = []
+            def capture_upsert_args(data, **kwargs):
+                captured_upsert_args.append(copy.deepcopy(data))
+                return mock_query_builder
+    
+            mock_query_builder.upsert.side_effect = capture_upsert_args
+    
+            # Also patch broadcast_to_station_and_patient in services.meal_service
+            with patch("services.meal_service.broadcast_to_station_and_patient", new_callable=AsyncMock):
+>                await upsert_meal_request(mock_db, req)
+
+tests\test_meals_schema_fallback.py:64: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+db = <MagicMock id='1679238161344'>
+req = MealRequestCreate(admission_id='adm-123', request_type='PATIENT_REQUEST', pediatric_meal_type='REGULAR', guardian_meal_type='REGULAR', room_note=None, meal_date=datetime.date(2026, 2, 15), meal_time=<MealTime.LUNCH: 'LUNCH'>)
+
+    async def upsert_meal_request(db: AsyncClient, req: MealRequestCreate):
+        # logic for preserving existing plan
+        current_res = await execute_with_retry_async(
+            db.table("meal_requests")
+            .select("*")
+            .eq("admission_id", req.admission_id)
+            .eq("meal_date", req.meal_date.isoformat())
+            .eq("meal_time", req.meal_time.value)
+        )
+        current_data = current_res.data[0] if current_res and current_res.data else None
+    
+        data = req.model_dump(mode='json')
+        if req.request_type == 'STATION_UPDATE':
+            data['status'] = 'APPROVED'
+            data['requested_pediatric_meal_type'] = None
+            data['requested_guardian_meal_type'] = None
+        else:
+            if current_data:
+                data['pediatric_meal_type'] = current_data.get('pediatric_meal_type')
+                data['guardian_meal_type'] = current_data.get('guardian_meal_type')
+            else:
+                data['pediatric_meal_type'] = data['guardian_meal_type'] = None
+    
+            data['requested_pediatric_meal_type'] = req.pediatric_meal_type
+            data['requested_guardian_meal_type'] = req.guardian_meal_type
+            data['status'] = 'PENDING'
+    
+        try:
+            upsert_res = await execute_with_retry_async(
+                db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time").select("*")
+            )
+            new_req_data = upsert_res.data[0] if upsert_res and upsert_res.data else None
+        except Exception as e:
+            if is_pgrst204_error(e):
+                get_logger().warning("Schema mismatch detected. Retrying without requested_* columns.")
+                data.pop('requested_pediatric_meal_type', None)
+                data.pop('requested_guardian_meal_type', None)
+                upsert_res = await execute_with_retry_async(
+                    db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time").select("*")
+                )
+>               new_req_data = upsert_res.data[0] if upsert_res and upsert_res.data else None
+                               ^^^^^^^^^^^^^^^^^^
+E               KeyError: 0
+
+services\meal_service.py:81: KeyError
+---------------------------- Captured stderr call -----------------------------
+2026-02-17 12:04:57 | WARNING  | services.meal_service:upsert_meal_request:75 - Schema mismatch detected. Retrying without requested_* columns.
+============================== warnings summary ===============================
+tests/test_dashboard_contract.py::test_dashboard_response_schema
+  C:\develop\eco_pediatrics\backend\tests\test_dashboard_contract.py:48: PydanticDeprecatedSince20: The `dict` method is deprecated; use `model_dump` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    print(f"Serialized: {model.dict()}")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_admissions_logic_mock.py::test_list_admissions_logic[asyncio]
+FAILED tests/test_meals_schema_fallback.py::test_upsert_meal_request_fallback_on_schema_error[asyncio]
+=================== 2 failed, 6 passed, 1 warning in 3.27s ====================

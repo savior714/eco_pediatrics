@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock
 from datetime import datetime, timedelta
 
-from routers.admissions import list_admissions
+from services.admission_service import list_active_admissions_enriched
 
 @pytest.fixture
 def mock_db():
@@ -11,7 +11,8 @@ def mock_db():
 @pytest.fixture
 def mock_execute(monkeypatch):
     m = AsyncMock()
-    monkeypatch.setattr("routers.admissions.execute_with_retry_async", m)
+    # Mocking in the service module now
+    monkeypatch.setattr("services.admission_service.execute_with_retry_async", m)
     return m
 
 @pytest.mark.anyio
@@ -62,7 +63,7 @@ async def test_list_admissions_logic(anyio_backend, mock_db, mock_execute):
     ]
 
     # Run the function
-    result = await list_admissions(mock_db)
+    result = await list_active_admissions_enriched(mock_db)
     
     # Verify Deduplication
     assert len(result) == 2, "Should have 2 unique admissions (Room 101, 102)"
@@ -104,7 +105,7 @@ async def test_fever_6h_boundary(anyio_backend, mock_db, mock_execute):
         MagicMock(data=[])  # Meals
     ]
 
-    result = await list_admissions(mock_db)
+    result = await list_active_admissions_enriched(mock_db)
 
     adm_within = next(r for r in result if r['id'] == 'adm_within')
     adm_outside = next(r for r in result if r['id'] == 'adm_outside')

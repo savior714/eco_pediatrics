@@ -25,55 +25,60 @@ async def create_audit_log(db: AsyncClient, actor_type: str, action: str, target
 
 async def execute_with_retry_async(query_builder):
     """
-    Executes a Supabase (Postgrest) async query with a retry policy.
+    Executes a Supabase (Postgrest) async query with a standardized retry policy.
 
     Retry Policy:
     - Max Retries: 3
     - Retryable Errors:
         - 5xx Server Errors (HTTP and APIError codes)
         - 429 Too Many Requests
-        - Network/Connection errors
-    - Non-retryable Errors:
+    - Fail-fast Errors:
         - 4xx Client Errors (except 429)
-    - Backoff: Exponential wait (0.5s * attempt)
+    - Backoff: Exponential with jitter (base 0.5s, cap 3s)
     """
+    import random
     max_retries = 3
     
     for attempt in range(max_retries):
         try:
             return await query_builder.execute()
         except Exception as e:
-            # Check for non-retryable errors first
+            # Categorize the error
+            is_retryable = False
+            error_status = None
+
             if isinstance(e, APIError):
-                # APIError.code could be a string status (e.g., "503") or a Postgres error code (e.g., "23505")
-                is_retryable = False
                 try:
-                    code_int = int(e.code)
-                    # Retry on 5xx Server Errors and 429 Too Many Requests
-                    if (500 <= code_int < 600) or (code_int == 429):
-                        is_retryable = True
+                    error_status = int(e.code)
                 except (ValueError, TypeError):
-                    pass
+                    # For non-numeric codes, only retry if it looks like a server/network error
+                    if any(term in str(e).lower() for term in ["network", "timeout", "connection"]):
+                        is_retryable = True
+            
+            elif isinstance(e, HTTPStatusError):
+                error_status = e.response.status_code
 
+            # Apply Policy: 429 and 5xx are retryable
+            if error_status:
+                if (500 <= error_status < 600) or (error_status == 429):
+                    is_retryable = True
+                elif 400 <= error_status < 500:
+                    # Fail-fast on 4xx (Auth, Not Found, etc.)
+                    logger.error(f"DB Client Error (Non-retryable {error_status}): {str(e)}")
+                    raise e
+
+            # Final check and backoff
+            if attempt == max_retries - 1 or not is_retryable:
                 if not is_retryable:
-                    logger.error(f"DB API Error (Non-retryable): {str(e)}")
-                    raise e
+                    logger.error(f"DB Error (Fail-fast): {str(e)}")
                 else:
-                    logger.warning(f"DB API Error (Retryable): {str(e)}. Retrying...")
-
-            if isinstance(e, HTTPStatusError):
-                status = e.response.status_code
-                # Fail on 4xx Client Errors, except 429 (Too Many Requests)
-                if 400 <= status < 500 and status != 429:
-                    logger.error(f"DB HTTP Client Error (Non-retryable): {str(e)}")
-                    raise e
-
-            # Retryable errors (5xx, Network, etc.)
-            if attempt == max_retries - 1:
-                logger.critical(f"DB Async Execute failed after {max_retries} attempts: {str(e)}")
+                    logger.critical(f"DB failed after {max_retries} attempts: {str(e)}")
                 raise e
-            logger.warning(f"DB async execute attempt {attempt+1} failed: {str(e)}. Retrying...")
-            await asyncio.sleep(0.5 * (attempt + 1))
+
+            # Exponential backoff with small jitter
+            wait_time = min(3.0, (0.5 * (2 ** attempt)) + (random.uniform(0, 0.1)))
+            logger.warning(f"DB retryable error ({error_status if error_status else 'Network'}). Attempt {attempt+1} failed. Retrying in {wait_time:.1f}s...")
+            await asyncio.sleep(wait_time)
 
 async def broadcast_to_station_and_patient(manager, message_dict: dict, token: str = None):
     """

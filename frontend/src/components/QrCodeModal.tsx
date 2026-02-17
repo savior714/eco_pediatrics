@@ -23,7 +23,7 @@ export function QrCodeModal({ isOpen, onClose, patientName, roomNumber, token }:
         }
     }, []);
 
-    const dashboardUrl = `${origin}/dashboard/${token}`;
+    const dashboardUrl = `${origin}/dashboard?token=${token}`;
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`보호자 대시보드 QR (${roomNumber}호 ${patientName})`}>

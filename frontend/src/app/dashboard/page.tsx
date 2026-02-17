@@ -1,51 +1,51 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense } from 'react';
 import Image from 'next/image';
 import { TemperatureGraph } from '@/components/TemperatureGraph';
 import { IVStatusCard } from '@/components/IVStatusCard';
-import { Utensils, FileText, CalendarCheck, Bell, Smartphone, Monitor } from 'lucide-react';
-import { useVitals } from '@/hooks/useVitals';
-import { api, API_BASE } from '@/lib/api';
+import { Utensils, FileText, CalendarCheck, Bell, Smartphone, Monitor, AlertCircle } from 'lucide-react';
+import { API_BASE } from '@/lib/api';
 import { MealRequestModal } from '@/components/MealRequestModal';
 import { DocumentRequestModal } from '@/components/DocumentRequestModal';
-import { calculateHospitalDay, getNextThreeMealSlots, formatPatientDemographics } from '@/utils/dateUtils';
+import { getNextThreeMealSlots, formatPatientDemographics } from '@/utils/dateUtils';
+import { useDashboardStats } from '@/hooks/useDashboardStats';
+import { NoticeItem } from '@/components/dashboard/NoticeItem';
+import { ExamScheduleItem } from '@/components/dashboard/ExamScheduleItem';
 
-export default function Dashboard({ params }: { params: { token: string } }) {
-    const { token } = params;
-    const { vitals, isConnected, admissionId, patientName, checkInAt, roomNumber, dob, gender, meals, examSchedules, ivRecords, documentRequests, refetchDashboard } = useVitals(token);
-    const [isMealModalOpen, setIsMealModalOpen] = useState(false);
-    const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+function formatExamDate(iso: string): string {
+    const d = new Date(iso);
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    const week = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+    return `${m.toString().padStart(2, '0')}.${day.toString().padStart(2, '0')} (${week})`;
+}
 
-    const latestIv = ivRecords.length > 0 ? ivRecords[0] : null;
+function formatExamTime(iso: string): string {
+    const d = new Date(iso);
+    const h = d.getHours();
+    const m = d.getMinutes();
+    if (h < 12) return `오전 ${h === 0 ? 12 : h}${m ? `:${m.toString().padStart(2, '0')}` : ':00'}`;
+    return `오후 ${h === 12 ? 12 : h - 12}${m ? `:${m.toString().padStart(2, '0')}` : ':00'}`;
+}
 
-    const STORAGE_KEY = 'dashboardViewMode';
-    type ViewMode = 'mobile' | 'desktop';
-    const [viewMode, setViewMode] = useState<ViewMode>('mobile');
+function DashboardContent() {
+    const {
+        token, vitalsData, latestIv, currentMealLabel, currentDocLabels,
+        viewMode, modalState, actions
+    } = useDashboardStats();
 
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const v = localStorage.getItem(STORAGE_KEY);
-            setViewMode(v === 'desktop' ? 'desktop' : 'mobile');
-        }
-    }, []);
-
-    const setViewModeAndStore = (mode: ViewMode) => {
-        setViewMode(mode);
-        try { localStorage.setItem(STORAGE_KEY, mode); } catch (_) { }
-    };
-
-    const mealLabel: Record<string, string> = { GENERAL: '일반식', SOFT: '죽', NPO: '금식' };
-    const currentMeal = meals.length > 0 ? meals[0] : null;
-    const currentMealLabel = currentMeal
-        ? (currentMeal.request_type === 'STATION_UPDATE'
-            ? (currentMeal.pediatric_meal_type || '일반식')
-            : (mealLabel[currentMeal.request_type] ?? currentMeal.request_type))
-        : null;
-    const docLabel: Record<string, string> = { RECEIPT: '진료비 계산서(영수증)', DETAIL: '진료비 세부내역서', CERT: '입퇴원확인서', DIAGNOSIS: '진단서', INITIAL: '초진기록지' };
-    const latestDocRequest = documentRequests.length > 0 ? documentRequests[0] : null;
-    const currentDocLabels = latestDocRequest?.request_items?.map((id: string) => docLabel[id] || id) ?? [];
     const isDesktop = viewMode === 'desktop';
+
+    if (!token) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-red-50 p-4 text-center">
+                <AlertCircle size={40} className="text-red-600 mb-4" />
+                <h1 className="text-xl font-bold text-red-800">잘못된 접근입니다.</h1>
+                <p className="text-red-600">유효한 토큰이 포함된 관리 페이지 주소로 접속해 주세요.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen min-h-[100dvh] bg-slate-100 w-full">
@@ -69,15 +69,15 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                         <div className="min-w-0">
                             <div className="flex items-baseline gap-2 md:gap-3">
                                 <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight shrink-0">
-                                    {patientName || 'Loading...'}
+                                    {vitalsData.patientName || 'Loading...'}
                                 </h1>
                                 <p className="text-slate-500 text-sm md:text-base font-bold flex items-center gap-2 whitespace-nowrap" suppressHydrationWarning>
-                                    <span className="text-slate-400">{roomNumber ? `${roomNumber}호` : '...'}</span>
-                                    {dob && (
+                                    <span className="text-slate-400">{vitalsData.roomNumber ? `${vitalsData.roomNumber}호` : '...'}</span>
+                                    {vitalsData.dob && (
                                         <>
                                             <span className="w-1 md:w-1.5 h-1 md:h-1.5 bg-slate-200 rounded-full shrink-0" />
-                                            <span className={`font-extrabold ${gender === 'M' ? 'text-blue-500' : gender === 'F' ? 'text-rose-500' : 'text-slate-500'}`}>
-                                                {formatPatientDemographics(dob, gender)}
+                                            <span className={`font-extrabold ${vitalsData.gender === 'M' ? 'text-blue-500' : vitalsData.gender === 'F' ? 'text-rose-500' : 'text-slate-500'}`}>
+                                                {formatPatientDemographics(vitalsData.dob, vitalsData.gender)}
                                             </span>
                                         </>
                                     )}
@@ -109,14 +109,11 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                         paddingRight: 'max(1rem, env(safe-area-inset-right))',
                     }}
                 >
-                    {/* Left Column (Desktop) */}
                     <div className="flex flex-col gap-6">
-                        {/* 체온 차트 - 모바일: 맨 위, PC: 왼쪽 */}
                         <section>
-                            <TemperatureGraph data={vitals} checkInAt={checkInAt} />
+                            <TemperatureGraph data={vitalsData.vitals} checkInAt={vitalsData.checkInAt} />
                         </section>
 
-                        {/* 수액 안전 모니터링 */}
                         <section>
                             <IVStatusCard
                                 photoUrl={latestIv?.photo_url ? (latestIv.photo_url.startsWith('/') ? `${API_BASE}${latestIv.photo_url}` : latestIv.photo_url) : ""}
@@ -126,10 +123,7 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                         </section>
                     </div>
 
-                    {/* Right Column (Desktop) */}
                     <div className="flex flex-col gap-6">
-
-                        {/* 아침, 점심, 저녁 식단 쪼개기 */}
                         <section className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2.5">
@@ -139,7 +133,7 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                                     오늘의 식단
                                 </h3>
                                 <button
-                                    onClick={() => setIsMealModalOpen(true)}
+                                    onClick={() => actions.setIsMealModalOpen(true)}
                                     className="shrink-0 h-9 px-4 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold rounded-xl text-sm transition-colors active:scale-[0.98] touch-manipulation"
                                 >
                                     식단 변경
@@ -148,24 +142,19 @@ export default function Dashboard({ params }: { params: { token: string } }) {
 
                             <div className="grid grid-cols-3 gap-2">
                                 {getNextThreeMealSlots().map((slot) => {
-                                    const meal = meals.find(m => m.meal_date === slot.date && m.meal_time === slot.meal_time);
-                                    const labelText = meal
-                                        ? (meal.pediatric_meal_type || '일반식')
-                                        : '신청전';
+                                    const meal = vitalsData.meals.find(m => m.meal_date === slot.date && m.meal_time === slot.meal_time);
+                                    const labelText = meal ? (meal.pediatric_meal_type || '일반식') : '신청전';
 
                                     return (
                                         <div key={slot.label} className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
                                             <span className="text-[10px] text-slate-400 block mb-1 font-bold">{slot.label}</span>
-                                            <span className="text-xs font-bold text-slate-600 truncate block">
-                                                {labelText}
-                                            </span>
+                                            <span className="text-xs font-bold text-slate-600 truncate block">{labelText}</span>
                                         </div>
                                     );
                                 })}
                             </div>
                         </section>
 
-                        {/* 앞으로의 검사 일정 */}
                         <section className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
                             <h3 className="text-base font-bold text-slate-800 mb-3 flex items-center gap-2.5">
                                 <span className="w-9 h-9 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center shrink-0">
@@ -174,10 +163,10 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                                 앞으로의 검사 일정
                             </h3>
                             <div className="space-y-2">
-                                {examSchedules.length === 0 ? (
+                                {vitalsData.examSchedules.length === 0 ? (
                                     <p className="text-slate-400 text-sm py-2">등록된 검사 일정이 없습니다.</p>
                                 ) : (
-                                    examSchedules.map((ex: { id: number; scheduled_at: string; name: string; note?: string }) => (
+                                    vitalsData.examSchedules.map((ex) => (
                                         <ExamScheduleItem
                                             key={ex.id}
                                             date={formatExamDate(ex.scheduled_at)}
@@ -191,8 +180,6 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                             <p className="text-xs text-slate-400 mt-3">* 일정은 약간의 변동이 있을 수 있으며, 궁금점은 스테이션에 문의 바랍니다.</p>
                         </section>
 
-
-                        {/* 서류 신청 */}
                         <section className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
                             <div className="flex items-center justify-between mb-3">
                                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2.5">
@@ -202,7 +189,7 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                                     퇴원 전 서류 신청
                                 </h3>
                                 <button
-                                    onClick={() => setIsDocModalOpen(true)}
+                                    onClick={() => actions.setIsDocModalOpen(true)}
                                     className="h-9 px-4 bg-sky-500 hover:bg-sky-600 text-white font-semibold rounded-xl text-sm transition-colors active:scale-[0.98] touch-manipulation"
                                 >
                                     추가 신청
@@ -223,7 +210,6 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                             <p className="text-xs text-slate-400">미리 신청하시면 퇴원 수속이 빨라집니다.</p>
                         </section>
 
-                        {/* 병원 공지사항 */}
                         <section className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
                             <h3 className="text-base font-bold text-slate-800 mb-3 flex items-center gap-2.5">
                                 <span className="w-9 h-9 bg-teal-100 text-teal-600 rounded-xl flex items-center justify-center shrink-0">
@@ -240,26 +226,25 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                 </main>
 
                 <MealRequestModal
-                    isOpen={isMealModalOpen}
-                    onClose={() => setIsMealModalOpen(false)}
-                    admissionId={admissionId}
-                    onSuccess={() => { refetchDashboard(); setIsMealModalOpen(false); }}
+                    isOpen={modalState.isMealModalOpen}
+                    onClose={() => actions.setIsMealModalOpen(false)}
+                    admissionId={vitalsData.admissionId}
+                    onSuccess={() => { actions.refetch(); actions.setIsMealModalOpen(false); }}
                 />
 
                 <DocumentRequestModal
-                    isOpen={isDocModalOpen}
-                    onClose={() => setIsDocModalOpen(false)}
-                    admissionId={admissionId}
+                    isOpen={modalState.isDocModalOpen}
+                    onClose={() => actions.setIsDocModalOpen(false)}
+                    admissionId={vitalsData.admissionId}
                     token={token}
-                    onSuccess={() => { refetchDashboard(); }}
+                    onSuccess={() => { actions.refetch(); }}
                 />
 
-                {/* Footer View Mode Toggle */}
                 <footer className="py-6 flex justify-center pb-8 mt-4">
                     <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm" role="group" aria-label="보기 모드">
                         <button
                             type="button"
-                            onClick={() => setViewModeAndStore('mobile')}
+                            onClick={() => actions.setViewModeAndStore('mobile')}
                             className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${!isDesktop ? 'bg-slate-100 text-slate-900 shadow-inner' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
                         >
                             <Smartphone size={16} />
@@ -267,7 +252,7 @@ export default function Dashboard({ params }: { params: { token: string } }) {
                         </button>
                         <button
                             type="button"
-                            onClick={() => setViewModeAndStore('desktop')}
+                            onClick={() => actions.setViewModeAndStore('desktop')}
                             className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isDesktop ? 'bg-slate-100 text-slate-900 shadow-inner' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
                         >
                             <Monitor size={16} />
@@ -280,42 +265,10 @@ export default function Dashboard({ params }: { params: { token: string } }) {
     );
 }
 
-function formatExamDate(iso: string): string {
-    const d = new Date(iso);
-    const m = d.getMonth() + 1;
-    const day = d.getDate();
-    const week = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
-    return `${m.toString().padStart(2, '0')}.${day.toString().padStart(2, '0')} (${week})`;
-}
-
-function formatExamTime(iso: string): string {
-    const d = new Date(iso);
-    const h = d.getHours();
-    const m = d.getMinutes();
-    if (h < 12) return `오전 ${h === 0 ? 12 : h}${m ? `:${m.toString().padStart(2, '0')}` : ':00'}`;
-    return `오후 ${h === 12 ? 12 : h - 12}${m ? `:${m.toString().padStart(2, '0')}` : ':00'}`;
-}
-
-function NoticeItem({ text, date }: { text: string; date: string }) {
+export default function Dashboard() {
     return (
-        <div className="flex items-start justify-between gap-3 p-3 bg-slate-50 rounded-xl active:bg-slate-100 transition-colors min-h-[44px]">
-            <p className="text-sm text-slate-700 font-medium line-clamp-2">{text}</p>
-            <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap shrink-0">{date}</span>
-        </div>
-    );
-}
-
-function ExamScheduleItem({ date, time, name, note }: { date: string; time: string; name: string; note: string }) {
-    return (
-        <div className="flex gap-3 p-3 bg-violet-50/60 rounded-xl border border-violet-100 min-h-[44px]">
-            <div className="shrink-0 text-center min-w-[4rem]">
-                <p className="text-xs font-bold text-violet-600">{date}</p>
-                <p className="text-[10px] text-slate-500">{time}</p>
-            </div>
-            <div className="min-w-0 flex-1">
-                <p className="font-medium text-slate-800 text-sm">{name}</p>
-                {note ? <p className="text-xs text-slate-500 mt-0.5">{note}</p> : null}
-            </div>
-        </div>
+        <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center">Loading...</div>}>
+            <DashboardContent />
+        </Suspense>
     );
 }

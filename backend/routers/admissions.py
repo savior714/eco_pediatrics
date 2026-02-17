@@ -1,11 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from supabase._async.client import AsyncClient
 from typing import List
-import asyncio
-from websocket_manager import manager
 
 from dependencies import get_supabase
-from utils import execute_with_retry_async, mask_name, create_audit_log, broadcast_to_station_and_patient
+from services import admission_service
 from services.dashboard import fetch_dashboard_data
 from models import Admission, AdmissionCreate, TransferRequest
 from schemas import DashboardResponse
@@ -14,237 +12,19 @@ router = APIRouter()
 
 @router.post("/{admission_id}/transfer")
 async def transfer_patient(admission_id: str, req: TransferRequest, db: AsyncClient = Depends(get_supabase)):
-    # 1. Check target room availability
-    res = await execute_with_retry_async(
-        db.table("admissions")
-        .select("id")
-        .eq("room_number", req.target_room)
-        .in_("status", ["IN_PROGRESS", "OBSERVATION"])
-    )
-    if res.data:
-        raise HTTPException(status_code=400, detail=f"Room {req.target_room} is currently occupied.")
-
-    # 2. Get current room (OLD) - BEFORE update
-    current_res = await execute_with_retry_async(db.table("admissions").select("room_number, access_token").eq("id", admission_id).single())
-    if not current_res.data:
-        raise HTTPException(status_code=404, detail="Admission not found")
-        
-    old_room = current_res.data['room_number']
-    token = current_res.data['access_token']
-
-    # 3. Update room (NEW)
-    await execute_with_retry_async(
-        db.table("admissions")
-        .update({"room_number": req.target_room})
-        .eq("id", admission_id)
-    )
-    
-    # 4. Audit & Broadcast in parallel
-    msg = {
-        "type": "ADMISSION_TRANSFERRED",
-        "data": {
-            "admission_id": admission_id,
-            "old_room": old_room,
-            "new_room": req.target_room
-        }
-    }
-    await asyncio.gather(
-        create_audit_log(db, "NURSE", "TRANSFER", admission_id, f"From {old_room} To {req.target_room}"),
-        broadcast_to_station_and_patient(manager, msg, token)
-    )
-
-    return {"message": "Transferred successfully"}
+    return await admission_service.transfer_patient(db, admission_id, req)
 
 @router.post("/{admission_id}/discharge")
 async def discharge_patient(admission_id: str, db: AsyncClient = Depends(get_supabase)):
-    from datetime import datetime
-    now = datetime.now().isoformat()
-    
-    await execute_with_retry_async(
-        db.table("admissions")
-        .update({"status": "DISCHARGED", "discharged_at": now})
-        .eq("id", admission_id)
-    )
-    
-    # 4. Broadcast & Audit
-    adm_res = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", admission_id))
-    if adm_res.data:
-        token = adm_res.data[0]['access_token']
-        room = adm_res.data[0]['room_number']
-        msg = {
-            "type": "ADMISSION_DISCHARGED",
-            "data": {
-                "admission_id": admission_id,
-                "room": room
-            }
-        }
-        await asyncio.gather(
-            create_audit_log(db, "NURSE", "DISCHARGE", admission_id),
-            broadcast_to_station_and_patient(manager, msg, token)
-        )
-    else:
-        await create_audit_log(db, "NURSE", "DISCHARGE", admission_id)
-
-    return {"message": "Discharged successfully"}
-
+    return await admission_service.discharge_patient(db, admission_id)
 
 @router.post("", response_model=Admission)
 async def create_admission(admission: AdmissionCreate, db: AsyncClient = Depends(get_supabase)):
-    masked_name = mask_name(admission.patient_name)
-    data = {
-        "patient_name_masked": masked_name,
-        "room_number": admission.room_number,
-        "status": "IN_PROGRESS",
-        "dob": admission.dob.isoformat() if admission.dob else None,
-        "gender": admission.gender
-    }
-    if admission.check_in_at:
-        data["check_in_at"] = admission.check_in_at.isoformat()
-
-    response = await execute_with_retry_async(db.table("admissions").insert(data))
-    new_admission = response.data[0]
-    await create_audit_log(db, "NURSE", "CREATE", new_admission['id'])
-    return new_admission
+    return await admission_service.create_admission(db, admission)
 
 @router.get("", response_model=List[dict])
 async def list_admissions(db: AsyncClient = Depends(get_supabase)):
-    # 1. Get active admissions with async retry
-    res = await execute_with_retry_async(db.table("admissions").select("*").in_("status", ["IN_PROGRESS", "OBSERVATION"]))
-    admissions = res.data or []
-    
-    # 2. Deduplicate: sort by check_in_at desc (latest first) and keep first per room
-    admissions.sort(key=lambda x: x.get('check_in_at') or x.get('created_at') or '', reverse=True)
-    
-    unique_map = {}
-    for adm in admissions:
-        room = adm['room_number']
-        if room not in unique_map:
-            unique_map[room] = adm
-    
-    unique_admissions = list(unique_map.values())
-    
-    # 3. Enrich in parallel (Phase A)
-    admission_ids = [adm['id'] for adm in unique_admissions]
-    iv_map = {}
-    vital_map = {}
-    meal_map = {}
-
-    if admission_ids:
-        from datetime import datetime, timedelta, timezone
-
-        # ⚡ Bolt Optimization: Limit fetch history to prevent large payloads
-        # Vitals: Last 5 days (covers longer admissions for fever check)
-        # Meals: Last 3 days covers recent history
-        # IVs: Last 7 days covers most active IVs
-        now_utc = datetime.now(timezone.utc)
-        cutoff_vitals = (now_utc - timedelta(days=5)).isoformat()
-        cutoff_meals = (now_utc - timedelta(days=3)).isoformat()
-        cutoff_iv = (now_utc - timedelta(days=7)).isoformat()
-
-        # Define tasks
-        async def fetch_iv():
-            res = await execute_with_retry_async(
-                db.table("iv_records")
-                .select("admission_id, infusion_rate, photo_url, created_at")
-                .in_("admission_id", admission_ids)
-                .gte("created_at", cutoff_iv)
-                .order("created_at", desc=True)
-                .order("id", desc=True) # Secondary sort for stability
-            )
-            return res.data or []
-
-        async def fetch_vitals():
-            res = await execute_with_retry_async(
-                db.table("vital_signs")
-                .select("admission_id, temperature, recorded_at")
-                .in_("admission_id", admission_ids)
-                .gte("recorded_at", cutoff_vitals)
-                .order("recorded_at", desc=True)
-            )
-            return res.data or []
-
-        async def fetch_meals():
-            res = await execute_with_retry_async(
-                db.table("meal_requests")
-                .select("admission_id, request_type, pediatric_meal_type, guardian_meal_type, room_note, created_at")
-                .in_("admission_id", admission_ids)
-                .gte("created_at", cutoff_meals)
-                .order("id", desc=True)
-            )
-            return res.data or []
-
-        # Execute in parallel
-        all_ivs, all_vitals, all_meals = await asyncio.gather(
-            fetch_iv(),
-            fetch_vitals(),
-            fetch_meals()
-        )
-
-        # Process IVs
-        for iv in all_ivs:
-            aid = iv['admission_id']
-            if aid not in iv_map:
-                iv_map[aid] = iv
-
-        # Process Vitals
-        # Reuse now_utc from above
-        six_hours_ago = now_utc - timedelta(hours=6)
-
-        for v in all_vitals:
-            aid = v['admission_id']
-            
-            # Initialize with latest
-            if aid not in vital_map:
-                vital_map[aid] = {
-                    'latest_temp': v['temperature'],
-                    'last_vital_at': v['recorded_at'],
-                    'had_fever_in_6h': False
-                }
-            
-            # Check fever
-            if not vital_map[aid]['had_fever_in_6h']:
-                rec_at_str = v.get('recorded_at')
-                if rec_at_str and v['temperature'] >= 38.0:
-                    try:
-                        # Handle 'Z' suffix and other ISO formats
-                        clean_iso = rec_at_str.replace('Z', '+00:00')
-                        rec_at_dt = datetime.fromisoformat(clean_iso)
-
-                        # Ensure comparison is between aware datetimes
-                        if rec_at_dt.tzinfo is None:
-                            rec_at_dt = rec_at_dt.replace(tzinfo=timezone.utc)
-
-                        if rec_at_dt >= six_hours_ago:
-                            vital_map[aid]['had_fever_in_6h'] = True
-                    except (ValueError, TypeError):
-                        # Fallback for unexpected formats
-                        six_hours_ago_iso = (datetime.now() - timedelta(hours=6)).isoformat()
-                        if rec_at_str >= six_hours_ago_iso:
-                            vital_map[aid]['had_fever_in_6h'] = True
-
-        # Process Meals
-        for m in all_meals:
-            aid = m['admission_id']
-            if aid not in meal_map:
-                meal_map[aid] = m
-
-    for adm in unique_admissions:
-        adm['latest_iv'] = iv_map.get(adm['id'])
-        adm['display_name'] = adm.get('patient_name_masked', '')
-        
-        v_data = vital_map.get(adm['id'])
-        if v_data:
-            adm['latest_temp'] = v_data['latest_temp']
-            adm['last_vital_at'] = v_data['last_vital_at']
-            adm['had_fever_in_6h'] = v_data['had_fever_in_6h']
-        else:
-            adm['latest_temp'] = None
-            adm['last_vital_at'] = None
-            adm['had_fever_in_6h'] = False
-            
-        adm['latest_meal'] = meal_map.get(adm['id'])
-            
-    return unique_admissions
+    return await admission_service.list_active_admissions_enriched(db)
 
 @router.get("/{admission_id}/dashboard", response_model=DashboardResponse)
 async def get_dashboard_data_by_id(admission_id: str, db: AsyncClient = Depends(get_supabase)):

@@ -1,0 +1,23 @@
+
+> pid-frontend@0.1.0 build
+> next build
+
+  ??Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ??Compiled successfully
+   Linting and checking validity of types ...
+Failed to compile.
+
+./src/app/station/page.tsx:224:116
+Type error: Expected 1 arguments, but got 3.
+
+  222 |                     bed={selectedBed}
+  223 |                     notifications={notifications}
+> 224 |                     onCompleteRequest={(id: string, type?: string, admissionId?: string) => removeNotification(id, type, admissionId)}
+      |                                                                                                                    ^
+  225 |                     lastUploadedIv={lastUploadedIv}
+  226 |                     onIVUploadSuccess={(rate) => {
+  227 |                         if (rate !== undefined && selectedRoom) {
+Next.js build worker exited with code: 1 and signal: null

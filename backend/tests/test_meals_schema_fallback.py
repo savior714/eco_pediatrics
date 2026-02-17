@@ -1,11 +1,12 @@
 import pytest
+import copy
 from unittest.mock import AsyncMock, patch, MagicMock
 from postgrest.exceptions import APIError
 from datetime import date
 from models import MealRequestCreate, MealTime
 
-# Import the function to test
-from routers.meals import upsert_meal_request
+# Import the function from the service
+from services.meal_service import upsert_meal_request
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("anyio_backend", ["asyncio"])
@@ -32,7 +33,6 @@ async def test_upsert_meal_request_fallback_on_schema_error(anyio_backend):
     mock_query_builder.lte.return_value = mock_query_builder
     mock_query_builder.order.return_value = mock_query_builder
     mock_query_builder.single.return_value = mock_query_builder
-    # mock_query_builder.upsert.return_value = mock_query_builder # Remove this, use side_effect below
 
     # Create an APIError instance simulating the schema error
     error_dict = {
@@ -43,40 +43,28 @@ async def test_upsert_meal_request_fallback_on_schema_error(anyio_backend):
     }
     schema_error = APIError(error_dict)
 
-    # Patch execute_with_retry_async in routers.meals
-    with patch("routers.meals.execute_with_retry_async", new_callable=AsyncMock) as mock_execute:
-        # Define side effects for execute_with_retry_async
-        # 1. Select current record -> Success (empty data)
-        # 2. Upsert -> Fails with schema_error
-        # 3. Upsert (Retry) -> Success
-        # 4. Select admission (for broadcast) -> Success (or None)
-
+    # Patch execute_with_retry_async in services.meal_service
+    with patch("services.meal_service.execute_with_retry_async", new_callable=AsyncMock) as mock_execute:
         mock_execute.side_effect = [
             AsyncMock(data=[]),         # 1. Check existing
             schema_error,               # 2. Upsert fails
-            AsyncMock(data={"id": "123"}), # 3. Upsert retry succeeds
+            AsyncMock(data=[{"id": "123"}]), # 3. Upsert retry succeeds
             AsyncMock(data=None)        # 4. Broadcast info fetch
         ]
 
-        # Capture upsert args because data is mutated in place
         captured_upsert_args = []
         def capture_upsert_args(data, **kwargs):
-            import copy
             captured_upsert_args.append(copy.deepcopy(data))
             return mock_query_builder
 
         mock_query_builder.upsert.side_effect = capture_upsert_args
 
-        # Also patch manager.broadcast to avoid errors during broadcast logic
-        with patch("routers.meals.manager.broadcast", new_callable=AsyncMock):
-             await upsert_meal_request(req, mock_db)
+        # Also patch broadcast_to_station_and_patient in services.meal_service
+        with patch("services.meal_service.broadcast_to_station_and_patient", new_callable=AsyncMock):
+             await upsert_meal_request(mock_db, req)
 
         # Verification
-
-        # Verify execute_with_retry_async was called at least 3 times
         assert mock_execute.call_count >= 3
-
-        # Verify db.table("meal_requests").upsert(...) was called twice
         assert len(captured_upsert_args) == 2
 
         # First upsert call (failed one)

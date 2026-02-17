@@ -1,5 +1,27 @@
 // Export constant for use elsewhere if needed, but prefer using api instance
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+
+// Detect Tauri environment
+const isTauri = typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__;
+
+// Lazy-load Tauri plugins to avoid issues in browser/node environments
+const getTauriFetch = async () => {
+    if (!isTauri) return window.fetch;
+    const { fetch } = await import('@tauri-apps/plugin-http');
+    return fetch;
+};
+
+const tauriLog = async (level: 'info' | 'warn' | 'error' | 'debug', message: string) => {
+    if (isTauri) {
+        try {
+            const { info, warn, error, debug } = await import('@tauri-apps/plugin-log');
+            const logMap = { info, warn, error, debug };
+            logMap[level](`[Frontend] ${message}`);
+        } catch (e) {
+            console.error('Failed to log to Tauri:', e);
+        }
+    }
+};
 
 class ApiClient {
     private baseUrl: string;
@@ -10,25 +32,39 @@ class ApiClient {
 
     private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
         const url = `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-        const res = await fetch(url, {
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options?.headers,
-            },
-        });
 
-        if (!res.ok) {
-            const errorText = await res.text().catch(() => 'Unknown error');
-            throw new Error(`API Error ${res.status}: ${errorText}`);
+        // Use Tauri Native Fetch if available (Bypasses CORS/CSP)
+        const fetchFn = await getTauriFetch();
+
+        await tauriLog('info', `Requesting: ${options?.method || 'GET'} ${url}`);
+
+        try {
+            const res = await fetchFn(url, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options?.headers,
+                },
+            });
+
+            if (!res.ok) {
+                const errorText = await res.text().catch(() => 'Unknown error');
+                const errorMsg = `API Error ${res.status}: ${errorText}`;
+                console.error(errorMsg);
+                await tauriLog('error', `API Failure: ${options?.method || 'GET'} ${url} -> ${errorMsg}`);
+                throw new Error(errorMsg);
+            }
+
+            // Return empty object for 204 No Content, otherwise JSON
+            if (res.status === 204) return {} as T;
+
+            // Check if response has content
+            const text = await res.text();
+            return text ? JSON.parse(text) : ({} as T);
+        } catch (err: any) {
+            await tauriLog('error', `Fetch Fatal: ${options?.method || 'GET'} ${url} -> ${err.message}`);
+            throw err;
         }
-
-        // Return empty object for 204 No Content, otherwise JSON
-        if (res.status === 204) return {} as T;
-
-        // Check if response has content
-        const text = await res.text();
-        return text ? JSON.parse(text) : ({} as T);
     }
 
     get<T>(endpoint: string, options?: RequestInit): Promise<T> {

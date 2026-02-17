@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState, ChangeEvent } from 'react';
-import { Upload, Camera, Check, AlertCircle } from 'lucide-react';
+import React, { useState, ChangeEvent, Suspense } from 'react';
+import { Camera, Check, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-export default function MobileIVUpload({ params }: { params: { token: string } }) {
-    const { token } = params;
+function IVUploadContent() {
+    const searchParams = useSearchParams();
+    const token = searchParams.get('token');
+
     const [file, setFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -38,7 +41,7 @@ export default function MobileIVUpload({ params }: { params: { token: string } }
     };
 
     const handleUpload = async () => {
-        if (!file) return;
+        if (!file || !token) return;
 
         setUploading(true);
         setError(null);
@@ -63,6 +66,16 @@ export default function MobileIVUpload({ params }: { params: { token: string } }
             setUploading(false);
         }
     };
+
+    if (!token) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-red-50 p-4 text-center">
+                <AlertCircle size={40} className="text-red-600 mb-4" />
+                <h1 className="text-xl font-bold text-red-800">잘못된 접근입니다.</h1>
+                <p className="text-red-600">유효한 토큰이 포함된 QR코드를 다시 스캔해 주세요.</p>
+            </div>
+        );
+    }
 
     if (success) {
         return (
@@ -130,5 +143,13 @@ export default function MobileIVUpload({ params }: { params: { token: string } }
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function MobileIVUpload() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center">Loading...</div>}>
+            <IVUploadContent />
+        </Suspense>
     );
 }
