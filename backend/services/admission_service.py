@@ -69,6 +69,11 @@ async def create_admission(db: AsyncClient, admission: AdmissionCreate, ip_addre
         }).execute()
         return res.data
     except Exception as e:
+        # APIError(RLS violation 등)인 경우 더 상세한 메시지 제공
+        if "row-level security policy" in str(e).lower():
+            logger.error(f"RLS Violation during admission creation: {e}")
+            raise HTTPException(status_code=403, detail="Database Role Policy Violation. Please check if SQL functions are updated with SECURITY DEFINER.")
+        
         logger.error(f"Create admission RPC failed: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
