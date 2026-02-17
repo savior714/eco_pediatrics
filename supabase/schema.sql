@@ -211,3 +211,97 @@ FOR INSERT WITH CHECK (
   )
 );
 CREATE POLICY "Staff can manage all patient meal overrides" ON patient_meal_overrides FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+-- // ... existing policies ....
+
+-- 13. 핵심 트랜잭션 함수 (RPC)
+-- SECURITY DEFINER를 사용하여 백엔드(anon)에서도 RLS를 우회하여 입원 처리가 가능하도록 함
+
+-- A. 입원 등록
+CREATE OR REPLACE FUNCTION create_admission_transaction(
+    p_patient_name_masked TEXT,
+    p_room_number TEXT,
+    p_dob DATE,
+    p_gender TEXT,
+    p_check_in_at TIMESTAMPTZ,
+    p_actor_type TEXT,
+    p_ip_address TEXT
+) RETURNS JSON AS $$
+DECLARE
+    v_admission_id UUID;
+    v_token UUID;
+BEGIN
+    INSERT INTO admissions (
+        patient_name_masked, 
+        room_number, 
+        status, 
+        dob, 
+        gender, 
+        check_in_at
+    ) VALUES (
+        p_patient_name_masked,
+        p_room_number,
+        'IN_PROGRESS',
+        p_dob,
+        p_gender,
+        COALESCE(p_check_in_at, NOW())
+    ) RETURNING id, access_token INTO v_admission_id, v_token;
+
+    INSERT INTO audit_logs (actor_type, action, target_id, ip_address)
+    VALUES (p_actor_type, 'CREATE', v_admission_id, p_ip_address);
+
+    RETURN json_build_object('id', v_admission_id, 'access_token', v_token);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- B. 전실 (방 이동)
+CREATE OR REPLACE FUNCTION transfer_patient_transaction(
+    p_admission_id UUID,
+    p_target_room TEXT,
+    p_actor_type TEXT,
+    p_ip_address TEXT
+) RETURNS JSON AS $$
+DECLARE
+    v_old_room TEXT;
+    v_token UUID;
+BEGIN
+    IF EXISTS (SELECT 1 FROM admissions WHERE room_number = p_target_room AND status = 'IN_PROGRESS') THEN
+        RAISE EXCEPTION 'Room % is occupied', p_target_room;
+    END IF;
+
+    SELECT room_number, access_token INTO v_old_room, v_token
+    FROM admissions WHERE id = p_admission_id AND status = 'IN_PROGRESS' FOR UPDATE;
+
+    IF NOT FOUND THEN RAISE EXCEPTION 'Active admission not found'; END IF;
+
+    UPDATE admissions SET room_number = p_target_room, discharged_at = NULL WHERE id = p_admission_id;
+
+    INSERT INTO audit_logs (actor_type, action, target_id, ip_address)
+    VALUES (p_actor_type, 'TRANSFER', p_admission_id, p_ip_address);
+
+    RETURN json_build_object('admission_id', p_admission_id, 'old_room', v_old_room, 'new_room', p_target_room, 'token', v_token);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- C. 퇴원 처리
+CREATE OR REPLACE FUNCTION discharge_patient_transaction(
+    p_admission_id UUID,
+    p_actor_type TEXT,
+    p_ip_address TEXT
+) RETURNS JSON AS $$
+DECLARE
+    v_room TEXT;
+    v_token UUID;
+BEGIN
+    UPDATE admissions
+    SET status = 'DISCHARGED', discharged_at = NOW()
+    WHERE id = p_admission_id AND status = 'IN_PROGRESS'
+    RETURNING room_number, access_token INTO v_room, v_token;
+
+    IF NOT FOUND THEN RAISE EXCEPTION 'Active admission not found'; END IF;
+
+    INSERT INTO audit_logs (actor_type, action, target_id, ip_address)
+    VALUES (p_actor_type, 'DISCHARGE', p_admission_id, p_ip_address);
+
+    RETURN json_build_object('admission_id', p_admission_id, 'room', v_room, 'token', v_token);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
