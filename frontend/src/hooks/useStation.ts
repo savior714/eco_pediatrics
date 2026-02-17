@@ -13,6 +13,7 @@ interface UseStationReturn {
     lastUpdated: number;
     isConnected: boolean;
     removeNotification: (id: string, type?: string, admissionId?: string) => void;
+    fetchAdmissions: () => void;
 }
 
 export function useStation(): UseStationReturn {
@@ -112,7 +113,7 @@ export function useStation(): UseStationReturn {
                             return {
                                 ...bed,
                                 latest_meal: {
-                                    id: Math.floor(Math.random() * 1000), // This ID is for internal use, not DB ID
+                                    id: message.data.id, // Use actual server/DB ID from message
                                     admission_id: message.data.admission_id,
                                     request_type: message.data.request_type,
                                     pediatric_meal_type: message.data.pediatric_meal_type,
@@ -227,6 +228,7 @@ export function useStation(): UseStationReturn {
         lastUploadedIv,
         lastUpdated,
         isConnected,
-        removeNotification
+        removeNotification,
+        fetchAdmissions
     };
 }

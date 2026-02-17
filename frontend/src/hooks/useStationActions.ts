@@ -5,7 +5,7 @@ import { useStation } from './useStation';
 
 export function useStationActions() {
     const stationData = useStation();
-    const { beds, setBeds, notifications, removeNotification } = stationData;
+    const { beds, setBeds, notifications, removeNotification, fetchAdmissions } = stationData;
 
     const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
     const [qrBed, setQrBed] = useState<Bed | null>(null);
@@ -48,12 +48,12 @@ export function useStationActions() {
 
             alert('입원 수속이 완료되었습니다.');
             setAdmitRoom(null);
-            window.location.reload();
+            fetchAdmissions(); // Replace reload with state refresh
         } catch (e: any) {
             console.error(e);
             alert(`입원 처리 실패: ${e.message || '알 수 없는 오류'}`);
         }
-    }, [admitRoom]);
+    }, [admitRoom, fetchAdmissions]);
 
     const handleNotificationClick = useCallback((notif: Notification) => {
         const bed = beds.find(b => b.room === notif.room);
@@ -71,11 +71,11 @@ export function useStationActions() {
         try {
             await api.post('/api/v1/dev/discharge-all', {});
             alert('모든 환자가 퇴원 처리되었습니다.');
-            window.location.reload();
+            fetchAdmissions(); // Replace reload with state refresh
         } catch (e) {
             alert('Error discharging');
         }
-    }, []);
+    }, [fetchAdmissions]);
 
     return {
         stationData,
