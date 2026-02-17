@@ -1,0 +1,351 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\savio\AppData\Local\Programs\Python\Python314\python.exe
+cachedir: .pytest_cache
+rootdir: C:\develop\eco_pediatrics\backend
+plugins: anyio-4.12.1, cov-7.0.0
+collecting ... collected 8 items
+
+tests/test_admissions_logic_mock.py::test_list_admissions_logic[asyncio] FAILED [ 12%]
+tests/test_admissions_logic_mock.py::test_fever_6h_boundary[asyncio] FAILED [ 25%]
+tests/test_dashboard_contract.py::test_dashboard_response_schema PASSED  [ 37%]
+tests/test_meals_schema_fallback.py::test_upsert_meal_request_fallback_on_schema_error[asyncio] PASSED [ 50%]
+tests/test_websocket_cleanup.py::test_broadcast_cleanup_on_failure[asyncio] FAILED [ 62%]
+tests/test_websocket_cleanup.py::test_broadcast_cleanup_on_timeout[asyncio] FAILED [ 75%]
+tests/test_websocket_cleanup.py::test_broadcast_cleanup_on_exception_in_gather[asyncio] FAILED [ 87%]
+tests/test_ws_sanity_local.py::test_sanity[asyncio] PASSED               [100%]
+
+================================== FAILURES ===================================
+_____________________ test_list_admissions_logic[asyncio] _____________________
+
+anyio_backend = 'asyncio', mock_db = <MagicMock id='2232240128752'>
+mock_execute = <AsyncMock id='2232310850160'>
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("anyio_backend", ["asyncio"])
+    async def test_list_admissions_logic(anyio_backend, mock_db, mock_execute):
+        # Scenario:
+        # Room 101 has 3 admissions:
+        # 1. Old (Discharged)
+        # 2. Newer (In Progress, but older check_in) - "Zombie"
+        # 3. Newest (In Progress) - Real
+    
+        now = datetime.now()
+        t1 = (now - timedelta(days=2)).isoformat()
+        t2 = (now - timedelta(days=1)).isoformat()
+        t3 = now.isoformat()
+    
+        mock_admissions_data = [
+            {"id": "adm_1", "room_number": "101", "status": "DISCHARGED", "check_in_at": t1},
+            {"id": "adm_2", "room_number": "101", "status": "IN_PROGRESS", "check_in_at": t2},
+            {"id": "adm_3", "room_number": "101", "status": "IN_PROGRESS", "check_in_at": t3}, # Should win
+            {"id": "adm_4", "room_number": "102", "status": "IN_PROGRESS", "check_in_at": t3}, # Distinct room
+        ]
+    
+        # Mock IV data response
+        mock_iv_data = [
+            {"admission_id": "adm_4", "infusion_rate": 20, "created_at": t3},
+            {"admission_id": "adm_3", "infusion_rate": 10, "created_at": t3},
+            {"admission_id": "adm_3", "infusion_rate": 5, "created_at": t2},
+        ]
+    
+        # Mock Vitals data response
+        mock_vitals_data = [
+            {"admission_id": "adm_3", "temperature": 38.5, "recorded_at": t3},
+            {"admission_id": "adm_4", "temperature": 36.5, "recorded_at": t3},
+        ]
+    
+        # Mock Meals data response
+        mock_meals_data = [
+            {"admission_id": "adm_3", "request_type": "BREAKFAST", "created_at": t3}
+        ]
+    
+        # Setup mocks for sequential calls
+        mock_execute.side_effect = [
+            MagicMock(data=mock_admissions_data), # 1. Admissions
+            MagicMock(data=mock_iv_data),         # 2. IVs
+            MagicMock(data=mock_vitals_data),      # 3. Vitals
+            MagicMock(data=mock_meals_data)       # 4. Meals
+        ]
+    
+        # Run the function
+>       result = await list_active_admissions_enriched(mock_db)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_admissions_logic_mock.py:66: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+db = <MagicMock id='2232240128752'>
+
+    async def list_active_admissions_enriched(db: AsyncClient):
+        # Use SQL View to fetch pre-calculated dashboard state (No N+1)
+        res = await execute_with_retry_async(db.table("view_station_dashboard").select("*"))
+        data = res.data or []
+    
+        # Process for specific structure if needed (mapping flat view to nested object if UI expects it)
+        enriched = []
+        for item in data:
+            row = {
+                "id": item['id'],
+                "room_number": item['room_number'],
+>               "display_name": item['display_name'],
+                                ^^^^^^^^^^^^^^^^^^^^
+                "access_token": item['access_token'],
+                "dob": item['dob'],
+                "gender": item['gender'],
+                "check_in_at": item['check_in_at'],
+                "latest_temp": item['latest_temp'],
+                "last_vital_at": item['last_vital_at'],
+                "had_fever_in_6h": item['had_fever_in_6h'],
+                "latest_iv": {
+                    "infusion_rate": item['iv_rate'],
+                    "photo_url": item['iv_photo']
+                } if item['iv_rate'] is not None else None,
+                "latest_meal": {
+                    "request_type": item['meal_type'],
+                    "pediatric_meal_type": item['pediatric_meal_type'],
+                    "guardian_meal_type": item['guardian_meal_type'],
+                    "created_at": item['meal_requested_at']
+                } if item['meal_type'] is not None else None
+            }
+E           KeyError: 'display_name'
+
+services\admission_service.py:87: KeyError
+_______________________ test_fever_6h_boundary[asyncio] _______________________
+
+anyio_backend = 'asyncio', mock_db = <MagicMock id='2232239267792'>
+mock_execute = <AsyncMock id='2232310857216'>
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("anyio_backend", ["asyncio"])
+    async def test_fever_6h_boundary(anyio_backend, mock_db, mock_execute):
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
+    
+        # 5 hours 55 mins ago (Should be True)
+        t_within = (now - timedelta(hours=5, minutes=55)).isoformat()
+        # 6 hours 5 mins ago (Should be False)
+        t_outside = (now - timedelta(hours=6, minutes=5)).isoformat()
+    
+        mock_admissions_data = [
+            {"id": "adm_within", "room_number": "101", "status": "IN_PROGRESS"},
+            {"id": "adm_outside", "room_number": "102", "status": "IN_PROGRESS"},
+        ]
+    
+        mock_vitals_data = [
+            {"admission_id": "adm_within", "temperature": 38.5, "recorded_at": t_within},
+            {"admission_id": "adm_outside", "temperature": 38.5, "recorded_at": t_outside},
+        ]
+    
+        mock_execute.side_effect = [
+            MagicMock(data=mock_admissions_data),
+            MagicMock(data=[]), # IVs
+            MagicMock(data=mock_vitals_data),
+            MagicMock(data=[])  # Meals
+        ]
+    
+>       result = await list_active_admissions_enriched(mock_db)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_admissions_logic_mock.py:108: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+db = <MagicMock id='2232239267792'>
+
+    async def list_active_admissions_enriched(db: AsyncClient):
+        # Use SQL View to fetch pre-calculated dashboard state (No N+1)
+        res = await execute_with_retry_async(db.table("view_station_dashboard").select("*"))
+        data = res.data or []
+    
+        # Process for specific structure if needed (mapping flat view to nested object if UI expects it)
+        enriched = []
+        for item in data:
+            row = {
+                "id": item['id'],
+                "room_number": item['room_number'],
+>               "display_name": item['display_name'],
+                                ^^^^^^^^^^^^^^^^^^^^
+                "access_token": item['access_token'],
+                "dob": item['dob'],
+                "gender": item['gender'],
+                "check_in_at": item['check_in_at'],
+                "latest_temp": item['latest_temp'],
+                "last_vital_at": item['last_vital_at'],
+                "had_fever_in_6h": item['had_fever_in_6h'],
+                "latest_iv": {
+                    "infusion_rate": item['iv_rate'],
+                    "photo_url": item['iv_photo']
+                } if item['iv_rate'] is not None else None,
+                "latest_meal": {
+                    "request_type": item['meal_type'],
+                    "pediatric_meal_type": item['pediatric_meal_type'],
+                    "guardian_meal_type": item['guardian_meal_type'],
+                    "created_at": item['meal_requested_at']
+                } if item['meal_type'] is not None else None
+            }
+E           KeyError: 'display_name'
+
+services\admission_service.py:87: KeyError
+_________________ test_broadcast_cleanup_on_failure[asyncio] __________________
+
+anyio_backend = 'asyncio'
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("anyio_backend", ["asyncio"])
+    async def test_broadcast_cleanup_on_failure(anyio_backend):
+        manager = ConnectionManager()
+    
+        # Mock WebSockets
+        ws_ok = MagicMock(spec=WebSocket)
+        ws_ok.send_text = AsyncMock()
+    
+        ws_fail = MagicMock(spec=WebSocket)
+        ws_fail.send_text = AsyncMock(side_effect=Exception("Connection lost"))
+    
+        token = "test_token"
+    
+        # Manually add connections (avoiding await ws.accept() which is in manager.connect)
+        manager.active_connections[token] = [ws_ok, ws_fail]
+    
+        # Broadcast
+>       await manager.broadcast("hello", token)
+
+tests\test_websocket_cleanup.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <websocket_manager.ConnectionManager object at 0x00000207C02647D0>
+message = 'hello', token = 'test_token'
+
+    async def broadcast(self, message: str, token: str):
+        if token not in self.active_connections:
+            return
+    
+        # Snapshot to avoid "Set changed size during iteration"
+        live_sockets = list(self.active_connections[token])
+        dead_sockets = []
+    
+        async def send_safe(ws: WebSocket):
+            try:
+                await asyncio.wait_for(ws.send_text(message), timeout=1.5)
+            except Exception:
+                dead_sockets.append(ws)
+    
+        if live_sockets:
+            await asyncio.gather(*(send_safe(ws) for ws in live_sockets))
+    
+        # Atomic cleanup after gather
+        if dead_sockets and token in self.active_connections:
+            for ws in dead_sockets:
+>               self.active_connections[token].discard(ws)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               AttributeError: 'list' object has no attribute 'discard'
+
+websocket_manager.py:45: AttributeError
+_________________ test_broadcast_cleanup_on_timeout[asyncio] __________________
+
+anyio_backend = 'asyncio'
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("anyio_backend", ["asyncio"])
+    async def test_broadcast_cleanup_on_timeout(anyio_backend):
+        manager = ConnectionManager()
+    
+        async def slow_send(msg):
+            await asyncio.sleep(5) # Longer than 2s timeout
+    
+        ws_timeout = MagicMock(spec=WebSocket)
+        ws_timeout.send_text = AsyncMock(side_effect=slow_send)
+    
+        token = "timeout_token"
+        manager.active_connections[token] = [ws_timeout]
+    
+        # Broadcast
+>       await manager.broadcast("hello", token)
+
+tests\test_websocket_cleanup.py:47: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <websocket_manager.ConnectionManager object at 0x00000207C02656D0>
+message = 'hello', token = 'timeout_token'
+
+    async def broadcast(self, message: str, token: str):
+        if token not in self.active_connections:
+            return
+    
+        # Snapshot to avoid "Set changed size during iteration"
+        live_sockets = list(self.active_connections[token])
+        dead_sockets = []
+    
+        async def send_safe(ws: WebSocket):
+            try:
+                await asyncio.wait_for(ws.send_text(message), timeout=1.5)
+            except Exception:
+                dead_sockets.append(ws)
+    
+        if live_sockets:
+            await asyncio.gather(*(send_safe(ws) for ws in live_sockets))
+    
+        # Atomic cleanup after gather
+        if dead_sockets and token in self.active_connections:
+            for ws in dead_sockets:
+>               self.active_connections[token].discard(ws)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               AttributeError: 'list' object has no attribute 'discard'
+
+websocket_manager.py:45: AttributeError
+___________ test_broadcast_cleanup_on_exception_in_gather[asyncio] ____________
+
+anyio_backend = 'asyncio'
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("anyio_backend", ["asyncio"])
+    async def test_broadcast_cleanup_on_exception_in_gather(anyio_backend):
+        # This test simulates an Exception being returned by gather (return_exceptions=True)
+        # even if our send() wrapper tries to catch everything.
+    
+        manager = ConnectionManager()
+    
+        ws = MagicMock(spec=WebSocket)
+        # We won't actually call send_text if we mock the whole gather results,
+        # but let's just make it a normal mock.
+        ws.send_text = AsyncMock()
+    
+        token = "gather_exception_token"
+        manager.active_connections[token] = [ws]
+    
+        # We need to monkeypatch asyncio.gather to return an Exception
+        original_gather = asyncio.gather
+    
+        async def mock_gather(*aws, **kwargs):
+            # We must avoid "coroutine was never awaited" warnings
+            for aw in aws:
+                try:
+                    aw.close()
+                except:
+                    pass
+            return [Exception("Unexpected error")]
+    
+        try:
+            asyncio.gather = mock_gather
+            await manager.broadcast("hello", token)
+        finally:
+            asyncio.gather = original_gather
+    
+        # Verify ws is removed because gather returned an Exception
+>       assert token not in manager.active_connections
+E       AssertionError: assert 'gather_exception_token' not in {'gather_exception_token': [<MagicMock spec='WebSocket' id='2232311835216'>]}
+E        +  where {'gather_exception_token': [<MagicMock spec='WebSocket' id='2232311835216'>]} = <websocket_manager.ConnectionManager object at 0x00000207C03703E0>.active_connections
+
+tests\test_websocket_cleanup.py:87: AssertionError
+============================== warnings summary ===============================
+tests/test_dashboard_contract.py::test_dashboard_response_schema
+  C:\develop\eco_pediatrics\backend\tests\test_dashboard_contract.py:48: PydanticDeprecatedSince20: The `dict` method is deprecated; use `model_dump` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    print(f"Serialized: {model.dict()}")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_admissions_logic_mock.py::test_list_admissions_logic[asyncio]
+FAILED tests/test_admissions_logic_mock.py::test_fever_6h_boundary[asyncio]
+FAILED tests/test_websocket_cleanup.py::test_broadcast_cleanup_on_failure[asyncio]
+FAILED tests/test_websocket_cleanup.py::test_broadcast_cleanup_on_timeout[asyncio]
+FAILED tests/test_websocket_cleanup.py::test_broadcast_cleanup_on_exception_in_gather[asyncio]
+=================== 5 failed, 3 passed, 1 warning in 3.29s ====================

@@ -18,13 +18,14 @@ async def test_broadcast_cleanup_on_failure(anyio_backend):
 
     token = "test_token"
 
-    # Manually add connections (avoiding await ws.accept() which is in manager.connect)
-    manager.active_connections[token] = [ws_ok, ws_fail]
+    # Manually add connections using a SET
+    manager.active_connections[token] = {ws_ok, ws_fail}
 
     # Broadcast
     await manager.broadcast("hello", token)
 
     # Verify ws_fail is removed, ws_ok remains
+    assert token in manager.active_connections
     assert len(manager.active_connections[token]) == 1
     assert ws_ok in manager.active_connections[token]
     assert ws_fail not in manager.active_connections[token]
@@ -35,13 +36,13 @@ async def test_broadcast_cleanup_on_timeout(anyio_backend):
     manager = ConnectionManager()
 
     async def slow_send(msg):
-        await asyncio.sleep(5) # Longer than 2s timeout
+        await asyncio.sleep(5) # Longer than 1.5s timeout
 
     ws_timeout = MagicMock(spec=WebSocket)
     ws_timeout.send_text = AsyncMock(side_effect=slow_send)
 
     token = "timeout_token"
-    manager.active_connections[token] = [ws_timeout]
+    manager.active_connections[token] = {ws_timeout}
 
     # Broadcast
     await manager.broadcast("hello", token)
@@ -52,36 +53,18 @@ async def test_broadcast_cleanup_on_timeout(anyio_backend):
 @pytest.mark.anyio
 @pytest.mark.parametrize("anyio_backend", ["asyncio"])
 async def test_broadcast_cleanup_on_exception_in_gather(anyio_backend):
-    # This test simulates an Exception being returned by gather (return_exceptions=True)
-    # even if our send() wrapper tries to catch everything.
-
+    # This test simulates a case where the sub-task itself handles error 
+    # but the socket must be removed from the set.
     manager = ConnectionManager()
 
     ws = MagicMock(spec=WebSocket)
-    # We won't actually call send_text if we mock the whole gather results,
-    # but let's just make it a normal mock.
-    ws.send_text = AsyncMock()
+    # Simulate a crash inside send_text
+    ws.send_text = AsyncMock(side_effect=RuntimeError("Fatal"))
 
-    token = "gather_exception_token"
-    manager.active_connections[token] = [ws]
+    token = "fatal_token"
+    manager.active_connections[token] = {ws}
 
-    # We need to monkeypatch asyncio.gather to return an Exception
-    original_gather = asyncio.gather
+    await manager.broadcast("hello", token)
 
-    async def mock_gather(*aws, **kwargs):
-        # We must avoid "coroutine was never awaited" warnings
-        for aw in aws:
-            try:
-                aw.close()
-            except:
-                pass
-        return [Exception("Unexpected error")]
-
-    try:
-        asyncio.gather = mock_gather
-        await manager.broadcast("hello", token)
-    finally:
-        asyncio.gather = original_gather
-
-    # Verify ws is removed because gather returned an Exception
+    # Verify ws is removed
     assert token not in manager.active_connections
