@@ -40,7 +40,10 @@ export function PatientDetailModal({
         documentRequests: fetchedDocRequests,
         examSchedules,
         fetchDashboardData,
-        addOptimisticVital
+        addOptimisticVital,
+        addOptimisticExam,
+        deleteOptimisticExam,
+        updateOptimisticMeal
     } = useVitals(bed?.token, isOpen);
 
     const { state, actions } = usePatientActions({
@@ -132,7 +135,14 @@ export function PatientDetailModal({
                             roomNotifications={roomNotifications}
                             deletingExamId={state.deletingExamId}
                             onAddExam={() => actions.setAddExamModalOpen(true)}
-                            onDeleteExam={actions.handleDeleteExam}
+                            onDeleteExam={(scheduleId) => {
+                                if (!window.confirm('이 검사 일정을 삭제할까요?')) return;
+                                const { rollback } = deleteOptimisticExam(scheduleId);
+                                actions.apiDeleteExam(scheduleId).catch(err => {
+                                    rollback();
+                                    alert('삭제 실패');
+                                });
+                            }}
                             onCompleteRequest={(id, type) => onCompleteRequest?.(id, type, bed.id)}
                         />
                     </div>
@@ -150,10 +160,10 @@ export function PatientDetailModal({
                 isOpen={state.vitalModalOpen}
                 onClose={() => actions.setVitalModalOpen(false)}
                 admissionId={bed.id}
-                onSuccess={(temp, recordedAt) => {
-                    addOptimisticVital(temp, recordedAt);
-                    fetchDashboardData();
+                onSave={(temp, recordedAt) => {
+                    const { rollback } = addOptimisticVital(temp, recordedAt);
                     onVitalUpdate?.(temp);
+                    return { rollback };
                 }}
             />
 
@@ -165,14 +175,16 @@ export function PatientDetailModal({
                     mealTime={state.editMealConfig.meal_time}
                     currentPediatric={state.editMealConfig.pediatric}
                     currentGuardian={state.editMealConfig.guardian}
-                    onSave={actions.handleMealEditSave}
+                    onSave={(mealId, pediatric, guardian) => updateOptimisticMeal(mealId, pediatric, guardian)}
+                    onApiSave={actions.apiMealUpdate}
                 />
             )}
 
             <AddExamModal
                 isOpen={state.addExamModalOpen}
                 onClose={() => actions.setAddExamModalOpen(false)}
-                onSave={actions.handleAddExam}
+                onSave={addOptimisticExam}
+                onApiSave={actions.apiAddExam}
             />
         </div>
     );

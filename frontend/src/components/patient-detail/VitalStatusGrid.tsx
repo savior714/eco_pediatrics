@@ -11,7 +11,7 @@ interface VitalStatusGridProps {
     meals: MealRequest[];
     lastUploadedIv?: LastUploadedIv | null;
     onVitalModalOpen: () => void;
-    onEditMeal: (config: { label: string; date: string; meal_time: string; pediatric: string; guardian: string }) => void;
+    onEditMeal: (config: { label: string; date: string; meal_time: string; pediatric: string; guardian: string; mealId: number }) => void;
     onIVUploadSuccess?: (rate?: number) => void;
 }
 
@@ -64,8 +64,9 @@ export function VitalStatusGrid({
                         return (
                             <div key={slot.label} className="col-span-1 bg-white rounded-[1.2rem] border-[1.5px] border-slate-200 shadow-sm flex flex-col justify-center items-center relative group/meal py-1.5 px-1">
                                 <button
-                                    onClick={() => onEditMeal({
+                                    onClick={() => meal?.id && onEditMeal({
                                         ...slot,
+                                        mealId: meal.id,
                                         pediatric: meal?.pediatric_meal_type || '선택 안함',
                                         guardian: meal?.guardian_meal_type || '선택 안함'
                                     })}
@@ -75,7 +76,7 @@ export function VitalStatusGrid({
                                     <Edit2 size={10} />
                                 </button>
                                 <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-tight">{slot.label}</span>
-                                <div className="text-[11px] font-bold text-slate-700 flex flex-col items-center leading-tight">
+                                <div className={`text-[11px] font-bold text-slate-700 flex flex-col items-center leading-tight ${meal?.isOptimistic ? 'opacity-50' : ''}`}>
                                     <span>{meal?.pediatric_meal_type || '환아식 미신청'}</span>
                                     <span className="text-slate-300 font-light my-[-2px]">/</span>
                                     <span>{meal?.guardian_meal_type || '보호자식 미신청'}</span>

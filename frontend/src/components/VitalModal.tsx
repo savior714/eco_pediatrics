@@ -7,10 +7,10 @@ interface VitalModalProps {
     isOpen: boolean;
     onClose: () => void;
     admissionId: string;
-    onSuccess: (temp: number, recordedAt: string) => void;
+    onSave: (temp: number, recordedAt: string) => { rollback: () => void };
 }
 
-export function VitalModal({ isOpen, onClose, admissionId, onSuccess }: VitalModalProps) {
+export function VitalModal({ isOpen, onClose, admissionId, onSave }: VitalModalProps) {
     const [temp, setTemp] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
@@ -20,23 +20,23 @@ export function VitalModal({ isOpen, onClose, admissionId, onSuccess }: VitalMod
         e.preventDefault();
         if (!temp) return;
 
-        setSubmitting(true);
         const now = new Date().toISOString();
+        const { rollback } = onSave(parseFloat(temp), now);
+
+        onClose();
+        setTemp('');
+
         try {
             await api.post('/api/v1/vitals', {
                 admission_id: admissionId,
                 temperature: parseFloat(temp),
-                has_medication: false, // Default to false for quick input
+                has_medication: false,
                 recorded_at: now
             });
-            onSuccess(parseFloat(temp), now);
-            onClose();
-            setTemp('');
         } catch (error) {
-            alert('체온 저장 실패');
+            rollback();
+            alert('체온 저장 실패. 다시 시도해주세요.');
             console.error(error);
-        } finally {
-            setSubmitting(false);
         }
     };
 

@@ -47,7 +47,7 @@ export function PatientDetailSidebar({
                 </div>
                 <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
                     {examSchedules.map(ex => (
-                        <div key={ex.id} className="p-3 bg-white rounded-xl border-[1.5px] border-slate-200 shadow-sm text-xs flex justify-between items-center gap-2">
+                        <div key={ex.id === -1 ? ex.tempId : ex.id} className={`p-3 bg-white rounded-xl border-[1.5px] border-slate-200 shadow-sm text-xs flex justify-between items-center gap-2 ${ex.isOptimistic ? 'opacity-50' : ''}`}>
                             <div className="min-w-0 flex-1">
                                 <div className="flex justify-between mb-0.5">
                                     <span className="font-bold text-slate-700">{ex.name}</span>

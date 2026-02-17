@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { X, Check, Calendar } from 'lucide-react';
 import Portal from './common/Portal';
+import { EXAM_TYPE_OPTIONS } from '@/constants/mappings';
 
 interface AddExamModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (examData: { name: string; date: string; timeOfDay: 'am' | 'pm' }) => Promise<void>;
+    onSave: (examData: { name: string; date: string; timeOfDay: 'am' | 'pm' }) => { rollback: () => void };
+    onApiSave: (examData: { name: string; date: string; timeOfDay: 'am' | 'pm' }) => Promise<void>;
 }
 
-import { EXAM_TYPE_OPTIONS } from '@/constants/mappings';
-
-export function AddExamModal({ isOpen, onClose, onSave }: AddExamModalProps) {
+export function AddExamModal({ isOpen, onClose, onSave, onApiSave }: AddExamModalProps) {
     const [name, setName] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [timeOfDay, setTimeOfDay] = useState<'am' | 'pm'>('am');
@@ -26,16 +26,19 @@ export function AddExamModal({ isOpen, onClose, onSave }: AddExamModalProps) {
             return;
         }
         setError(null);
-        setSubmitting(true);
+
+        const examData = { name, date, timeOfDay };
+        const { rollback } = onSave(examData);
+
+        onClose();
+        setName('');
+
         try {
-            await onSave({ name, date, timeOfDay });
-            setName('');
-            onClose();
+            await onApiSave(examData);
         } catch (err) {
             console.error(err);
-            setError('일정 저장에 실패했습니다.');
-        } finally {
-            setSubmitting(false);
+            rollback();
+            alert('일정 저장에 실패했습니다.');
         }
     };
 
@@ -88,8 +91,8 @@ export function AddExamModal({ isOpen, onClose, onSave }: AddExamModalProps) {
                                         type="button"
                                         onClick={() => setTimeOfDay(type)}
                                         className={`flex-1 py-3 rounded-xl text-sm font-bold border-2 transition-all ${timeOfDay === type
-                                            ? 'border-violet-500 bg-violet-50 text-violet-700 font-extrabold'
-                                            : 'border-slate-100 bg-white text-slate-400'
+                                                ? 'border-violet-500 bg-violet-50 text-violet-700 font-extrabold'
+                                                : 'border-slate-100 bg-white text-slate-400'
                                             }`}
                                     >
                                         {type === 'am' ? '오전' : '오후'}
@@ -123,7 +126,7 @@ export function AddExamModal({ isOpen, onClose, onSave }: AddExamModalProps) {
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="flex-1 py-3.5 bg-violet-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-violet-200 hover:bg-violet-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="flex-1 py-3.5 bg-violet-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-violet-200 hover:bg-violet-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                             >
                                 {submitting ? '저장 중...' : (
                                     <>

@@ -19,7 +19,10 @@ interface UseVitalsReturn {
     isRefreshing: boolean;
     refetchDashboard: () => Promise<void>;
     fetchDashboardData: () => Promise<void>; // Alias
-    addOptimisticVital: (temp: number, recordedAt: string) => void;
+    addOptimisticVital: (temp: number, recordedAt: string) => { tempId: string; rollback: () => void };
+    addOptimisticExam: (examData: { name: string; date: string; timeOfDay: string }) => { tempId: string; rollback: () => void };
+    deleteOptimisticExam: (examId: number) => { rollback: () => void };
+    updateOptimisticMeal: (mealId: number, pediatric: string, guardian: string) => { rollback: () => void };
 }
 
 interface DashboardResponse {
@@ -139,8 +142,19 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                         recorded_at: v.recorded_at
                     };
                     setVitals(prev => {
-                        const exists = prev.some(existing => existing.recorded_at === v.recorded_at);
-                        if (exists) return prev;
+                        // Reconciliation: Check for matching optimistic item (within 2s)
+                        const optimisticIndex = prev.findIndex(existing =>
+                            existing.isOptimistic &&
+                            Math.abs(new Date(existing.recorded_at).getTime() - new Date(v.recorded_at).getTime()) < 2000
+                        );
+
+                        if (optimisticIndex !== -1) {
+                            const nextVitals = [...prev];
+                            nextVitals[optimisticIndex] = { ...formattedV, isOptimistic: false };
+                            return nextVitals;
+                        }
+
+                        if (prev.some(existing => existing.recorded_at === v.recorded_at)) return prev;
                         return [formattedV, ...prev];
                     });
                     break;
@@ -154,10 +168,26 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                 case 'NEW_DOC_REQUEST':
                     setDocumentRequests(prev => [message.data as any, ...prev]);
                     break;
-                case 'NEW_EXAM_SCHEDULE':
-                    setExamSchedules(prev => [...prev, message.data as any].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
-                    // Removed debouncedRefetch() - local state is already synced
+                case 'NEW_EXAM_SCHEDULE': {
+                    const newExam = message.data;
+                    setExamSchedules(prev => {
+                        // Reconciliation: Match by name and date
+                        const optimisticIndex = prev.findIndex(ex =>
+                            ex.isOptimistic &&
+                            ex.name === newExam.name &&
+                            ex.scheduled_at.split('T')[0] === newExam.scheduled_at.split('T')[0]
+                        );
+
+                        if (optimisticIndex !== -1) {
+                            const next = [...prev];
+                            next[optimisticIndex] = { ...newExam, isOptimistic: false };
+                            return next.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+                        }
+
+                        return [...prev, newExam].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+                    });
                     break;
+                }
                 case 'DELETE_EXAM_SCHEDULE':
                     setExamSchedules(prev => prev.filter(ex => ex.id !== (message.data as any).id));
                     // Removed debouncedRefetch() - local state is already synced
@@ -171,7 +201,14 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     break;
                 case 'NEW_MEAL_REQUEST':
                     if (admissionIdRef.current && message.data.admission_id === admissionIdRef.current) {
+                        // When a new meal request (or update) arrives, we just refresh to be safe or update inline
+                        // For simplicity and consistency with current implementation:
                         debouncedRefetch();
+                    }
+                    break;
+                case 'MEAL_UPDATED': // If the backend ever sends this
+                    if (admissionIdRef.current && (message.data as any).admission_id === admissionIdRef.current) {
+                        setMeals(prev => prev.map(m => m.id === (message.data as any).id ? { ...(message.data as any), isOptimistic: false } : m));
                     }
                     break;
             }
@@ -195,13 +232,70 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
     }, [token, enabled, fetchDashboardData]);
 
     const addOptimisticVital = useCallback((temp: number, recordedAt: string) => {
+        const tempId = `temp-vital-${Date.now()}`;
         const newVital: VitalData = {
+            tempId,
             temperature: temp,
             recorded_at: recordedAt,
             time: new Date(recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            has_medication: false // defaulting to false as per VitalModal
+            has_medication: false,
+            isOptimistic: true
         };
         setVitals(prev => [newVital, ...prev]);
+        return { tempId, rollback: () => setVitals(prev => prev.filter(v => v.tempId !== tempId)) };
+    }, []);
+
+    const addOptimisticExam = useCallback((examData: { name: string; date: string; timeOfDay: string }) => {
+        const tempId = `temp-exam-${Date.now()}`;
+        const newExam: ExamScheduleItem = {
+            id: -1, // Temporary id
+            tempId,
+            admission_id: admissionIdRef.current || '',
+            name: examData.name,
+            scheduled_at: `${examData.date}T${examData.timeOfDay === 'am' ? '09:00:00' : '14:00:00'}`,
+            isOptimistic: true
+        };
+
+        setExamSchedules(prev => [...prev, newExam].sort((a, b) =>
+            new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+        ));
+
+        return { tempId, rollback: () => setExamSchedules(prev => prev.filter(ex => ex.tempId !== tempId)) };
+    }, []);
+
+    const deleteOptimisticExam = useCallback((examId: number) => {
+        let deletedItem: ExamScheduleItem | undefined;
+        setExamSchedules(prev => {
+            deletedItem = prev.find(ex => ex.id === examId);
+            return prev.filter(ex => ex.id !== examId);
+        });
+        return {
+            rollback: () => {
+                if (deletedItem) {
+                    setExamSchedules(prev => [...prev, deletedItem!].sort((a, b) =>
+                        new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+                    ));
+                }
+            }
+        };
+    }, []);
+
+    const updateOptimisticMeal = useCallback((mealId: number, pediatric: string, guardian: string) => {
+        let originalMeal: MealRequest | undefined;
+        setMeals(prev => prev.map(m => {
+            if (m.id === mealId) {
+                originalMeal = { ...m };
+                return { ...m, pediatric_meal_type: pediatric, guardian_meal_type: guardian, isOptimistic: true };
+            }
+            return m;
+        }));
+        return {
+            rollback: () => {
+                if (originalMeal) {
+                    setMeals(prev => prev.map(m => m.id === mealId ? originalMeal! : m));
+                }
+            }
+        };
     }, []);
 
     return {
@@ -220,6 +314,9 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
         isRefreshing,
         refetchDashboard: fetchDashboardData,
         fetchDashboardData, // Alias
-        addOptimisticVital
+        addOptimisticVital,
+        addOptimisticExam,
+        deleteOptimisticExam,
+        updateOptimisticMeal
     };
 }

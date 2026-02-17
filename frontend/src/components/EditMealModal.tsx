@@ -8,9 +8,11 @@ interface EditMealModalProps {
     label: string;
     date: string;
     mealTime: string;
+    mealId: number;
     currentPediatric: string;
     currentGuardian: string;
-    onSave: (pediatric: string, guardian: string) => Promise<void>;
+    onSave: (mealId: number, pediatric: string, guardian: string) => { rollback: () => void };
+    onApiSave: (pediatric: string, guardian: string) => Promise<void>;
 }
 
 const PEDIATRIC_OPTIONS = ['일반식', '죽1', '죽2', '죽3'];
@@ -22,9 +24,11 @@ export function EditMealModal({
     label,
     date,
     mealTime,
+    mealId,
     currentPediatric,
     currentGuardian,
-    onSave
+    onSave,
+    onApiSave
 }: EditMealModalProps) {
     const [pediatric, setPediatric] = useState(currentPediatric);
     const [guardian, setGuardian] = useState(currentGuardian);
@@ -34,15 +38,17 @@ export function EditMealModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setSubmitting(true);
+
+        const { rollback } = onSave(mealId, pediatric, guardian);
+
+        onClose();
+
         try {
-            await onSave(pediatric, guardian);
-            onClose();
+            await onApiSave(pediatric, guardian);
         } catch (error) {
             console.error(error);
+            rollback();
             alert('저장 실패');
-        } finally {
-            setSubmitting(false);
         }
     };
 

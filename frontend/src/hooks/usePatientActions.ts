@@ -14,7 +14,7 @@ export function usePatientActions({ bed, onClose, fetchDashboardData, meals }: U
     const [deletingExamId, setDeletingExamId] = useState<number | null>(null);
     const [transferModalOpen, setTransferModalOpen] = useState(false);
     const [vitalModalOpen, setVitalModalOpen] = useState(false);
-    const [editMealConfig, setEditMealConfig] = useState<{ label: string; date: string; meal_time: string; pediatric: string; guardian: string } | null>(null);
+    const [editMealConfig, setEditMealConfig] = useState<{ label: string; date: string; meal_time: string; pediatric: string; guardian: string; mealId: number } | null>(null);
 
     const handleDischarge = async () => {
         if (!bed?.id) return;
@@ -54,54 +54,39 @@ export function usePatientActions({ bed, onClose, fetchDashboardData, meals }: U
         }
     };
 
-    const handleAddExam = async (examData: { name: string; date: string; timeOfDay: 'am' | 'pm' }) => {
+    const apiAddExam = async (examData: { name: string; date: string; timeOfDay: 'am' | 'pm' }) => {
         if (!bed?.id) return;
-        try {
-            const [y, m, d] = examData.date.split('-').map(Number);
-            const hour = examData.timeOfDay === 'am' ? 9 : 14;
-            const scheduledAt = new Date(y, m - 1, d, hour, 0).toISOString();
-            await api.post('/api/v1/exam-schedules', {
-                admission_id: bed.id,
-                scheduled_at: scheduledAt,
-                name: examData.name.trim(),
-                note: ''
-            });
-
-            fetchDashboardData();
-        } catch (e) {
-            console.error(e);
-            throw e;
-        }
+        const [y, m, d] = examData.date.split('-').map(Number);
+        const hour = examData.timeOfDay === 'am' ? 9 : 14;
+        const scheduledAt = new Date(y, m - 1, d, hour, 0).toISOString();
+        await api.post('/api/v1/exam-schedules', {
+            admission_id: bed.id,
+            scheduled_at: scheduledAt,
+            name: examData.name.trim(),
+            note: ''
+        });
     };
 
-    const handleDeleteExam = async (scheduleId: number) => {
-        if (!window.confirm('이 검사 일정을 삭제할까요?')) return;
+    const apiDeleteExam = async (scheduleId: number) => {
         setDeletingExamId(scheduleId);
         try {
             await api.delete(`/api/v1/exam-schedules/${scheduleId}`);
-            fetchDashboardData();
         } finally {
             setDeletingExamId(null);
         }
     };
 
-    const handleMealEditSave = async (pediatric: string, guardian: string) => {
+    const apiMealUpdate = async (pediatric: string, guardian: string) => {
         if (!bed?.id || !editMealConfig) return;
-        try {
-            await api.post('/api/v1/meals/requests', {
-                admission_id: bed.id,
-                request_type: 'STATION_UPDATE',
-                meal_date: editMealConfig.date,
-                meal_time: editMealConfig.meal_time,
-                pediatric_meal_type: pediatric,
-                guardian_meal_type: guardian,
-                room_note: meals.find(m => m.meal_date === editMealConfig.date && m.meal_time === editMealConfig.meal_time)?.room_note || ''
-            });
-            fetchDashboardData();
-        } catch (e) {
-            console.error(e);
-            throw e;
-        }
+        await api.post('/api/v1/meals/requests', {
+            admission_id: bed.id,
+            request_type: 'STATION_UPDATE',
+            meal_date: editMealConfig.date,
+            meal_time: editMealConfig.meal_time,
+            pediatric_meal_type: pediatric,
+            guardian_meal_type: guardian,
+            room_note: meals.find(m => m.meal_date === editMealConfig.date && m.meal_time === editMealConfig.meal_time)?.room_note || ''
+        });
     };
 
     return {
@@ -120,9 +105,8 @@ export function usePatientActions({ bed, onClose, fetchDashboardData, meals }: U
             handleDischarge,
             handleSeedData,
             handleTransfer,
-            handleAddExam,
-            handleDeleteExam,
-            handleMealEditSave
+            apiAddExam,
+            apiDeleteExam
         }
     };
 }

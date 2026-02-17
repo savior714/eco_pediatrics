@@ -31,6 +31,7 @@ interface VitalData {
     has_medication: boolean;
     medication_type?: string;
     recorded_at: string;
+    isOptimistic?: boolean;
 }
 
 interface TemperatureGraphProps {
@@ -247,6 +248,8 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
                                             fill="#fff"
                                             stroke={isFever ? '#ef4444' : '#14b8a6'}
                                             strokeWidth={2}
+                                            strokeOpacity={payload.isOptimistic ? 0.4 : 1}
+                                            fillOpacity={payload.isOptimistic ? 0.4 : 1}
                                         />
                                     );
                                 }}

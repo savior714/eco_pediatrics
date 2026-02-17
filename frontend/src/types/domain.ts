@@ -1,3 +1,10 @@
+export interface OptimisticStatus {
+    id?: string | number; // Optional as it might be a temp string or server number
+    tempId?: string;
+    isOptimistic?: boolean;
+    isDeleting?: boolean;
+}
+
 export interface Bed {
     id: string;
     room: string;
@@ -23,7 +30,7 @@ export interface Notification {
     admissionId?: string;
 }
 
-export interface VitalData {
+export interface VitalData extends OptimisticStatus {
     time: string;
     temperature: number;
     has_medication: boolean;
@@ -38,7 +45,7 @@ export interface VitalDataResponse {
     medication_type?: string;
 }
 
-export interface ExamScheduleItem {
+export interface ExamScheduleItem extends OptimisticStatus {
     id: number;
     admission_id: string;
     scheduled_at: string;
@@ -67,7 +74,7 @@ export interface AdmissionSummary {
     gender?: string;
 }
 
-export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL' | 'NEW_EXAM_SCHEDULE' | 'DELETE_EXAM_SCHEDULE' | 'ADMISSION_TRANSFERRED' | 'ADMISSION_DISCHARGED';
+export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL' | 'NEW_EXAM_SCHEDULE' | 'DELETE_EXAM_SCHEDULE' | 'ADMISSION_TRANSFERRED' | 'ADMISSION_DISCHARGED' | 'MEAL_UPDATED';
 
 export type WsMessage =
     | { type: 'NEW_MEAL_REQUEST'; data: { id: number; room: string; request_type: string; admission_id: string; meal_date: string; meal_time: string; pediatric_meal_type?: string; guardian_meal_type?: string } }
@@ -78,7 +85,8 @@ export type WsMessage =
     | { type: 'NEW_EXAM_SCHEDULE'; data: ExamScheduleItem & { room: string } }
     | { type: 'DELETE_EXAM_SCHEDULE'; data: { id: number; admission_id: string; room: string } }
     | { type: 'ADMISSION_TRANSFERRED'; data: { admission_id: string; old_room: string; new_room: string } }
-    | { type: 'ADMISSION_DISCHARGED'; data: { admission_id: string; room: string } };
+    | { type: 'ADMISSION_DISCHARGED'; data: { admission_id: string; room: string } }
+    | { type: 'MEAL_UPDATED'; data: MealRequest };
 
 export interface IVRecord {
     id: number;
@@ -88,7 +96,7 @@ export interface IVRecord {
     created_at: string;
 }
 
-export interface MealRequest {
+export interface MealRequest extends OptimisticStatus {
     id?: number;
     admission_id: string;
     request_type: string;
