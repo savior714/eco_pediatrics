@@ -73,7 +73,7 @@ app.mount("/static", StaticFiles(directory="uploads"), name="static")
 # CORS Configuration
 ALLOWED_ORIGINS = os.environ.get(
     "ALLOWED_ORIGINS", 
-    "http://localhost:3000,http://127.0.0.1:3000,tauri://localhost,http://tauri.localhost,https://tauri.localhost"
+    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,tauri://localhost,http://tauri.localhost,https://tauri.localhost"
 ).split(",")
 
 app.add_middleware(

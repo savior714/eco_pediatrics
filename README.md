@@ -56,7 +56,7 @@
 3.  **프론트엔드 실행**:
     ```bash
     ./start_frontend.bat
-    # 또는 cd frontend && npm run dev -- -p 3001
+    # 또는 cd frontend && npm run dev
     ```
 
 4.  **Tauri 앱 실행 (데스크톱)**:
