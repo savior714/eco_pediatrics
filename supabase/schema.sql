@@ -115,11 +115,25 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 -- 식단 및 서류 신청에 대한 권한 허용
 -- 보호자: 조회 및 신청 가능 / 의료진: 모든 관리 권한
 CREATE POLICY "Enable read for all users" ON public.meal_requests FOR SELECT USING (true);
-CREATE POLICY "Enable insert for all users" ON public.meal_requests FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow insert for active admissions" ON public.meal_requests
+FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM admissions 
+    WHERE admissions.id = admission_id 
+    AND admissions.status = 'IN_PROGRESS'
+  )
+);
 CREATE POLICY "Enable manage for authenticated" ON public.meal_requests FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 CREATE POLICY "Enable read for all users" ON public.document_requests FOR SELECT USING (true);
-CREATE POLICY "Enable insert for all users" ON public.document_requests FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow insert for active admissions" ON public.document_requests
+FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM admissions 
+    WHERE admissions.id = admission_id 
+    AND admissions.status = 'IN_PROGRESS'
+  )
+);
 CREATE POLICY "Enable manage for authenticated" ON public.document_requests FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- 10. 입원, 바이탈, 수액 기록에 대한 읽기 권한 (대시보드 필수)

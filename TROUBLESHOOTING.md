@@ -140,4 +140,7 @@
   1. **RLS 활성화**: `ALTER TABLE public.document_requests ENABLE ROW LEVEL SECURITY;` 명령을 SQL Editor에서 실행.
   2. **조회 권한 추가**: 대시보드 연동을 위해 `FOR SELECT USING (true)` 정책을 반드시 추가.
   3. **코드 일관성**: `supabase/schema.sql`에 모든 테이블의 `ENABLE ROW LEVEL SECURITY` 구문이 포함되어 있는지 확인.
+- **린트 경고 (RLS Policy Always True)**:
+  - **문제**: `WITH CHECK (true)` 사용 시 린터가 보안 우회로 간주하여 경고 발생.
+  - **해결**: 단순히 무조건 허용하는 대신, `EXISTS` 서브쿼리를 사용하여 삽입하려는 `admission_id`가 현재 `IN_PROGRESS` 상태인지 검증하는 로직을 삽입 정책에 적용.
 - **참고**: 보안 강화를 위해 운영 환경에서는 `USING (true)` 대신 `auth.uid()`나 `access_token` 기반의 세부 정책 수립 권장.
