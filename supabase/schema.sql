@@ -168,5 +168,12 @@ CREATE POLICY "Enable read access for all users" ON common_meal_plans FOR SELECT
 CREATE POLICY "Staff can manage all common meal plans" ON common_meal_plans FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 CREATE POLICY "Enable read access for all users" ON patient_meal_overrides FOR SELECT USING (true);
-CREATE POLICY "Enable insert for all users" ON patient_meal_overrides FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow insert for active admissions" ON patient_meal_overrides
+FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM admissions 
+    WHERE admissions.id = admission_id 
+    AND admissions.status = 'IN_PROGRESS'
+  )
+);
 CREATE POLICY "Staff can manage all patient meal overrides" ON patient_meal_overrides FOR ALL TO authenticated USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
