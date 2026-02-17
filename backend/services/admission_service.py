@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from supabase._async.client import AsyncClient
 from websocket_manager import manager
 
+from logger import logger
 from utils import execute_with_retry_async, mask_name, create_audit_log, broadcast_to_station_and_patient
 from models import AdmissionCreate, TransferRequest
 
@@ -69,13 +70,22 @@ async def create_admission(db: AsyncClient, admission: AdmissionCreate, ip_addre
         }).execute()
         return res.data
     except Exception as e:
+        error_msg = str(e)
         # APIError(RLS violation 등)인 경우 더 상세한 메시지 제공
-        if "row-level security policy" in str(e).lower():
-            logger.error(f"RLS Violation during admission creation: {e}")
-            raise HTTPException(status_code=403, detail="Database Role Policy Violation. Please check if SQL functions are updated with SECURITY DEFINER.")
+        if "row-level security policy" in error_msg.lower():
+            logger.critical(f"RLS Violation during admission creation: {error_msg}")
+            raise HTTPException(status_code=403, detail="Database Role Policy Violation. Check SECURITY DEFINER.")
         
-        logger.error(f"Create admission RPC failed: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        # Room Occupied or other Business Logic exceptions from SQL
+        if "room" in error_msg.lower() and "occupied" in error_msg.lower():
+            logger.warning(f"Admission failed: Room occupied - {error_msg}")
+            raise HTTPException(status_code=400, detail="해당 병상은 이미 사용 중입니다.")
+
+        import traceback
+        error_stack = traceback.format_exc()
+        logger.error(f"Create admission RPC failed:\n{error_msg}\n{error_stack}")
+        # Return detail for debugging if 500
+        raise HTTPException(status_code=500, detail=f"RPC Error or Model Validation Failed: {error_msg}")
 
 async def list_active_admissions_enriched(db: AsyncClient):
     # Use SQL View to fetch pre-calculated dashboard state (No N+1)
@@ -89,7 +99,7 @@ async def list_active_admissions_enriched(db: AsyncClient):
         row = {
             "id": item['id'],
             "room_number": item['room_number'],
-            "display_name": item['display_name'],
+            "display_name": item.get('display_name') or item.get('patient_name_masked') or "환자",
             "access_token": item['access_token'],
             "dob": item['dob'],
             "gender": item['gender'],

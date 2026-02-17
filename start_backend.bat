@@ -11,14 +11,14 @@ echo:
 cd backend
 
 :: Check if .venv exists
-if exist .venv goto :ACTIVATE
+if exist ".venv" goto :ACTIVATE
 echo [INFO] Creating virtual environment with Python 3.14...
 py -3.14 -m venv .venv
 if errorlevel 1 goto :FAIL_VENV
 
 :ACTIVATE
 echo [INFO] Activating virtual environment...
-call .venv\Scripts\activate.bat
+call ".venv\Scripts\activate.bat"
 
 echo [INFO] Installing/Updating dependencies...
 pip install -r requirements.txt -q
@@ -28,7 +28,7 @@ echo:
 echo [SUCCESS] Starting uvicorn on http://localhost:8000
 echo [INFO] (Test data: run seed_data.bat or POST /api/v1/seed/station-admissions)
 echo:
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 if errorlevel 1 goto :FAIL
 goto :END
 

@@ -287,7 +287,8 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
 
                                     // Calculate Temperature point Y coordinate to limit the vertical line
                                     // Recharts passes yScale in props.yAxis.scale
-                                    const tempCy = props.yAxis.scale(payload.temperature);
+                                    const yScale = props.yAxis?.scale;
+                                    const tempCy = yScale ? yScale(payload.temperature) : cy;
 
                                     return (
                                         <g key={`med-${payload.recorded_at}`}>

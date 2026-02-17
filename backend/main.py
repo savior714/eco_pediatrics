@@ -60,10 +60,19 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    # Allow individual route HTTPExceptions to pass through to their own handler
+    if isinstance(exc, StarletteHTTPException):
+        return await http_exception_handler(request, exc)
+    
     logger.critical(f"Unhandled exception: {exc}")
+    # In development/local, we want more transparency
+    detail = "Internal Server Error"
+    if os.getenv("ENV") in ["local", "development"]:
+        detail = f"Unhandled Exception: {str(exc)}"
+
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error"},
+        content={"detail": detail},
     )
 
 # Mount Static Files

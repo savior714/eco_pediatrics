@@ -110,17 +110,14 @@ function DashboardContent() {
                     }}
                 >
                     <div className="flex flex-col gap-6">
-                        <section>
-                            <TemperatureGraph data={vitalsData.vitals} checkInAt={vitalsData.checkInAt} />
-                        </section>
+                        <TemperatureGraph data={vitalsData.vitals} checkInAt={vitalsData.checkInAt} className="flex-1" />
 
-                        <section>
-                            <IVStatusCard
-                                photoUrl={latestIv?.photo_url ? (latestIv.photo_url.startsWith('/') ? `${API_BASE}${latestIv.photo_url}` : latestIv.photo_url) : ""}
-                                infusionRate={latestIv?.infusion_rate || 0}
-                                lastChecked={latestIv ? new Date(latestIv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}
-                            />
-                        </section>
+                        <IVStatusCard
+                            photoUrl={latestIv?.photo_url ? (latestIv.photo_url.startsWith('/') ? `${API_BASE}${latestIv.photo_url}` : latestIv.photo_url) : ""}
+                            infusionRate={latestIv?.infusion_rate || 0}
+                            lastChecked={latestIv ? new Date(latestIv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}
+                            className="bg-white"
+                        />
                     </div>
 
                     <div className="flex flex-col gap-6">

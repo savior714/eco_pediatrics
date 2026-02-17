@@ -1,0 +1,10 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0
+rootdir: C:\develop\eco_pediatrics\backend
+plugins: anyio-4.12.1, cov-7.0.0
+collected 5 items
+
+tests\test_admissions_logic_mock.py ..                                   [ 40%]
+tests\test_websocket_cleanup.py ...                                      [100%]
+
+============================== 5 passed in 2.37s ==============================

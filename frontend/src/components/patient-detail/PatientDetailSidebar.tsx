@@ -47,7 +47,7 @@ export function PatientDetailSidebar({
                 </div>
                 <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
                     {examSchedules.map(ex => (
-                        <div key={ex.id} className="p-3 bg-white rounded-xl border-[1.5px] border-slate-600 shadow-sm text-xs flex justify-between items-center gap-2">
+                        <div key={ex.id} className="p-3 bg-white rounded-xl border-[1.5px] border-slate-200 shadow-sm text-xs flex justify-between items-center gap-2">
                             <div className="min-w-0 flex-1">
                                 <div className="flex justify-between mb-0.5">
                                     <span className="font-bold text-slate-700">{ex.name}</span>
@@ -74,7 +74,7 @@ export function PatientDetailSidebar({
                     <FileText size={16} className="text-sky-500" />
                     신청된 서류
                 </h3>
-                <div className="bg-white rounded-xl border-[1.5px] border-slate-600 p-4 shadow-sm">
+                <div className="bg-white rounded-xl border-[1.5px] border-slate-200 p-4 shadow-sm">
                     {documentRequests.filter(r => r.status === 'COMPLETED').length > 0 ? (
                         <div className="space-y-3">
                             {documentRequests.filter(r => r.status === 'COMPLETED').map((req) => (
@@ -106,7 +106,7 @@ export function PatientDetailSidebar({
                 </h3>
                 <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
                     {roomNotifications.map(notif => (
-                        <div key={notif.id} className="p-3 bg-white rounded-xl border-[1.5px] border-slate-600 shadow-sm flex items-center justify-between gap-3">
+                        <div key={notif.id} className="p-3 bg-white rounded-xl border-[1.5px] border-slate-200 shadow-sm flex items-center justify-between gap-3">
                             <div className="min-w-0 flex-1">
                                 <span className="text-[10px] font-bold text-slate-400 block mb-0.5">{notif.time}</span>
                                 <p className="text-xs text-slate-700 line-clamp-2 leading-snug">{notif.content}</p>

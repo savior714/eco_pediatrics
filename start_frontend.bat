@@ -27,10 +27,11 @@ goto :START_DEV
 
 :START_DEV
 echo:
-echo [SUCCESS] Starting frontend (Next.js dev)...
-echo [INFO] Backend should be at http://localhost:8000
+echo [SUCCESS] Starting frontend (Tauri Dev)...
+echo [INFO] Backend expected at http://localhost:8000
+echo [INFO] This will launch the desktop window.
 echo:
-call npm run dev
+call npm run tauri dev
 if errorlevel 1 goto :FAIL
 goto :END
 

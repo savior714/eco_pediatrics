@@ -77,7 +77,7 @@ export function PatientDetailModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
+            <div className="absolute inset-0 bg-slate-900/25 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
             <div className="bg-white rounded-[2rem] w-[75%] max-w-none max-h-[85vh] shadow-2xl overflow-hidden flex flex-col transition-all duration-300">
                 <PatientDetailHeader
@@ -112,7 +112,7 @@ export function PatientDetailModal({
                                 <TemperatureGraph
                                     data={chartVitals}
                                     checkInAt={chartCheckIn}
-                                    className="h-auto min-h-[340px] border-[1.5px] border-slate-600 shadow-sm"
+                                    className="h-auto min-h-[340px] border-[1.5px] border-slate-200 shadow-sm"
                                 />
                             </section>
                         </div>

@@ -1,16 +1,23 @@
 import React from 'react';
 import { Card } from './Card';
 import { Droplet, Camera, CheckCircle2 } from 'lucide-react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
 
 interface IVStatusCardProps {
     photoUrl?: string;
     infusionRate?: number;
     lastChecked?: string;
+    className?: string;
 }
 
-export function IVStatusCard({ photoUrl, infusionRate, lastChecked }: IVStatusCardProps) {
+export function IVStatusCard({ photoUrl, infusionRate, lastChecked, className }: IVStatusCardProps) {
     return (
-        <Card className="flex flex-col gap-4 bg-white border-slate-200/80 shadow-sm">
+        <Card className={cn("flex flex-col gap-4 bg-white border-slate-200/80 shadow-sm", className)}>
             <div className="flex justify-between items-center gap-2 flex-wrap">
                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2.5">
                     <span className="w-9 h-9 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center shrink-0 border border-blue-100/50">
