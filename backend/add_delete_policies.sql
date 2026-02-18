@@ -1,32 +1,35 @@
 -- Supabase RLS 삭제 권한 추가 (Idempotency 해결)
 
 -- 1. 검사 일정 삭제 권한 추가
+DROP POLICY IF EXISTS "Allow delete for active admissions" ON public.exam_schedules;
 CREATE POLICY "Allow delete for active admissions" ON public.exam_schedules
 FOR DELETE USING (
   EXISTS (
     SELECT 1 FROM admissions 
     WHERE admissions.id = admission_id 
-    AND admissions.status = 'IN_PROGRESS'
+    AND admissions.status IN ('IN_PROGRESS', 'OBSERVATION')
   )
 );
 
 -- 2. 바이탈 기록 삭제 권한 추가
+DROP POLICY IF EXISTS "Allow delete for active admissions" ON public.vital_signs;
 CREATE POLICY "Allow delete for active admissions" ON public.vital_signs
 FOR DELETE USING (
   EXISTS (
     SELECT 1 FROM admissions 
     WHERE admissions.id = admission_id 
-    AND admissions.status = 'IN_PROGRESS'
+    AND admissions.status IN ('IN_PROGRESS', 'OBSERVATION')
   )
 );
 
 -- 3. 수액 기록 삭제 권한 추가
+DROP POLICY IF EXISTS "Allow delete for active admissions" ON public.iv_records;
 CREATE POLICY "Allow delete for active admissions" ON public.iv_records
 FOR DELETE USING (
   EXISTS (
     SELECT 1 FROM admissions 
     WHERE admissions.id = admission_id 
-    AND admissions.status = 'IN_PROGRESS'
+    AND admissions.status IN ('IN_PROGRESS', 'OBSERVATION')
   )
 );
 
