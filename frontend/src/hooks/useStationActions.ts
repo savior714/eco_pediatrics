@@ -69,11 +69,16 @@ export function useStationActions() {
     const handleDischargeAll = useCallback(async () => {
         if (!confirm('경고: DEV 모드 전용입니다.\n모든 환자를 퇴원 처리하시겠습니까?')) return;
         try {
+            // 1. 백엔드 처리 대기
             await api.post('/api/v1/dev/discharge-all', {});
+
+            // 2. 브로드캐스트가 동작하지만, 즉각적인 피드백을 위해 수동 갱신 병행
+            await fetchAdmissions();
+
             alert('모든 환자가 퇴원 처리되었습니다.');
-            fetchAdmissions(); // Replace reload with state refresh
         } catch (e) {
-            alert('Error discharging');
+            console.error('Discharge Error:', e);
+            alert('퇴원 처리 중 오류가 발생했습니다.');
         }
     }, [fetchAdmissions]);
 

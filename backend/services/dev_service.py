@@ -1,22 +1,39 @@
 import random
 import asyncio
-from datetime import datetime, timedelta
+import json
+from datetime import datetime, timedelta, timezone
 from supabase._async.client import AsyncClient
 from websocket_manager import manager
 from utils import execute_with_retry_async, broadcast_to_station_and_patient
+from logger import logger
 
 async def discharge_all(db: AsyncClient):
-    now = datetime.now().isoformat()
-    res = await execute_with_retry_async(
-        db.table("admissions")
-        .update({"status": "DISCHARGED", "discharged_at": now})
-        .in_("status", ["IN_PROGRESS", "OBSERVATION"])
-        .neq("id", "00000000-0000-0000-0000-000000000000")
-    )
-    return {"count": len(res.data) if res.data else 0, "message": "All active patients discharged."}
+    """
+    SECURITY DEFINER가 설정된 RPC를 호출하여 RLS를 우회하고 
+    모든 활성 환자를 퇴원 처리합니다.
+    """
+    # RPC 호출 (admissions 테이블 직접 수정 대신 사용)
+    res = await db.rpc("discharge_all_transaction", {
+        "p_actor_type": "NURSE",
+        "p_ip_address": "127.0.0.1"
+    }).execute()
+    
+    # RPC 결과에서 업데이트된 행 수 추출 (Python SDK execute() 결과 대응)
+    data = res.data
+    updated_count = data.get('count', 0) if data else 0
+    
+    if updated_count > 0:
+        import json
+        # 웹소켓을 통해 프론트엔드에 즉시 갱신 신호 전송
+        await manager.broadcast_all(json.dumps({
+            "type": "ADMISSION_DISCHARGED",
+            "data": {"message": f"Total {updated_count} patients discharged."}
+        }))
+    
+    return {"count": updated_count, "message": "All active patients discharged successfully."}
 
 async def seed_patient_data(db: AsyncClient, admission_id: str):
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     start_time = now - timedelta(hours=72)
     
     await execute_with_retry_async(

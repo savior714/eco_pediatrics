@@ -10,8 +10,9 @@ from utils import execute_with_retry_async, create_audit_log, broadcast_to_stati
 from models import IVRecordCreate
 
 async def record_iv(db: AsyncClient, iv: IVRecordCreate):
+    from datetime import timezone
     data = iv.dict()
-    data['created_at'] = datetime.utcnow().isoformat()
+    data['created_at'] = datetime.now(timezone.utc).isoformat()
     response = await execute_with_retry_async(db.table("iv_records").insert(data))
     if not response.data:
         raise HTTPException(status_code=500, detail="Failed to save IV record")
