@@ -33,12 +33,14 @@ async def discharge_all(db: AsyncClient):
     return {"count": updated_count, "message": "All active patients discharged successfully."}
 
 async def seed_patient_data(db: AsyncClient, admission_id: str):
-    now = datetime.now(timezone.utc)
-    start_time = now - timedelta(hours=72)
+    # 과거 72시간 전의 '시간(hour)' 정각부터 시작하도록 정밀화
+    start_time = (now - timedelta(hours=72)).replace(minute=0, second=0, microsecond=0)
     
-    await execute_with_retry_async(
+    update_res = await execute_with_retry_async(
         db.table("admissions").update({"check_in_at": start_time.isoformat()}).eq("id", admission_id)
     )
+    if not update_res.data:
+        logger.error(f"Failed to update check_in_at for admission {admission_id}. RLS policy might be missing.")
 
     # Idempotency: Clear existing seeded data to prevent duplication
     await asyncio.gather(
