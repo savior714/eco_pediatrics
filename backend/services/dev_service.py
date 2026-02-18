@@ -85,19 +85,47 @@ async def seed_patient_data(db: AsyncClient, admission_id: str):
     
     return {"message": "Seeded successfully"}
 
-async def seed_all_meals(db: AsyncClient, target_date: str = None):
-    if not target_date: target_date = datetime.now().strftime("%Y-%m-%d")
-    res = await execute_with_retry_async(db.table("admissions").select("id").in_("status", ["IN_PROGRESS", "OBSERVATION"]))
-    admissions = res.data or []
-    if not admissions: return {"message": "No active admissions"}
+async def seed_all_meals(db: AsyncClient):
+    """
+    모든 활성 입원 환자(IN_PROGRESS, OBSERVATION)에게 오늘부터 3일간의 식단 데이터를 시딩합니다.
+    """
+    # KST (UTC+9) 기준 오늘 날짜 계산
+    start_date = (datetime.utcnow() + timedelta(hours=9)).date()
     
+    res = await execute_with_retry_async(
+        db.table("admissions")
+        .select("id")
+        .in_("status", ["IN_PROGRESS", "OBSERVATION"])
+    )
+    admissions = res.data or []
+    if not admissions:
+        return {"message": "시딩할 활성 입원 세션이 없습니다."}
+    
+    meal_times = ["BREAKFAST", "LUNCH", "DINNER"]
+    pediatric_types = ['일반식', '죽', '미음']
     meal_records = []
-    for adm in admissions:
-        for mt in ["BREAKFAST", "LUNCH", "DINNER"]:
-            meal_records.append({
-                "admission_id": adm["id"], "meal_date": target_date, "meal_time": mt,
-                "request_type": "STATION_UPDATE", "pediatric_meal_type": "일반식",
-                "guardian_meal_type": "일반식", "status": "APPROVED"
-            })
-    await execute_with_retry_async(db.table("meal_requests").upsert(meal_records, on_conflict="admission_id,meal_date,meal_time"))
-    return {"message": f"Seeded meals for {len(admissions)} patients"}
+    
+    for idx, adm in enumerate(admissions):
+        admission_id = adm['id']
+        for d_idx in range(3): # 오늘부터 3일간
+            target_date = (start_date + timedelta(days=d_idx)).isoformat()
+            for t_idx, mt in enumerate(meal_times):
+                # 환자별/날짜별로 다른 메뉴 제공 (순환)
+                p_type = pediatric_types[(idx + d_idx + t_idx) % len(pediatric_types)]
+                
+                meal_records.append({
+                    "admission_id": admission_id,
+                    "meal_date": target_date,
+                    "meal_time": mt,
+                    "request_type": "REGULAR",
+                    "pediatric_meal_type": p_type,
+                    "guardian_meal_type": "일반식" if mt != "BREAKFAST" else "신청 안함",
+                    "room_note": "알러지 확인 요망" if idx % 5 == 0 else "",
+                    "status": "APPROVED"
+                })
+                
+    if meal_records:
+        await execute_with_retry_async(db.rpc("upsert_meal_requests_admin", {"p_meals": meal_records}))
+        return {"message": f"성공: {len(admissions)}명의 환자에게 총 {len(meal_records)}개의 식단 데이터가 시딩되었습니다."}
+    
+    return {"message": "생성된 데이터가 없습니다."}

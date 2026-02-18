@@ -1,0 +1,15 @@
+Total active admissions: 13
+--------------------------------------------------
+Room: 311-1 | Name: 이*은 | Status: IN_PROGRESS | ID: 8a9a91bb-24a0-490c-9ee1-0ea391ea7819 | Token: b976f484-f21c-44e2-8a46-acb31815bed5 | Meals: 0
+Room: 313 | Name: 조*우 | Status: IN_PROGRESS | ID: db2c1c8e-1f22-4abb-bb58-b0b43dcffad8 | Token: 919fb7d5-eb38-4df1-9de0-72d2e7af5f51 | Meals: 0
+Room: 311-4 | Name: 김*진 | Status: IN_PROGRESS | ID: 9d3f863e-791c-4b02-974c-86cc8204a996 | Token: 4ea2984d-707d-41cb-8895-7030a57db33c | Meals: 0
+Room: 303 | Name: 박* | Status: IN_PROGRESS | ID: ae0265d4-bd93-42e9-9601-70038eae5cb5 | Token: 5ef2054e-1654-4f23-a3c7-57ae0a8787e4 | Meals: 0
+Room: 305 | Name: 이*원 | Status: IN_PROGRESS | ID: d4b59543-b39d-44a3-b4fc-e79e8984d4f5 | Token: e4d0ac7d-1a9e-47cc-b0b1-70a3de963dde | Meals: 0
+Room: 308 | Name: 김*경 | Status: IN_PROGRESS | ID: cd6f240d-1f85-4f14-ae68-3adce40c3daa | Token: 4fd0f184-7c4e-4ec5-b188-a7d694b7fe60 | Meals: 0
+Room: 310-1 | Name: 이*원 | Status: IN_PROGRESS | ID: 07662df9-ee0d-4c7b-9474-b6017e6a4658 | Token: 2a61b428-84ac-4d6e-9324-d1c73b85e387 | Meals: 0
+Room: 306 | Name: 이*주 | Status: IN_PROGRESS | ID: 9e32663d-941d-426f-bfc0-7082bc7dede3 | Token: f21758de-84be-4c7b-926e-8a7997974973 | Meals: 0
+Room: 310-2 | Name: 소*이 | Status: IN_PROGRESS | ID: 12451805-3d7c-49b0-88d0-054a80d613d6 | Token: fb5be224-3dc0-4273-a184-73c3c57a62d3 | Meals: 0
+Room: 304 | Name: 이*주 | Status: IN_PROGRESS | ID: ab2a1d3f-cbb5-4f6e-9249-518e0c1129d3 | Token: 1e3a0b37-e222-46fe-a5bc-9a67bbc0fbb0 | Meals: 0
+Room: 312 | Name: 이*원 | Status: IN_PROGRESS | ID: 284ae365-0f2e-4295-b86d-a232487a9bb0 | Token: 55857dc4-c61a-42be-8742-546fc2753fd4 | Meals: 0
+Room: 302 | Name: 이*민 | Status: IN_PROGRESS | ID: 28ebabc6-790a-48a9-9c43-f025b97db9dd | Token: 136ee834-4b9d-441f-92e3-6a526a00fde0 | Meals: 0
+Room: 309 | Name: 김*원 | Status: IN_PROGRESS | ID: 6f312732-1abf-4e5c-b142-e52fe308d5ca | Token: fb0d87fc-8b4d-492b-99c9-ff31c5be8540 | Meals: 0

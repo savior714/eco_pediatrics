@@ -1,0 +1,16 @@
+Fetching all active admissions...
+Total active admissions: 13
+Room 311-1 (이*은): ID=8a9a91bb-24a0-490c-9ee1-0ea391ea7819, Meals=0
+Room 313 (조*우): ID=db2c1c8e-1f22-4abb-bb58-b0b43dcffad8, Meals=0
+Room 311-4 (김*진): ID=9d3f863e-791c-4b02-974c-86cc8204a996, Meals=0
+Room 303 (박*): ID=ae0265d4-bd93-42e9-9601-70038eae5cb5, Meals=0
+Room 305 (이*원): ID=d4b59543-b39d-44a3-b4fc-e79e8984d4f5, Meals=0
+Room 308 (김*경): ID=cd6f240d-1f85-4f14-ae68-3adce40c3daa, Meals=0
+Room 310-1 (이*원): ID=07662df9-ee0d-4c7b-9474-b6017e6a4658, Meals=0
+Room 306 (이*주): ID=9e32663d-941d-426f-bfc0-7082bc7dede3, Meals=0
+Room 310-2 (소*이): ID=12451805-3d7c-49b0-88d0-054a80d613d6, Meals=0
+Room 304 (이*주): ID=ab2a1d3f-cbb5-4f6e-9249-518e0c1129d3, Meals=0
+Room 312 (이*원): ID=284ae365-0f2e-4295-b86d-a232487a9bb0, Meals=0
+Room 302 (이*민): ID=28ebabc6-790a-48a9-9c43-f025b97db9dd, Meals=0
+Room 309 (김*원): ID=6f312732-1abf-4e5c-b142-e52fe308d5ca, Meals=0
+--- Scan Finished ---

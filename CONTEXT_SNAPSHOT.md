@@ -40,6 +40,10 @@
 - [x] **Produiction Hardening (2026-02-18)**:
     - **Security RPC**: `audit_logs` 및 `meal_requests` 테이블에 RLS 우회용 `SECURITY DEFINER` RPC 적용. (시스템 권한으로 안전한 데이터 관리)
     - **UI Stability**: `PatientDetailSidebar.tsx`, `VitalStatusGrid.tsx` 내 중복 Key 에러 완전 해결.
+    - **Meal Request System Restore**: 
+        - RPC 함수(`upsert_meal_requests_admin`) 고스트 성공 현상 해결 및 물리 데이터 적재 확인.
+        - `OBSERVATION` 환자 식단 가시성 확보를 위한 RLS 정책(SELECT) 정밀 보정.
+        - `dev_service.py` 내 3일치 벌크 시딩 로직 고도화 (전체 환자 자동 추적 연동).
     - **Dashboard logic**: 대시보드 식단 데이터 노출 제한 해제 및 KST(UTC+9) 타임존 정합성 확보.
 - [x] **Modular Refactoring for AI Context Efficiency (2026-02-17)**:
 
