@@ -14,11 +14,11 @@ def mask_name(name: str) -> str:
 async def create_audit_log(db: AsyncClient, actor_type: str, action: str, target_id: str, ip_address: str = "0.0.0.0"):
     if db:
         try:
-            await db.table("audit_logs").insert({
-                "actor_type": actor_type,
-                "action": action,
-                "target_id": target_id,
-                "ip_address": ip_address
+            await db.rpc("log_audit_activity", {
+                "p_actor_type": actor_type,
+                "p_action": action,
+                "p_target_id": target_id,
+                "p_ip_address": ip_address
             }).execute()
         except Exception as e:
             logger.warning(f"Audit log failed: {str(e)}")

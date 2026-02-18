@@ -59,10 +59,10 @@ export function VitalStatusGrid({
                         </div>
                     </div>
 
-                    {getNextThreeMealSlots().map((slot) => {
+                    {getNextThreeMealSlots().map((slot, index) => {
                         const meal = meals.find(m => m.meal_date === slot.date && m.meal_time === slot.meal_time);
                         return (
-                            <div key={slot.label} className="col-span-1 bg-white rounded-[1.2rem] border-[1.5px] border-slate-200 shadow-sm flex flex-col justify-center items-center relative group/meal py-1.5 px-1">
+                            <div key={`meal-slot-${slot.label}-${index}`} className="col-span-1 bg-white rounded-[1.2rem] border-[1.5px] border-slate-200 shadow-sm flex flex-col justify-center items-center relative group/meal py-1.5 px-1">
                                 <button
                                     onClick={() => meal?.id && onEditMeal({
                                         ...slot,

@@ -46,8 +46,8 @@ export function PatientDetailSidebar({
                     </button>
                 </div>
                 <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
-                    {examSchedules.map(ex => (
-                        <div key={ex.id === -1 ? ex.tempId : ex.id} className={`p-3 bg-white rounded-xl border-[1.5px] border-slate-200 shadow-sm text-xs flex justify-between items-center gap-2 ${ex.isOptimistic ? 'opacity-50' : ''}`}>
+                    {examSchedules.map((ex, index) => (
+                        <div key={`exam-schedule-${ex.id}-${index}-${ex.scheduled_at}`} className={`p-3 bg-white rounded-xl border-[1.5px] border-slate-200 shadow-sm text-xs flex justify-between items-center gap-2 ${ex.isOptimistic ? 'opacity-50' : ''}`}>
                             <div className="min-w-0 flex-1">
                                 <div className="flex justify-between mb-0.5">
                                     <span className="font-bold text-slate-700">{ex.name}</span>
@@ -77,14 +77,14 @@ export function PatientDetailSidebar({
                 <div className="bg-slate-50/50 rounded-xl border border-slate-200 p-4">
                     {documentRequests.filter(r => r.status === 'COMPLETED').length > 0 ? (
                         <div className="space-y-3">
-                            {documentRequests.filter(r => r.status === 'COMPLETED').map((req) => (
-                                <div key={req.id} className="space-y-1">
+                            {documentRequests.filter(r => r.status === 'COMPLETED').map((req, idx) => (
+                                <div key={`doc-request-group-${req.id}-${idx}`} className="space-y-1">
                                     <div className="text-[10px] text-slate-400 font-bold">
                                         {new Date(req.created_at).toLocaleDateString()} 신청분
                                     </div>
                                     <ul className="space-y-1 text-xs text-slate-600">
-                                        {req.request_items.map((it: string) => (
-                                            <li key={it} className="flex items-center gap-2">
+                                        {req.request_items.map((it: string, i: number) => (
+                                            <li key={`doc-item-${req.id}-${it}-${i}`} className="flex items-center gap-2">
                                                 <span className="w-1 h-1 rounded-full bg-sky-400 shrink-0" />
                                                 {DOC_MAP[it] || it}
                                             </li>
@@ -105,8 +105,8 @@ export function PatientDetailSidebar({
                     요청 사항 ({roomNotifications.length})
                 </h3>
                 <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
-                    {roomNotifications.map(notif => (
-                        <div key={notif.id} className="p-3 bg-white rounded-xl border-[1.5px] border-slate-200 shadow-sm flex items-center justify-between gap-3">
+                    {roomNotifications.map((notif, index) => (
+                        <div key={`notif-${notif.id}-${index}`} className="p-3 bg-white rounded-xl border-[1.5px] border-slate-200 shadow-sm flex items-center justify-between gap-3">
                             <div className="min-w-0 flex-1">
                                 <span className="text-[10px] font-bold text-slate-400 block mb-0.5">{notif.time}</span>
                                 <p className="text-xs text-slate-700 line-clamp-2 leading-snug">{notif.content}</p>

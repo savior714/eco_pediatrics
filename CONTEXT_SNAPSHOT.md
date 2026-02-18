@@ -1,7 +1,8 @@
 # Context Snapshot
 
-## 현재 상태 (2026-02-18)
-
+- **Audit Log & Meal Request RPC 도입**: RLS 제약을 우회하고 보안을 강화하기 위해 `SECURITY DEFINER` 기반의 RPC 함수(`log_audit_activity`, `upsert_meal_requests_admin`) 도입 및 연동 완료
+- **React Key 경고 원천 차단**: 상세 모달 및 사이드바의 모든 리스트 렌더링에 고유 접두사(`exam-`, `notif-`)와 인덱스를 결합한 Key 로직 적용
+- **대시보드 데이터 노출 로직 보정**: 상위 5개로 제한되던 식단 노출 로직을 해제하고, KST 타임존 보정을 통해 오늘/내일 데이터 누락 문제 해결
 - **PostgREST 20.5 (PGRST205) 호환성 확보**: 스키마 구조 최적화 및 `view_station_dashboard` 도입을 통한 500 에러 해결
 - **백엔드 예외 처리 강화**: 전역 예외 핸들러 및 환경별 상세 에러 메시지(local/dev) 도입
 - **프론트엔드 모듈화**: `StationActions`, `DashboardStats` 훅 추출로 컴포넌트 복잡도 획기적 개선
@@ -36,10 +37,11 @@
 - [x] **백엔드 비동기(Async) 전환**: Supabase AsyncClient 및 FastAPI lifespan 도입으로 Windows `WinError 10035` 해결 및 성능 최적화
 - [x] **Seeder UUID 수정**: `access_token` 형식을 UUID4로 변경하여 DB 제약 조건 위반(`22P02`) 해결
 - [x] **Patient-Specific Dev Seeder (Phase ZA-ZB)**: 개별 환자 상세 모달에 'Dev' 버튼 추가, 72시간 치 더미 데이터(체온·수액·검사) 생성 및 모달 유지 연동
-- [x] **실시간 동기화 하드닝 (Phase ZC-ZF)**: 스테이션–보호자 간 100% 실시간 연동 (검사 일정, 전실, 퇴원, 수액 속도). WebSocket Partial Update 도입으로 지연 시간 최소화
-- [x] **체온 차트 정렬 최적화 (Phase ZE)**: 가로축(X-axis)을 자정 기준으로 고정하여 날짜 칸막이와 데이터 위치가 어긋나던 버그 수정
-
-## Refactoring (2026-02-14)
+- [x] **Produiction Hardening (2026-02-18)**:
+    - **Security RPC**: `audit_logs` 및 `meal_requests` 테이블에 RLS 우회용 `SECURITY DEFINER` RPC 적용. (시스템 권한으로 안전한 데이터 관리)
+    - **UI Stability**: `PatientDetailSidebar.tsx`, `VitalStatusGrid.tsx` 내 중복 Key 에러 완전 해결.
+    - **Dashboard logic**: 대시보드 식단 데이터 노출 제한 해제 및 KST(UTC+9) 타임존 정합성 확보.
+- [x] **Modular Refactoring for AI Context Efficiency (2026-02-17)**:
 
 ### 목표
 - **코드 품질 향상**: 거대해진 `main.py`와 `Station.tsx`를 분리하여 유지보수성 확보

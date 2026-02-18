@@ -52,6 +52,33 @@ async def seed_patient_data(db: AsyncClient, admission_id: str):
     adm_res = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", admission_id).single())
     if adm_res.data:
         token, room = adm_res.data['access_token'], adm_res.data['room_number']
+        
+        # 3일치 랜덤 식단 데이터 생성 (오늘 ~ 내레)
+        meal_times = ["BREAKFAST", "LUNCH", "DINNER"]
+        pediatric_types = ["일반식", "죽", "미음"]
+        guardian_types = ["일반식", "신청 안함"]
+        statuses = ["APPROVED", "COMPLETED", "REQUESTED"]
+        
+        # KST (UTC+9) adjustment to ensure today's date matches Korean hospital context
+        start_date = (datetime.utcnow() + timedelta(hours=9)).date()
+        meal_entries = []
+        for i in range(3):
+            target_date = (start_date + timedelta(days=i)).isoformat()
+            for mt in meal_times:
+                meal_entries.append({
+                    "admission_id": admission_id,
+                    "meal_date": target_date,
+                    "meal_time": mt,
+                    "pediatric_meal_type": random.choice(pediatric_types),
+                    "requested_pediatric_meal_type": random.choice(pediatric_types),
+                    "guardian_meal_type": random.choice(guardian_types),
+                    "requested_guardian_meal_type": random.choice(guardian_types),
+                    "status": random.choice(statuses),
+                    "request_type": "REGULAR"
+                })
+        
+        await execute_with_retry_async(db.rpc("upsert_meal_requests_admin", {"p_meals": meal_entries}))
+
         if vitals: await broadcast_to_station_and_patient(manager, {"type": "NEW_VITAL", "data": {**vitals[0], "room": room}}, token)
         if ivs: await broadcast_to_station_and_patient(manager, {"type": "NEW_IV", "data": {**ivs[-1], "room": room}}, token)
         await broadcast_to_station_and_patient(manager, {"type": "NEW_EXAM_SCHEDULE", "data": {**exams[0], "room": room}}, token)
