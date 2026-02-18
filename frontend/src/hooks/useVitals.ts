@@ -198,14 +198,15 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                 }
                 case 'DELETE_EXAM_SCHEDULE':
                     setExamSchedules(prev => prev.filter(ex => ex.id !== (message.data as any).id));
-                    // Removed debouncedRefetch() - local state is already synced
+                    // 서버 상태와의 최종 정합성을 위해 리페치 (유령 데이터 방어)
+                    debouncedRefetch();
                     break;
                 case 'ADMISSION_TRANSFERRED':
                     debouncedRefetch();
                     break;
                 case 'ADMISSION_DISCHARGED':
-                    alert('환자가 퇴원되었습니다.');
-                    window.location.reload();
+                    alert('환자가 퇴원 처리되었습니다. 페이지를 종료합니다.');
+                    window.location.href = '/';
                     break;
                 case 'NEW_MEAL_REQUEST':
                     if (admissionIdRef.current && message.data.admission_id === admissionIdRef.current) {

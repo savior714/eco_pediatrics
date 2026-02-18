@@ -98,7 +98,7 @@ async def seed_patient_data(db: AsyncClient, admission_id: str):
 
         if vitals: await broadcast_to_station_and_patient(manager, {"type": "NEW_VITAL", "data": {**vitals[0], "room": room}}, token)
         if ivs: await broadcast_to_station_and_patient(manager, {"type": "NEW_IV", "data": {**ivs[-1], "room": room}}, token)
-        await broadcast_to_station_and_patient(manager, {"type": "NEW_EXAM_SCHEDULE", "data": {**exams[0], "room": room}}, token)
+        # exam 개별 broadcast 제거: REFRESH_DASHBOARD가 전체 데이터를 갱신하므로 개별 트리거 불필요 (이중 렌더링 방지)
         
         # 전체 데이터 갱신을 지시하는 신호 전송
         await broadcast_to_station_and_patient(manager, {

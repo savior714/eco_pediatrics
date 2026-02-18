@@ -99,7 +99,7 @@ async def update_document_request_status(
     # 2. 브로드캐스트 데이터 조회 (join 포함)
     response = await execute_with_retry_async(
         db.table("document_requests")
-        .select("*, admissions(room_number)")
+        .select("*, admissions(room_number, access_token)")
         .eq("id", request_id)
     )
     
