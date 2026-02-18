@@ -33,6 +33,7 @@ async def discharge_all(db: AsyncClient):
     return {"count": updated_count, "message": "All active patients discharged successfully."}
 
 async def seed_patient_data(db: AsyncClient, admission_id: str):
+    now = datetime.now(timezone.utc)
     # 과거 72시간 전의 '시간(hour)' 정각부터 시작하도록 정밀화
     start_time = (now - timedelta(hours=72)).replace(minute=0, second=0, microsecond=0)
     
