@@ -198,8 +198,8 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                 }
                 case 'DELETE_EXAM_SCHEDULE':
                     setExamSchedules(prev => prev.filter(ex => ex.id !== (message.data as any).id));
-                    // 서버 상태와의 최종 정합성을 위해 리페치 (유령 데이터 방어)
-                    debouncedRefetch();
+                    // debouncedRefetch 제거: optimistic 삭제로 로컬 상태 이미 동기화됨
+                    // refetch 시 DB 반영 전 데이터가 로드되어 삭제 항목이 복원되는 버그 방지
                     break;
                 case 'ADMISSION_TRANSFERRED':
                     debouncedRefetch();
