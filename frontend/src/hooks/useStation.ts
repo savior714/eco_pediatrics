@@ -140,6 +140,10 @@ export function useStation(): UseStationReturn {
                         admissionId: message.data.admission_id // Store for removal patch
                     } as any, ...prev]);
                     break;
+                case 'DOC_REQUEST_UPDATED':
+                    // Remove notification when a document request is updated (e.g., to COMPLETED) by any station
+                    setNotifications(prev => prev.filter(n => n.id !== String(message.data.id)));
+                    break;
 
                 case 'IV_PHOTO_UPLOADED':
                     setLastUploadedIv({

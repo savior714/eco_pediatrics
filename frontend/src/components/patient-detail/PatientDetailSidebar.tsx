@@ -36,7 +36,7 @@ export function PatientDetailSidebar({
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                         <Calendar size={16} className="text-violet-500" />
-                        오늘의 검사 일정
+                        예정된 검사 일정
                     </h3>
                     <button
                         onClick={onAddExam}

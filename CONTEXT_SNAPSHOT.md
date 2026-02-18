@@ -104,3 +104,11 @@
     - **Backend**: `admissions`, `meals`, `iv_records`, `dev` 라우터의 비즈니스 로직을 `services/` 레이어로 완전 이관 (Router Slimming).
     - **Result**: 모든 파일이 500라인(20KB) 이하를 유지하며 AI 컨텍스트 효율성 극대화.
     - **Stability**: 백엔드 단위 테스트 8건 전원 통과 (`pytest`) 및 프론트엔드 Lint 준수.
+- [x] **Document Request Real-time Sync & Optimization (2026-02-18)**:
+    - **Real-time Sync**: `DOC_REQUEST_UPDATED` 및 `NEW_DOC_REQUEST` 메시지를 STATION뿐만 아니라 관련 환자(`token`) 채널에도 브로드캐스트하여 서브모달과 보호자 대시보드가 즉시 갱신되도록 개선.
+    - **Data Aggregation**: `useDashboardStats.ts`에서 모든 미완료/완료(`not CANCELED`) 서류 신청 내역을 합쳐서(`flatMap`) 보여주도록 수정하여 정보 일치성 확보.
+    - **Bug Fixes**: 
+        - `DocumentRequest` Pydantic 모델에 `created_at` 필드 추가로 "Invalid Date" 오류 해결.
+        - Supabase SDK의 `update().eq().select()` 제약 사항을 반영하여 업데이트와 조회를 분리 처리.
+        - 환자 서브모달 내 검사 일정 타이틀을 "예정된 검사 일정"으로 변경하여 용어 통일.
+    - **Stability**: `useVitals.ts`에서 메시지 수신 시 `debouncedRefetch`를 호출하여 서버 데이터와의 정합성 극대화.

@@ -45,8 +45,14 @@ export function useDashboardStats() {
             : (MEAL_LABEL_MAP[currentMeal.request_type] ?? currentMeal.request_type))
         : null;
 
-    const latestDocRequest = vitalsData.documentRequests.length > 0 ? vitalsData.documentRequests[0] : null;
-    const currentDocLabels = latestDocRequest?.request_items?.map((id: string) => DOC_LABEL_MAP[id] || id) ?? [];
+    // Aggregate all document requests that are not canceled (Pending + Completed)
+    const allDocItems = vitalsData.documentRequests
+        .filter(req => req.status !== 'CANCELED')
+        .flatMap(req => req.request_items);
+
+    // Remove duplicates and map to labels
+    const currentDocLabels = Array.from(new Set(allDocItems))
+        .map((id: string) => DOC_LABEL_MAP[id] || id);
 
     return {
         token,

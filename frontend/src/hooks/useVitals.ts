@@ -166,7 +166,8 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     debouncedRefetch();
                     break;
                 case 'NEW_DOC_REQUEST':
-                    setDocumentRequests(prev => [message.data as any, ...prev]);
+                case 'DOC_REQUEST_UPDATED':
+                    debouncedRefetch();
                     break;
                 case 'NEW_EXAM_SCHEDULE': {
                     const newExam = message.data;

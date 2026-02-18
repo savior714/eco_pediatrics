@@ -93,6 +93,7 @@ class DocumentRequest(BaseModel):
     admission_id: str
     request_items: list[str] # RECEIPT, DETAIL, CERT, DIAGNOSIS
     status: str = "PENDING"
+    created_at: Optional[datetime] = None
 
 class DocumentRequestCreate(BaseModel):
     admission_id: str

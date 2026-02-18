@@ -13,6 +13,7 @@ interface MealRequestModalProps {
     isOpen: boolean;
     onClose: () => void;
     admissionId: string | null;
+    currentMeals?: any[]; // Existing meals from props
     onSuccess?: () => void;
 }
 
@@ -24,7 +25,7 @@ interface SlotState {
     guardian: string;
 }
 
-export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: MealRequestModalProps) {
+export function MealRequestModal({ isOpen, onClose, admissionId, currentMeals = [], onSuccess }: MealRequestModalProps) {
     const slots = getNextThreeMealSlots();
     const [selectedSlotIdx, setSelectedSlotIdx] = useState(0);
 
@@ -35,6 +36,8 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
         2: { pediatric: '일반식', guardian: '선택 안함' }
     });
 
+    const [initialSelections, setInitialSelections] = useState<Record<number, SlotState>>({});
+
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<'SUCCESS' | 'ERROR' | null>(null);
 
@@ -42,13 +45,24 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
         if (isOpen) {
             setResult(null);
             setSelectedSlotIdx(0);
-            setSelections({
-                0: { pediatric: '일반식', guardian: '선택 안함' },
-                1: { pediatric: '일반식', guardian: '선택 안함' },
-                2: { pediatric: '일반식', guardian: '선택 안함' }
+
+            // Initialize from currentMeals if available
+            const initial: Record<number, SlotState> = {};
+            slots.forEach((slot, idx) => {
+                const existing = currentMeals.find(m =>
+                    m.meal_date === slot.date &&
+                    m.meal_time === slot.meal_time
+                );
+                initial[idx] = {
+                    pediatric: existing?.pediatric_meal_type || '일반식',
+                    guardian: existing?.guardian_meal_type || '선택 안함'
+                };
             });
+
+            setSelections(initial);
+            setInitialSelections(initial);
         }
-    }, [isOpen]);
+    }, [isOpen, currentMeals]);
 
     const updateSelection = (field: keyof SlotState, value: string) => {
         setSelections(prev => ({
@@ -65,14 +79,28 @@ export function MealRequestModal({ isOpen, onClose, admissionId, onSuccess }: Me
     const handleSubmit = async () => {
         if (!admissionId) return;
 
+        // Check if anything actually changed
+        const changedIdxs = slots.map((_, idx) => {
+            const current = selections[idx];
+            const initial = initialSelections[idx];
+            const hasChanged = current.pediatric !== initial.pediatric || current.guardian !== initial.guardian;
+            return hasChanged ? idx : -1;
+        }).filter(idx => idx !== -1);
+
+        if (changedIdxs.length === 0) {
+            onClose(); // No changes, just close
+            return;
+        }
+
         setIsLoading(true);
         setResult(null);
 
         try {
             const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-            // Submit all 3 slots sequentially
-            const promises = slots.map((slot, idx) => {
+            // Submit only changed slots
+            const promises = changedIdxs.map((idx) => {
+                const slot = slots[idx];
                 const sel = selections[idx];
                 return fetch(`${API_BASE}/api/v1/meals/requests`, {
                     method: 'POST',

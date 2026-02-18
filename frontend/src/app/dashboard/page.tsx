@@ -235,6 +235,7 @@ function DashboardContent() {
                     isOpen={modalState.isMealModalOpen}
                     onClose={() => actions.setIsMealModalOpen(false)}
                     admissionId={vitalsData.admissionId}
+                    currentMeals={vitalsData.meals}
                     onSuccess={() => { actions.refetch(); actions.setIsMealModalOpen(false); }}
                 />
 

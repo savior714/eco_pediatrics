@@ -66,18 +66,20 @@ async def request_document(
     response = await execute_with_retry_async(db.table("document_requests").insert(data))
     new_request = response.data[0]
     
-    # Broadcast to station with generated ID
+    # Broadcast to station and the specific admission (for real-time update in sub-modal/guardian)
     room = adm_res.data['room_number']
     message = {
         "type": "NEW_DOC_REQUEST",
         "data": {
             "id": new_request['id'],
             "room": room,
+            "admission_id": request.admission_id, # Added for context
             "request_items": request.request_items,
             "created_at": datetime.now().isoformat()
         }
     }
     await manager.broadcast(json.dumps(message), "STATION")
+    await manager.broadcast(json.dumps(message), token)
     return new_request
 
 @router.patch("/documents/requests/{request_id}", response_model=DocumentRequest)
@@ -87,14 +89,43 @@ async def update_document_request_status(
     db: AsyncClient = Depends(get_supabase)
 ):
     """Update document request status (e.g., PENDING -> COMPLETED)"""
-    response = await execute_with_retry_async(
+    # 1. 상태 업데이트 수행
+    await execute_with_retry_async(
         db.table("document_requests")
         .update({"status": status})
         .eq("id", request_id)
     )
+    
+    # 2. 브로드캐스트 데이터 조회 (join 포함)
+    response = await execute_with_retry_async(
+        db.table("document_requests")
+        .select("*, admissions(room_number)")
+        .eq("id", request_id)
+    )
+    
     if not response.data:
         raise HTTPException(status_code=404, detail="Request not found")
-    return response.data[0]
+    
+    updated_request = response.data[0]
+    
+    # 3. STATION 및 해당 환자 채널 브로드캐스트
+    admission_data = updated_request.get('admissions', {})
+    room_number = admission_data.get('room_number') if isinstance(admission_data, dict) else None
+    admission_token = admission_data.get('access_token') if isinstance(admission_data, dict) else None
+
+    message = {
+        "type": "DOC_REQUEST_UPDATED",
+        "data": {
+            "id": updated_request['id'],
+            "status": status,
+            "room": room_number
+        }
+    }
+    await manager.broadcast(json.dumps(message), "STATION")
+    if admission_token:
+        await manager.broadcast(json.dumps(message), admission_token)
+    
+    return updated_request
 
 @router.patch("/meals/requests/{request_id}", response_model=MealRequest)
 async def update_meal_request_status(
