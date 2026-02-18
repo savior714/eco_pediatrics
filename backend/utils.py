@@ -11,6 +11,18 @@ def mask_name(name: str) -> str:
         return name
     return name[0] + "*" + name[2:] if len(name) > 2 else name[0] + "*"
 
+def normalize_rpc_result(res):
+    """
+    Standardizes Supabase RPC results.
+    Returns the first item if the result is a non-empty list,
+    returns the data as is if it's already a dict or None.
+    Useful for ensuring SSOT consistency across different Supabase environments.
+    """
+    if not res or not res.data:
+        return None
+    data = res.data
+    return data[0] if isinstance(data, list) and len(data) > 0 else data
+
 async def create_audit_log(db: AsyncClient, actor_type: str, action: str, target_id: str, ip_address: str = "0.0.0.0"):
     if db:
         try:

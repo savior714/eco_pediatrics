@@ -1,13 +1,10 @@
 # Context Snapshot
 
+- **Z-Index 이슈 해결 (2026-02-18)**: `PatientDetailModal.tsx`의 상단 섹션 `z-index`를 `z-20`으로 조정하여 IV QR 코드 및 팝오버가 가려지는 문제 해결
+- **백엔드 SDK 오용 수정 (2026-02-18)**: `meal_service.py`에서 `upsert()` 후 잘못된 `.select("*")` 체이닝을 제거하여 500 Internal Server Error 해결
+- **RPC 정규화 및 SSOT 강화 (2026-02-18)**: `normalize_rpc_result` 유틸리티 도입으로 Supabase RPC 응답 형식(list/object) 불일치 해결 및 `create_admission` 시 전체 필드 즉시 반환 보장
+- **프론트엔드 토큰 방어 (2026-02-18)**: `useVitals.ts`에서 403/404 에러 감지 시 세션 종료 안내 및 홈(/) 리다이렉트 로직 구현
 - **Audit Log & Meal Request RPC 도입**: RLS 제약을 우회하고 보안을 강화하기 위해 `SECURITY DEFINER` 기반의 RPC 함수(`log_audit_activity`, `upsert_meal_requests_admin`) 도입 및 연동 완료
-- **React Key 경고 원천 차단**: 상세 모달 및 사이드바의 모든 리스트 렌더링에 고유 접두사(`exam-`, `notif-`)와 인덱스를 결합한 Key 로직 적용
-- **대시보드 데이터 노출 로직 보정**: 상위 5개로 제한되던 식단 노출 로직을 해제하고, KST 타임존 보정을 통해 오늘/내일 데이터 누락 문제 해결
-- **PostgREST 20.5 (PGRST205) 호환성 확보**: 스키마 구조 최적화 및 `view_station_dashboard` 도입을 통한 500 에러 해결
-- **백엔드 예외 처리 강화**: 전역 예외 핸들러 및 환경별 상세 에러 메시지(local/dev) 도입
-- **프론트엔드 모듈화**: `StationActions`, `DashboardStats` 훅 추출로 컴포넌트 복잡도 획기적 개선
-- **감사 로그 고도화**: 환자 전실/퇴원/생성 시 실제 클라이언트 IP 주소 추적 기능 도입
-- 보호자 대시보드 및 간호 스테이션 핵심 기능 안정화 단계 진입
 
 ## 주요 설계 결정
 

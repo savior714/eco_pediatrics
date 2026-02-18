@@ -98,9 +98,16 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                 setIvRecords(data.iv_records || []);
                 setExamSchedules(data.exam_schedules || []);
             }
-        } catch (err) {
+        } catch (err: any) {
             if (currentRequestId === requestRef.current) {
-                console.error(err);
+                console.error('Dashboard Fetch Error:', err);
+
+                // 3rd Priority: Defense Layer. Handle invalid/expired tokens gracefully.
+                const errorMessage = String(err?.message || '');
+                if (errorMessage.includes("403") || errorMessage.includes("404")) {
+                    alert("이미 종료되었거나 유효하지 않은 페이지입니다. 병원으로 문의해 주세요.");
+                    window.location.href = "/";
+                }
             }
         } finally {
             if (currentRequestId === requestRef.current) {

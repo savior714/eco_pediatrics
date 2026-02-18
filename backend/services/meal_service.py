@@ -67,7 +67,7 @@ async def upsert_meal_request(db: AsyncClient, req: MealRequestCreate):
 
     try:
         upsert_res = await execute_with_retry_async(
-            db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time").select("*")
+            db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time")
         )
         new_req_data = upsert_res.data[0] if upsert_res and upsert_res.data else None
     except Exception as e:
@@ -76,7 +76,7 @@ async def upsert_meal_request(db: AsyncClient, req: MealRequestCreate):
             data.pop('requested_pediatric_meal_type', None)
             data.pop('requested_guardian_meal_type', None)
             upsert_res = await execute_with_retry_async(
-                db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time").select("*")
+                db.table("meal_requests").upsert(data, on_conflict="admission_id,meal_date,meal_time")
             )
             new_req_data = upsert_res.data[0] if upsert_res and upsert_res.data else None
         else:

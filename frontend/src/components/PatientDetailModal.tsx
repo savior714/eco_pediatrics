@@ -112,7 +112,7 @@ export function PatientDetailModal({
                         onSeedData={actions.handleSeedData}
                     />
 
-                    <div className="relative z-0 px-8 bg-slate-50 border-b border-slate-200 pb-6 shrink-0">
+                    <div className="relative z-20 px-8 bg-slate-50 border-b border-slate-200 pb-6 shrink-0">
                         <VitalStatusGrid
                             bed={bed}
                             displayTemp={displayTemp}

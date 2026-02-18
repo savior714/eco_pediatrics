@@ -6,7 +6,7 @@ from supabase._async.client import AsyncClient
 from websocket_manager import manager
 
 from logger import logger
-from utils import execute_with_retry_async, mask_name, create_audit_log, broadcast_to_station_and_patient
+from utils import execute_with_retry_async, mask_name, create_audit_log, broadcast_to_station_and_patient, normalize_rpc_result
 from models import AdmissionCreate, TransferRequest
 
 async def transfer_patient(db: AsyncClient, admission_id: str, req: TransferRequest, ip_address: str = "127.0.0.1"):
@@ -69,19 +69,14 @@ async def create_admission(db: AsyncClient, admission: AdmissionCreate, ip_addre
             "p_ip_address": ip_address
         }).execute()
         
-        # Normalize RPC result (some environments return list of one)
-        data = res.data
-        if isinstance(data, list):
-            if not data:
-                raise HTTPException(status_code=500, detail="RPC returned empty list")
-            data = data[0]
+        # Use centralized utility for normalized result handling
+        data = normalize_rpc_result(res)
+        
+        if not data or not data.get("id"):
+            logger.error(f"RPC success but no valid admission ID returned: {res.data}")
+            raise HTTPException(status_code=500, detail="Admission created but response data is missing or invalid")
             
-        admission_id = data.get("id")
-        if not admission_id:
-            logger.error(f"RPC success but no ID returned: {data}")
-            raise HTTPException(status_code=500, detail="Admission created but ID missing in response")
-            
-        logger.info(f"Successfully created admission: {data}")
+        logger.info(f"Successfully created admission: {data['id']}")
         return data
     except HTTPException:
         raise
