@@ -39,11 +39,3 @@ FOR DELETE USING (
     AND admissions.status = 'IN_PROGRESS'
   )
 );
-
--- 5. 입원 정보 수정 권한 추가 (시딩 및 전실 대응)
-CREATE POLICY "Allow update for active admissions" ON public.admissions
-FOR UPDATE USING (
-  status IN ('IN_PROGRESS', 'OBSERVATION')
-) WITH CHECK (
-  status IN ('IN_PROGRESS', 'OBSERVATION')
-);

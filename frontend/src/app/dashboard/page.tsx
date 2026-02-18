@@ -31,7 +31,7 @@ function formatExamTime(iso: string): string {
 
 function DashboardContent() {
     const {
-        token, vitalsData, latestIv, currentMealLabel, currentDocLabels,
+        token, vitalsData, latestIv, currentMealLabel, currentDocLabels, pendingDocItems,
         viewMode, modalState, actions
     } = useDashboardStats();
 
@@ -244,6 +244,7 @@ function DashboardContent() {
                     onClose={() => actions.setIsDocModalOpen(false)}
                     admissionId={vitalsData.admissionId}
                     token={token}
+                    pendingItems={pendingDocItems}
                     onSuccess={() => { actions.refetch(); }}
                 />
 

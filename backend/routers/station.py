@@ -62,6 +62,23 @@ async def request_document(
     if adm_res.data["access_token"] != token:
         raise HTTPException(status_code=403, detail="Admission token mismatch")
 
+    # Deduplication Check: Check for existing PENDING requests with same items
+    # Sort request items to ensure consistent comparison
+    request_items_sorted = sorted(request.request_items)
+    
+    existing_requests = await execute_with_retry_async(
+        db.table("document_requests")
+        .select("*")
+        .eq("admission_id", request.admission_id)
+        .eq("status", "PENDING")
+    )
+    
+    if existing_requests.data:
+        for existing in existing_requests.data:
+            if sorted(existing.get("request_items", [])) == request_items_sorted:
+                logger.info(f"Duplicate document request detected for admission {request.admission_id}. Skipping insertion.")
+                return existing # Return existing one instead of creating duplicate
+
     data = request.dict()
     response = await execute_with_retry_async(db.table("document_requests").insert(data))
     new_request = response.data[0]

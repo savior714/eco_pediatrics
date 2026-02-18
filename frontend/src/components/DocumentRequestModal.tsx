@@ -15,6 +15,7 @@ interface DocumentRequestModalProps {
     onClose: () => void;
     admissionId: string | null;
     token: string;
+    pendingItems?: string[];
     onSuccess?: () => void;
 }
 
@@ -26,7 +27,7 @@ const DOCUMENT_OPTIONS = [
     { id: 'INITIAL', label: '초진기록지' }
 ];
 
-export function DocumentRequestModal({ isOpen, onClose, admissionId, token, onSuccess }: DocumentRequestModalProps) {
+export function DocumentRequestModal({ isOpen, onClose, admissionId, token, pendingItems = [], onSuccess }: DocumentRequestModalProps) {
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<'SUCCESS' | 'ERROR' | null>(null);
@@ -102,31 +103,42 @@ export function DocumentRequestModal({ isOpen, onClose, admissionId, token, onSu
                     </p>
 
                     <div className="space-y-2 max-h-60 overflow-y-auto px-1">
-                        {DOCUMENT_OPTIONS.map((option) => (
-                            <button
-                                key={option.id}
-                                type="button"
-                                onClick={() => toggleItem(option.id)}
-                                className={cn(
-                                    "w-full flex items-center gap-3 p-4 min-h-[48px] rounded-xl border-2 transition-all text-left touch-manipulation active:scale-[0.99]",
-                                    selectedItems.includes(option.id)
-                                        ? "border-teal-500 bg-teal-50 text-teal-700"
-                                        : "border-slate-100 active:border-slate-200 bg-white text-slate-600"
-                                )}
-                            >
-                                <div className={cn(
-                                    "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
-                                    selectedItems.includes(option.id)
-                                        ? "bg-teal-500 border-teal-500"
-                                        : "border-slate-300"
-                                )}>
-                                    {selectedItems.includes(option.id) && <CheckCircle size={14} className="text-white" />}
-                                </div>
-                                <span className={cn("font-medium flex-1", selectedItems.includes(option.id) && "font-bold")}>
-                                    {option.label}
-                                </span>
-                            </button>
-                        ))}
+                        {DOCUMENT_OPTIONS.map((option) => {
+                            const isPending = pendingItems.includes(option.id);
+                            return (
+                                <button
+                                    key={option.id}
+                                    type="button"
+                                    disabled={isPending}
+                                    onClick={() => toggleItem(option.id)}
+                                    className={cn(
+                                        "w-full flex items-center gap-3 p-4 min-h-[48px] rounded-xl border-2 transition-all text-left touch-manipulation active:scale-[0.99]",
+                                        selectedItems.includes(option.id)
+                                            ? "border-teal-500 bg-teal-50 text-teal-700"
+                                            : "border-slate-100 active:border-slate-200 bg-white text-slate-600",
+                                        isPending && "opacity-60 bg-slate-50 border-slate-200 cursor-not-allowed"
+                                    )}
+                                >
+                                    <div className={cn(
+                                        "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                                        selectedItems.includes(option.id) || isPending
+                                            ? "bg-teal-500 border-teal-500"
+                                            : "border-slate-300",
+                                        isPending && "bg-slate-300 border-slate-300"
+                                    )}>
+                                        {(selectedItems.includes(option.id) || isPending) && <CheckCircle size={14} className="text-white" />}
+                                    </div>
+                                    <div className="flex-1 flex justify-between items-center">
+                                        <span className={cn("font-medium", (selectedItems.includes(option.id) || isPending) && "font-bold")}>
+                                            {option.label}
+                                        </span>
+                                        {isPending && (
+                                            <span className="text-[10px] font-bold text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded uppercase">이미 신청됨</span>
+                                        )}
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {result === 'ERROR' && (
