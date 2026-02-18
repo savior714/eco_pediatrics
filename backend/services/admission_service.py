@@ -19,7 +19,10 @@ async def transfer_patient(db: AsyncClient, admission_id: str, req: TransferRequ
             "p_ip_address": ip_address
         }).execute()
         
-        data = res.data
+        data = normalize_rpc_result(res)
+        if not data:
+            raise HTTPException(status_code=400, detail="Transfer failed: No data returned from RPC")
+
         msg = {
             "type": "ADMISSION_TRANSFERRED",
             "data": {
@@ -42,7 +45,10 @@ async def discharge_patient(db: AsyncClient, admission_id: str, ip_address: str 
             "p_ip_address": ip_address
         }).execute()
         
-        data = res.data
+        data = normalize_rpc_result(res)
+        if not data:
+            raise HTTPException(status_code=400, detail="Discharge failed: No data returned from RPC")
+
         msg = {
             "type": "ADMISSION_DISCHARGED",
             "data": {

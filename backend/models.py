@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 from enum import Enum
 
@@ -67,6 +67,23 @@ class AdmissionCreate(BaseModel):
     dob: Optional[date] = None
     gender: Optional[GenderEnum] = None
     check_in_at: Optional[datetime] = None
+
+    @field_validator('dob')
+    @classmethod
+    def validate_dob(cls, v: Optional[date]) -> Optional[date]:
+        if v and v > date.today():
+             raise ValueError('생년월일은 미래 날짜일 수 없습니다.')
+        return v
+
+    @field_validator('check_in_at')
+    @classmethod
+    def validate_check_in(cls, v: Optional[datetime]) -> Optional[datetime]:
+        if v:
+            # Allow up to 1 hour in the future to account for clock skew
+            now = datetime.now(v.tzinfo) if v.tzinfo else datetime.now()
+            if v > now + timedelta(hours=1):
+                 raise ValueError('입원 일시는 미래 시점일 수 없습니다.')
+        return v
 
 class VitalSignCreate(BaseModel):
     admission_id: str

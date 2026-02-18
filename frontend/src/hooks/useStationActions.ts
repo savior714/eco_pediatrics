@@ -28,6 +28,12 @@ export function useStationActions() {
         try {
             const birthDate = new Date(formattedBirthday);
             const today = new Date();
+
+            // Defensive Check: Future date validation
+            if (birthDate > today) {
+                alert('생년월일은 오늘 이후 날짜일 수 없습니다.');
+                return;
+            }
             let age = today.getFullYear() - birthDate.getFullYear();
             const m = today.getMonth() - birthDate.getMonth();
             if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
