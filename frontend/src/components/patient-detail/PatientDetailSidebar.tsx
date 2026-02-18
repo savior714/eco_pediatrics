@@ -30,6 +30,31 @@ export function PatientDetailSidebar({
     onDeleteExam,
     onCompleteRequest
 }: PatientDetailSidebarProps) {
+    // DB의 PENDING 데이터와 실시간 알림을 병합 (F5 대응)
+    const displayNotifications = React.useMemo(() => {
+        const docPendings = documentRequests
+            .filter(r => r.status === 'PENDING')
+            .map(req => ({
+                id: String(req.id),
+                room: '',
+                time: new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                content: `서류 신청 (${req.request_items.map(it => DOC_MAP[it] || it).join(', ')})`,
+                type: 'doc',
+                admissionId: req.admission_id
+            }));
+
+        const existingIds = new Set(roomNotifications.map(n => n.id));
+        const merged = [...roomNotifications];
+
+        docPendings.forEach(dp => {
+            if (!existingIds.has(dp.id)) {
+                merged.push(dp as any);
+            }
+        });
+
+        return merged;
+    }, [roomNotifications, documentRequests]);
+
     return (
         <div className="lg:col-span-5 space-y-6 flex flex-col">
             <section className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex-1">
@@ -105,10 +130,10 @@ export function PatientDetailSidebar({
             <section className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex-1">
                 <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
                     <Bell size={16} className="text-amber-500" />
-                    요청 사항 ({roomNotifications.length})
+                    요청 사항 ({displayNotifications.length})
                 </h3>
                 <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
-                    {roomNotifications.map((notif, index) => (
+                    {displayNotifications.map((notif, index) => (
                         <div key={`notif-${notif.id}-${index}`} className="p-3 bg-white rounded-xl border-[1.5px] border-slate-200 shadow-sm flex items-center justify-between gap-3">
                             <div className="min-w-0 flex-1">
                                 <span className="text-[10px] font-bold text-slate-400 block mb-0.5">{notif.time}</span>
@@ -123,7 +148,7 @@ export function PatientDetailSidebar({
                             </button>
                         </div>
                     ))}
-                    {roomNotifications.length === 0 && <p className="text-xs text-slate-400 text-center py-4">대기 중인 요청이 없습니다.</p>}
+                    {displayNotifications.length === 0 && <p className="text-xs text-slate-400 text-center py-4">대기 중인 요청이 없습니다.</p>}
                 </div>
             </section>
         </div>
