@@ -6,22 +6,35 @@ export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:800
 const isTauri = typeof window !== 'undefined' &&
     ((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__);
 
-// Lazy-load Tauri plugins to avoid issues in browser/node environments
+// Caching Tauri functions to avoid redundant dynamic imports
+let cachedTauriFetch: any = null;
+let cachedTauriLog: any = null;
+
 const getTauriFetch = async () => {
     if (!isTauri) return window.fetch;
-    const { fetch } = await import('@tauri-apps/plugin-http');
-    return fetch;
+    if (cachedTauriFetch) return cachedTauriFetch;
+
+    try {
+        const { fetch } = await import('@tauri-apps/plugin-http');
+        cachedTauriFetch = fetch;
+        return fetch;
+    } catch (e) {
+        console.error('Failed to load Tauri fetch:', e);
+        return window.fetch;
+    }
 };
 
 const tauriLog = async (level: 'info' | 'warn' | 'error' | 'debug', message: string) => {
-    if (isTauri) {
-        try {
+    if (!isTauri) return;
+
+    try {
+        if (!cachedTauriLog) {
             const { info, warn, error, debug } = await import('@tauri-apps/plugin-log');
-            const logMap = { info, warn, error, debug };
-            logMap[level](`[Frontend] ${message}`);
-        } catch (e) {
-            console.error('Failed to log to Tauri:', e);
+            cachedTauriLog = { info, warn, error, debug };
         }
+        cachedTauriLog[level](`[Frontend] ${message}`);
+    } catch (e) {
+        console.error('Failed to log to Tauri:', e);
     }
 };
 

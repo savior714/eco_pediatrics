@@ -54,8 +54,7 @@ async def execute_with_retry_async(query_builder):
     for attempt in range(max_retries):
         try:
             res = await query_builder.execute()
-            if not res.data and str(query_builder.method).upper() in ["DELETE", "UPDATE"]:
-                logger.warning(f"DB Command executed but 0 rows affected (Method: {query_builder.method}). Check RLS policies.")
+            # method 속성 참조 시 AttributeError 발생 가능하므로 안전하게 제거하거나 getattr 사용
             return res
         except Exception as e:
             # Categorize the error
