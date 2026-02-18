@@ -1,5 +1,10 @@
 # Context Snapshot
 
+- **아키텍처 정규화 및 방어적 검증 (2026-02-19)**:
+    - **RPC 응답 정규화**: `normalize_rpc_result` 유틸리티를 전역 서비스 레이어(`transfer`, `discharge` 등)에 적용하여 데이터 일관성(SSOT) 확보.
+    - **백엔드 유효성 검증**: Pydantic `field_validator`를 통해 생년월일 및 입원일시의 미래 날짜 입력을 차단하고 `422 Unprocessable Entity` 에러 표준화.
+    - **프론트엔드 선검증**: API 호출 전 생년월일 유효성 체크 로직을 `useStationActions.ts`에 추가하여 불필요한 서버 요청 방지.
+    - **Dev: 단일 환자 시더**: 빈 호실을 자동 탐색하여 환자 생성 및 72시간 치 풀 데이터를 원클릭으로 시딩하는 기능 구현.
 - **6-핵심 이슈 안정화 (2026-02-19)**:
     - **환경 정합성**: `.env` 변수 최적화 및 `seed_all_meals` TypeError 해결
     - **유령 데이터 차단**: 검사 일정 삭제 시 `debouncedRefetch` 강제 호출로 WS 재연결 시 ghost 데이터 방어
