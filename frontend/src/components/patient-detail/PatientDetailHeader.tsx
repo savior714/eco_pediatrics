@@ -35,7 +35,7 @@ export function PatientDetailHeader({ bed, onClose, onDischarge, onTransfer, onS
                         onClick={onDischarge}
                         className={`px-4 py-2 text-xs font-bold rounded-xl transition-all border shadow-sm ${bed.status === 'fever'
                             ? 'bg-white border-red-200 text-red-600 hover:bg-red-600 hover:text-white'
-                            : 'bg-red-50 border-transparent text-red-600 hover:bg-red-100'
+                            : 'bg-white border-red-100 text-red-600 hover:bg-red-100'
                             }`}
                     >
                         퇴원

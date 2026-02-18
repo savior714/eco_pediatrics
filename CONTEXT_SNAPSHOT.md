@@ -6,6 +6,7 @@
     - **서류 동기화 완성**: `station.py` JOIN에 `access_token` 추가하여 환자 채널 실시간 브로드캐스트 보장
     - **보호자 대시보드 UX**: 퇴원 시 이중 alert 제거 및 즉시 리다이렉트(/) 구현
     - **Dev 시더 정교화**: 검사 일정 중복 브로드캐스트 제거로 이중 생성 시각 효과 해결
+- **퇴원 버튼 디자인 통일 (2026-02-19)**: 퇴원 버튼에 `border-red-100` 및 `bg-white`를 적용하여 전실/Dev 버튼과 디자인 정합성 확보
 - **Z-Index 이슈 해결 (2026-02-18)**: `PatientDetailModal.tsx`의 상단 섹션 `z-index`를 `z-20`으로 조정하여 IV QR 코드 및 팝오버가 가려지는 문제 해결
 - **백엔드 SDK 오용 수정 (2026-02-18)**: `meal_service.py`에서 `upsert()` 후 잘못된 `.select("*")` 체이닝을 제거하여 500 Internal Server Error 해결
 - **RPC 정규화 및 SSOT 강화 (2026-02-18)**: `normalize_rpc_result` 유틸리티 도입으로 Supabase RPC 응답 형식(list/object) 불일치 해결 및 `create_admission` 시 전체 필드 즉시 반환 보장
