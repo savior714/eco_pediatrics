@@ -75,9 +75,9 @@ export function PatientDetailSidebar({
                     신청된 서류
                 </h3>
                 <div className="bg-slate-50/50 rounded-xl border border-slate-200 p-4">
-                    {documentRequests.filter(r => r.status !== 'CANCELED').length > 0 ? (
+                    {documentRequests.filter(r => r.status === 'COMPLETED').length > 0 ? (
                         <div className="space-y-3">
-                            {documentRequests.filter(r => r.status !== 'CANCELED').map((req, idx) => (
+                            {documentRequests.filter(r => r.status === 'COMPLETED').map((req, idx) => (
                                 <div key={`doc-request-group-${req.id}-${idx}`} className="space-y-1">
                                     <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1.5">
                                         {new Date(req.created_at).toLocaleDateString()} 신청분
