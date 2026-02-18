@@ -7,14 +7,53 @@ async def fetch_dashboard_data(db: AsyncClient, admission_id: str):
     """
     Helper to fetch all related data for a given admission_id in parallel
     """
-    # Define all query tasks
+    # Define all query tasks with explicit column selection to optimize payload size
     tasks = [
-        execute_with_retry_async(db.table("admissions").select("*").eq("id", admission_id)),
-        execute_with_retry_async(db.table("vital_signs").select("*").eq("admission_id", admission_id).order("recorded_at", desc=True).limit(100)),
-        execute_with_retry_async(db.table("iv_records").select("*").eq("admission_id", admission_id).order("created_at", desc=True).limit(50)),
-        execute_with_retry_async(db.table("meal_requests").select("*").eq("admission_id", admission_id).order("meal_date", desc=True).limit(50)),
-        execute_with_retry_async(db.table("exam_schedules").select("*").eq("admission_id", admission_id).order("scheduled_at")),
-        execute_with_retry_async(db.table("document_requests").select("*").eq("admission_id", admission_id).order("created_at", desc=True).limit(10))
+        # 1. Admission Info
+        execute_with_retry_async(
+            db.table("admissions")
+            .select("id,patient_name_masked,room_number,status,discharged_at,access_token,dob,gender,check_in_at")
+            .eq("id", admission_id)
+        ),
+        # 2. Vitals
+        execute_with_retry_async(
+            db.table("vital_signs")
+            .select("id,admission_id,temperature,has_medication,medication_type,recorded_at")
+            .eq("admission_id", admission_id)
+            .order("recorded_at", desc=True)
+            .limit(100)
+        ),
+        # 3. IV Records
+        execute_with_retry_async(
+            db.table("iv_records")
+            .select("id,admission_id,photo_url,infusion_rate,created_at")
+            .eq("admission_id", admission_id)
+            .order("created_at", desc=True)
+            .limit(50)
+        ),
+        # 4. Meal Requests
+        execute_with_retry_async(
+            db.table("meal_requests")
+            .select("id,admission_id,request_type,pediatric_meal_type,guardian_meal_type,requested_pediatric_meal_type,requested_guardian_meal_type,room_note,meal_date,meal_time,status,created_at")
+            .eq("admission_id", admission_id)
+            .order("meal_date", desc=True)
+            .limit(50)
+        ),
+        # 5. Exam Schedules
+        execute_with_retry_async(
+            db.table("exam_schedules")
+            .select("id,admission_id,scheduled_at,name,note")
+            .eq("admission_id", admission_id)
+            .order("scheduled_at")
+        ),
+        # 6. Document Requests
+        execute_with_retry_async(
+            db.table("document_requests")
+            .select("id,admission_id,request_items,status,created_at")
+            .eq("admission_id", admission_id)
+            .order("created_at", desc=True)
+            .limit(10)
+        )
     ]
     
     # Execute in parallel
