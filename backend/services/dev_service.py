@@ -40,6 +40,14 @@ async def seed_patient_data(db: AsyncClient, admission_id: str):
         db.table("admissions").update({"check_in_at": start_time.isoformat()}).eq("id", admission_id)
     )
 
+    # Idempotency: Clear existing seeded data to prevent duplication
+    await asyncio.gather(
+        execute_with_retry_async(db.table("vital_signs").delete().eq("admission_id", admission_id)),
+        execute_with_retry_async(db.table("iv_records").delete().eq("admission_id", admission_id)),
+        execute_with_retry_async(db.table("exam_schedules").delete().eq("admission_id", admission_id)),
+        execute_with_retry_async(db.table("meal_requests").delete().eq("admission_id", admission_id))
+    )
+
     vitals = []
     for i in range(19):
         rec_time = start_time + timedelta(hours=i*4)
@@ -96,9 +104,10 @@ async def seed_patient_data(db: AsyncClient, admission_id: str):
         
         await execute_with_retry_async(db.rpc("upsert_meal_requests_admin", {"p_meals": meal_entries}))
 
-        if vitals: await broadcast_to_station_and_patient(manager, {"type": "NEW_VITAL", "data": {**vitals[0], "room": room}}, token)
-        if ivs: await broadcast_to_station_and_patient(manager, {"type": "NEW_IV", "data": {**ivs[-1], "room": room}}, token)
-        # exam 개별 broadcast 제거: REFRESH_DASHBOARD가 전체 데이터를 갱신하므로 개별 트리거 불필요 (이중 렌더링 방지)
+        # 개별 브로드캐스트 제거 (REFRESH_DASHBOARD가 전체 데이터를 갱신하므로 불필요한 시각적 깜빡임 방지)
+        # 1. NEW_VITAL 제거
+        # 2. NEW_IV 제거
+        # 3. NEW_EXAM_SCHEDULE 제거 (이미 이전 수정에서 제거됨)
         
         # 전체 데이터 갱신을 지시하는 신호 전송
         await broadcast_to_station_and_patient(manager, {

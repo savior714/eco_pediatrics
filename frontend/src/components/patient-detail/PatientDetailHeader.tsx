@@ -9,9 +9,10 @@ interface PatientDetailHeaderProps {
     onDischarge: () => Promise<void>;
     onTransfer: () => void;
     onSeedData: () => Promise<void>;
+    isSeeding?: boolean;
 }
 
-export function PatientDetailHeader({ bed, onClose, onDischarge, onTransfer, onSeedData }: PatientDetailHeaderProps) {
+export function PatientDetailHeader({ bed, onClose, onDischarge, onTransfer, onSeedData, isSeeding }: PatientDetailHeaderProps) {
     return (
         <div className={`px-8 py-6 shrink-0 ${bed.status === 'fever' ? 'bg-red-50' : 'bg-slate-50'} border-b border-slate-100`}>
             <div className="flex justify-between items-start">
@@ -48,10 +49,11 @@ export function PatientDetailHeader({ bed, onClose, onDischarge, onTransfer, onS
                     </button>
                     <button
                         onClick={onSeedData}
-                        className="px-4 py-2 bg-white border border-indigo-100 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                        disabled={isSeeding}
+                        className={`px-4 py-2 bg-white border border-indigo-100 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm ${isSeeding ? 'opacity-50 cursor-not-allowed' : ''}`}
                         title="가상 데이터 생성 (Dev)"
                     >
-                        Dev
+                        {isSeeding ? '생성 중...' : 'Dev'}
                     </button>
                     <button
                         onClick={onClose}

@@ -110,6 +110,7 @@ export function PatientDetailModal({
                         onDischarge={actions.handleDischarge}
                         onTransfer={() => actions.setTransferModalOpen(true)}
                         onSeedData={actions.handleSeedData}
+                        isSeeding={state.isSeeding}
                     />
 
                     <div className="relative z-20 px-8 bg-slate-50 border-b border-slate-200 pb-6 shrink-0">

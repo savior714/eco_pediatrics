@@ -15,6 +15,7 @@ export function usePatientActions({ bed, onClose, fetchDashboardData, meals }: U
     const [transferModalOpen, setTransferModalOpen] = useState(false);
     const [vitalModalOpen, setVitalModalOpen] = useState(false);
     const [editMealConfig, setEditMealConfig] = useState<{ label: string; date: string; meal_time: string; pediatric: string; guardian: string; mealId: number } | null>(null);
+    const [isSeeding, setIsSeeding] = useState(false);
 
     const handleDischarge = async () => {
         if (!bed?.id) return;
@@ -30,14 +31,18 @@ export function usePatientActions({ bed, onClose, fetchDashboardData, meals }: U
     };
 
     const handleSeedData = async () => {
-        if (!bed?.id) return;
-        if (!window.confirm(`[Dev] ${bed.name} 환자에게 가상 데이터를 생성할까요?`)) return;
+        if (!bed?.id || isSeeding) return;
+        if (!window.confirm(`[Dev] ${bed.name} 환자에게 가상 데이터를 생성할까요?\n(기존 체온/수액/검사 기록이 초기화됩니다.)`)) return;
+
+        setIsSeeding(true);
         try {
             await api.post(`/api/v1/dev/seed-patient/${bed.id}`, {});
             await fetchDashboardData();
             alert('데이터 생성 및 동기화 완료');
         } catch (e) {
             alert('데이터 생성 실패');
+        } finally {
+            setIsSeeding(false);
         }
     };
 
@@ -95,7 +100,8 @@ export function usePatientActions({ bed, onClose, fetchDashboardData, meals }: U
             deletingExamId,
             transferModalOpen,
             vitalModalOpen,
-            editMealConfig
+            editMealConfig,
+            isSeeding
         },
         actions: {
             setAddExamModalOpen,
