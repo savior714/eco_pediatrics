@@ -49,12 +49,20 @@ export default function Station() {
                                 식단 관리
                             </button>
                             {process.env.NEXT_PUBLIC_ENABLE_DEV_UI === 'true' && (
-                                <button
-                                    onClick={actions.handleDischargeAll}
-                                    className="px-3 py-2 text-xs bg-red-50 text-red-500 border border-red-200 rounded hover:bg-red-100 font-bold ml-2"
-                                >
-                                    DEV: 전체퇴원
-                                </button>
+                                <div className="flex gap-1 ml-2">
+                                    <button
+                                        onClick={actions.handleDischargeAll}
+                                        className="px-3 py-2 text-xs bg-red-50 text-red-500 border border-red-200 rounded hover:bg-red-100 font-bold"
+                                    >
+                                        DEV: 전체퇴원
+                                    </button>
+                                    <button
+                                        onClick={actions.handleSeedSingle}
+                                        className="px-3 py-2 text-xs bg-indigo-50 text-indigo-500 border border-indigo-200 rounded hover:bg-indigo-100 font-bold"
+                                    >
+                                        DEV: 환자추가
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>

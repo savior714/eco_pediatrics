@@ -1,10 +1,10 @@
 import random
 import asyncio
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, date, timedelta, timezone
 from supabase._async.client import AsyncClient
 from websocket_manager import manager
-from utils import execute_with_retry_async, broadcast_to_station_and_patient
+from utils import execute_with_retry_async, broadcast_to_station_and_patient, normalize_rpc_result
 from logger import logger
 
 async def discharge_all(db: AsyncClient):
@@ -161,3 +161,54 @@ async def seed_all_meals(db: AsyncClient):
         return {"message": f"성공: {len(admissions)}명의 환자에게 총 {len(meal_records)}개의 식단 데이터가 시딩되었습니다."}
     
     return {"message": "생성된 데이터가 없습니다."}
+
+async def seed_single_patient(db: AsyncClient):
+    """
+    빈 호실을 찾아 새로운 더미 환자를 생성하고 72시간치 데이터를 시딩합니다.
+    """
+    # 1. 현재 입원 중인 호실 파악
+    res = await execute_with_retry_async(
+        db.table("admissions")
+        .select("room_number")
+        .in_("status", ["IN_PROGRESS", "OBSERVATION"])
+    )
+    occupied_rooms = [r['room_number'] for r in res.data] if res.data else []
+    
+    # 2. 가능한 호실 리스트 (301~310)
+    all_rooms = [str(r) for r in range(301, 311)]
+    available_rooms = [r for r in all_rooms if r not in occupied_rooms]
+    
+    if not available_rooms:
+        return {"error": "더 이상 배정 가능한 빈 호실이 없습니다."}
+        
+    target_room = available_rooms[0]
+    
+    # 3. 더미 환자 생성 (RPC 사용)
+    names = ["김더미", "이더미", "박더미", "최더미", "정더미"]
+    dummy_name = random.choice(names) + str(random.randint(1, 99))
+    
+    today = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
+    birth_year = today.year - random.randint(3, 10)
+    dummy_dob = date(birth_year, random.randint(1, 12), random.randint(1, 28))
+    
+    # create_admission_transaction은 {id, access_token}을 반환함
+    adm_res = await db.rpc("create_admission_transaction", {
+        "p_patient_name_masked": dummy_name,
+        "p_room_number": target_room,
+        "p_dob": dummy_dob.isoformat(),
+        "p_gender": random.choice(["M", "F"]),
+        "p_check_in_at": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(),
+        "p_actor_type": "SYSTEM",
+        "p_ip_address": "127.0.0.1"
+    }).execute()
+    
+    data = normalize_rpc_result(adm_res)
+    if not data or not data.get("id"):
+        return {"error": "더미 환자 생성 실패"}
+        
+    admission_id = data["id"]
+    
+    # 4. 데이터 시딩 (이미 구현된 로직 재사용)
+    await seed_patient_data(db, admission_id)
+    
+    return {"message": f"{target_room}호에 더미 환자가 생성되었습니다.", "id": admission_id}

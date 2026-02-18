@@ -16,3 +16,7 @@ async def seed_patient_data(admission_id: str, db: AsyncClient = Depends(get_sup
 @router.post("/seed-meals")
 async def seed_all_meals(db: AsyncClient = Depends(get_supabase)):
     return await dev_service.seed_all_meals(db)
+
+@router.post("/seed-single")
+async def seed_single_patient(db: AsyncClient = Depends(get_supabase)):
+    return await dev_service.seed_single_patient(db)

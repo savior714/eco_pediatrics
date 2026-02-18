@@ -88,6 +88,21 @@ export function useStationActions() {
         }
     }, [fetchAdmissions]);
 
+    const handleSeedSingle = useCallback(async () => {
+        try {
+            const res = await api.post('/api/v1/dev/seed-single', {}) as any;
+            if (res.error) {
+                alert(`생성 실패: ${res.error}`);
+            } else {
+                await fetchAdmissions();
+                alert(res.message || '더미 환자가 생성되었습니다.');
+            }
+        } catch (e: any) {
+            console.error('Seed Error:', e);
+            alert(`더미 생성 중 오류가 발생했습니다: ${e.message}`);
+        }
+    }, [fetchAdmissions]);
+
     return {
         stationData,
         state: {
@@ -105,6 +120,7 @@ export function useStationActions() {
             handleAdmit,
             handleNotificationClick,
             handleDischargeAll,
+            handleSeedSingle,
             setBeds
         }
     };
