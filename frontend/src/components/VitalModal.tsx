@@ -42,7 +42,7 @@ export function VitalModal({ isOpen, onClose, admissionId, onSave }: VitalModalP
 
     return (
         <Portal>
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
                 <div
                     className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
                     onClick={(e) => { e.stopPropagation(); onClose(); }}

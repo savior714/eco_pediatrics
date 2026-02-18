@@ -211,6 +211,9 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                         setMeals(prev => prev.map(m => m.id === (message.data as any).id ? { ...(message.data as any), isOptimistic: false } : m));
                     }
                     break;
+                case 'REFRESH_DASHBOARD':
+                    debouncedRefetch();
+                    break;
             }
         } catch (e) {
             console.error('WS Parse Error', e);

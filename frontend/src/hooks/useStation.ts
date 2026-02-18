@@ -84,7 +84,6 @@ export function useStation(): UseStationReturn {
         try {
             const message = JSON.parse(event.data) as WsMessage;
             const id = Math.random().toString(36).substr(2, 9);
-            setLastUpdated(Date.now());
 
             switch (message.type) {
                 case 'NEW_MEAL_REQUEST':

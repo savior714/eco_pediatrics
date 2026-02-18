@@ -56,8 +56,9 @@ async def upload_iv_photo(db: AsyncClient, file: UploadFile, token: str):
     if size > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large")
 
+    from datetime import timezone
     file_ext = file.filename.split(".")[-1]
-    filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{token[:8]}.{file_ext}"
+    filename = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{token[:8]}.{file_ext}"
     file_path = f"uploads/{filename}"
     os.makedirs("uploads", exist_ok=True)
     

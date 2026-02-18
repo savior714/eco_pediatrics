@@ -58,7 +58,7 @@ export function PatientDetailModal({
         if (isOpen && bed?.token) {
             fetchDashboardData();
         }
-    }, [isOpen, bed?.token, fetchDashboardData, lastUpdated]);
+    }, [isOpen, bed?.token, fetchDashboardData]);
 
     useEffect(() => {
         if (isOpen) {
@@ -88,117 +88,117 @@ export function PatientDetailModal({
 
     return (
         <Portal>
-        <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 isolate"
-            onClick={(e) => e.stopPropagation()}
-        >
             <div
-                className="absolute inset-0 bg-slate-900/25 backdrop-blur-sm transition-opacity"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onClose();
-                }}
-            />
-
-            <div
-                className="relative z-10 bg-white rounded-[2rem] w-[75%] max-w-none max-h-[85vh] shadow-2xl overflow-hidden flex flex-col transition-all duration-300"
+                className="fixed inset-0 z-[9999] flex items-center justify-center p-4 isolate"
                 onClick={(e) => e.stopPropagation()}
             >
-                <PatientDetailHeader
-                    bed={bed}
-                    onClose={onClose}
-                    onDischarge={actions.handleDischarge}
-                    onTransfer={() => actions.setTransferModalOpen(true)}
-                    onSeedData={actions.handleSeedData}
+                <div
+                    className="absolute inset-0 bg-slate-900/25 backdrop-blur-sm transition-opacity"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onClose();
+                    }}
                 />
 
-                <div className="relative z-0 px-8 bg-slate-50 border-b border-slate-200 pb-6 shrink-0">
-                    <VitalStatusGrid
+                <div
+                    className="relative z-10 bg-white rounded-[2rem] w-[75%] max-w-none max-h-[85vh] shadow-2xl overflow-hidden flex flex-col transition-all duration-300"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <PatientDetailHeader
                         bed={bed}
-                        displayTemp={displayTemp}
-                        displayVitalTime={displayVitalTime}
-                        meals={fetchedMeals}
-                        lastUploadedIv={lastUploadedIv}
-                        onVitalModalOpen={() => actions.setVitalModalOpen(true)}
-                        onEditMeal={actions.setEditMealConfig}
-                        onIVUploadSuccess={onIVUploadSuccess}
+                        onClose={onClose}
+                        onDischarge={actions.handleDischarge}
+                        onTransfer={() => actions.setTransferModalOpen(true)}
+                        onSeedData={actions.handleSeedData}
                     />
-                </div>
 
-                <div className="relative z-10 flex-1 overflow-y-auto p-6 scrollbar-hide min-h-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        <div className="lg:col-span-7 space-y-6">
-                            <section className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-                                <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
-                                    <Thermometer size={16} className="text-rose-500" />
-                                    체온 기록 (24h)
-                                </h3>
-                                <TemperatureGraph
-                                    data={chartVitals}
-                                    checkInAt={chartCheckIn}
-                                    className="h-auto min-h-[340px] rounded-xl border border-slate-200 bg-slate-50/50"
-                                />
-                            </section>
-                        </div>
-
-                        <PatientDetailSidebar
-                            examSchedules={examSchedules}
-                            documentRequests={fetchedDocRequests}
-                            roomNotifications={roomNotifications}
-                            deletingExamId={state.deletingExamId}
-                            onAddExam={() => actions.setAddExamModalOpen(true)}
-                            onDeleteExam={(scheduleId) => {
-                                if (!window.confirm('이 검사 일정을 삭제할까요?')) return;
-                                const { rollback } = deleteOptimisticExam(scheduleId);
-                                actions.apiDeleteExam(scheduleId).catch(err => {
-                                    rollback();
-                                    alert('삭제 실패');
-                                });
-                            }}
-                            onCompleteRequest={(id, type) => onCompleteRequest?.(id, type, bed.id)}
+                    <div className="relative z-0 px-8 bg-slate-50 border-b border-slate-200 pb-6 shrink-0">
+                        <VitalStatusGrid
+                            bed={bed}
+                            displayTemp={displayTemp}
+                            displayVitalTime={displayVitalTime}
+                            meals={fetchedMeals}
+                            lastUploadedIv={lastUploadedIv}
+                            onVitalModalOpen={() => actions.setVitalModalOpen(true)}
+                            onEditMeal={actions.setEditMealConfig}
+                            onIVUploadSuccess={onIVUploadSuccess}
                         />
                     </div>
+
+                    <div className="relative z-10 flex-1 overflow-y-auto p-6 scrollbar-hide min-h-0">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            <div className="lg:col-span-7 space-y-6">
+                                <section className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+                                    <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                        <Thermometer size={16} className="text-rose-500" />
+                                        체온 기록 (24h)
+                                    </h3>
+                                    <TemperatureGraph
+                                        data={chartVitals}
+                                        checkInAt={chartCheckIn}
+                                        className="h-auto min-h-[340px] rounded-xl border border-slate-200 bg-slate-50/50"
+                                    />
+                                </section>
+                            </div>
+
+                            <PatientDetailSidebar
+                                examSchedules={examSchedules}
+                                documentRequests={fetchedDocRequests}
+                                roomNotifications={roomNotifications}
+                                deletingExamId={state.deletingExamId}
+                                onAddExam={() => actions.setAddExamModalOpen(true)}
+                                onDeleteExam={(scheduleId) => {
+                                    if (!window.confirm('이 검사 일정을 삭제할까요?')) return;
+                                    const { rollback } = deleteOptimisticExam(scheduleId);
+                                    actions.apiDeleteExam(scheduleId).catch(err => {
+                                        rollback();
+                                        alert('삭제 실패');
+                                    });
+                                }}
+                                onCompleteRequest={(id, type) => onCompleteRequest?.(id, type, bed.id)}
+                            />
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <TransferModal
-                isOpen={state.transferModalOpen}
-                onClose={() => actions.setTransferModalOpen(false)}
-                onTransfer={actions.handleTransfer}
-                currentRoom={bed.room}
-            />
-
-            <VitalModal
-                isOpen={state.vitalModalOpen}
-                onClose={() => actions.setVitalModalOpen(false)}
-                admissionId={bed.id}
-                onSave={(temp, recordedAt) => {
-                    const { rollback } = addOptimisticVital(temp, recordedAt);
-                    onVitalUpdate?.(temp);
-                    return { rollback };
-                }}
-            />
-
-            {state.editMealConfig && (
-                <EditMealModal
-                    isOpen={!!state.editMealConfig}
-                    onClose={() => actions.setEditMealConfig(null)}
-                    {...state.editMealConfig}
-                    mealTime={state.editMealConfig.meal_time}
-                    currentPediatric={state.editMealConfig.pediatric}
-                    currentGuardian={state.editMealConfig.guardian}
-                    onSave={(mealId, pediatric, guardian) => updateOptimisticMeal(mealId, pediatric, guardian)}
-                    onApiSave={actions.apiMealUpdate}
+                <TransferModal
+                    isOpen={state.transferModalOpen}
+                    onClose={() => actions.setTransferModalOpen(false)}
+                    onTransfer={actions.handleTransfer}
+                    currentRoom={bed.room}
                 />
-            )}
 
-            <AddExamModal
-                isOpen={state.addExamModalOpen}
-                onClose={() => actions.setAddExamModalOpen(false)}
-                onSave={addOptimisticExam}
-                onApiSave={actions.apiAddExam}
-            />
-        </div>
+                <VitalModal
+                    isOpen={state.vitalModalOpen}
+                    onClose={() => actions.setVitalModalOpen(false)}
+                    admissionId={bed.id}
+                    onSave={(temp, recordedAt) => {
+                        const { rollback } = addOptimisticVital(temp, recordedAt);
+                        onVitalUpdate?.(temp);
+                        return { rollback };
+                    }}
+                />
+
+                {state.editMealConfig && (
+                    <EditMealModal
+                        isOpen={!!state.editMealConfig}
+                        onClose={() => actions.setEditMealConfig(null)}
+                        {...state.editMealConfig}
+                        mealTime={state.editMealConfig.meal_time}
+                        currentPediatric={state.editMealConfig.pediatric}
+                        currentGuardian={state.editMealConfig.guardian}
+                        onSave={(mealId, pediatric, guardian) => updateOptimisticMeal(mealId, pediatric, guardian)}
+                        onApiSave={actions.apiMealUpdate}
+                    />
+                )}
+
+                <AddExamModal
+                    isOpen={state.addExamModalOpen}
+                    onClose={() => actions.setAddExamModalOpen(false)}
+                    onSave={addOptimisticExam}
+                    onApiSave={actions.apiAddExam}
+                />
+            </div>
         </Portal>
     );
 }

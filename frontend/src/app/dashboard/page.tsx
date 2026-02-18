@@ -110,7 +110,12 @@ function DashboardContent() {
                     }}
                 >
                     <div className="flex flex-col gap-6">
-                        <TemperatureGraph data={vitalsData.vitals} checkInAt={vitalsData.checkInAt} className="flex-1" />
+                        <TemperatureGraph
+                            key={`chart-${vitalsData.vitals.length}`}
+                            data={vitalsData.vitals}
+                            checkInAt={vitalsData.checkInAt}
+                            className="flex-1"
+                        />
 
                         <IVStatusCard
                             photoUrl={latestIv?.photo_url ? (latestIv.photo_url.startsWith('/') ? `${API_BASE}${latestIv.photo_url}` : latestIv.photo_url) : ""}
@@ -140,12 +145,16 @@ function DashboardContent() {
                             <div className="grid grid-cols-3 gap-2">
                                 {getNextThreeMealSlots().map((slot) => {
                                     const meal = vitalsData.meals.find(m => m.meal_date === slot.date && m.meal_time === slot.meal_time);
-                                    const labelText = meal ? (meal.pediatric_meal_type || '일반식') : '신청전';
+                                    const pLabel = meal?.pediatric_meal_type || (meal ? '일반식' : '환아식 미신청');
+                                    const gLabel = meal?.guardian_meal_type || (meal ? '신청 안함' : '보호자식 미신청');
 
                                     return (
-                                        <div key={slot.label} className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                                            <span className="text-[10px] text-slate-400 block mb-1 font-bold">{slot.label}</span>
-                                            <span className="text-xs font-bold text-slate-600 truncate block">{labelText}</span>
+                                        <div key={slot.label} className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center flex flex-col justify-center min-h-[4.5rem]">
+                                            <span className="text-[10px] text-slate-400 block mb-1 font-semibold uppercase">{slot.label}</span>
+                                            <div className="text-[11px] font-bold text-slate-700 leading-tight space-y-0.5">
+                                                <div className="truncate" title={pLabel}>{pLabel}</div>
+                                                <div className="font-bold truncate" title={gLabel}>{gLabel}</div>
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -157,15 +166,15 @@ function DashboardContent() {
                                 <span className="w-9 h-9 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center shrink-0">
                                     <CalendarCheck size={18} />
                                 </span>
-                                앞으로의 검사 일정
+                                예정된 검사 일정
                             </h3>
                             <div className="space-y-2">
                                 {vitalsData.examSchedules.length === 0 ? (
                                     <p className="text-slate-400 text-sm py-2">등록된 검사 일정이 없습니다.</p>
                                 ) : (
-                                    vitalsData.examSchedules.map((ex) => (
+                                    vitalsData.examSchedules.map((ex, index) => (
                                         <ExamScheduleItem
-                                            key={ex.id}
+                                            key={`${ex.id}-${index}`}
                                             date={formatExamDate(ex.scheduled_at)}
                                             time={formatExamTime(ex.scheduled_at)}
                                             name={ex.name}

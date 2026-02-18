@@ -72,12 +72,12 @@ async def seed_patient_data(db: AsyncClient, admission_id: str):
         
         # 3일치 랜덤 식단 데이터 생성 (오늘 ~ 내레)
         meal_times = ["BREAKFAST", "LUNCH", "DINNER"]
-        pediatric_types = ["일반식", "죽", "미음"]
+        pediatric_types = ["일반식", "죽1", "죽2", "죽3"]
         guardian_types = ["일반식", "신청 안함"]
         statuses = ["APPROVED", "COMPLETED", "REQUESTED"]
         
         # KST (UTC+9) adjustment to ensure today's date matches Korean hospital context
-        start_date = (datetime.utcnow() + timedelta(hours=9)).date()
+        start_date = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
         meal_entries = []
         for i in range(3):
             target_date = (start_date + timedelta(days=i)).isoformat()
@@ -99,6 +99,12 @@ async def seed_patient_data(db: AsyncClient, admission_id: str):
         if vitals: await broadcast_to_station_and_patient(manager, {"type": "NEW_VITAL", "data": {**vitals[0], "room": room}}, token)
         if ivs: await broadcast_to_station_and_patient(manager, {"type": "NEW_IV", "data": {**ivs[-1], "room": room}}, token)
         await broadcast_to_station_and_patient(manager, {"type": "NEW_EXAM_SCHEDULE", "data": {**exams[0], "room": room}}, token)
+        
+        # 전체 데이터 갱신을 지시하는 신호 전송
+        await broadcast_to_station_and_patient(manager, {
+            "type": "REFRESH_DASHBOARD",
+            "data": {"admission_id": admission_id}
+        }, token)
     
     return {"message": "Seeded successfully"}
 
@@ -107,7 +113,7 @@ async def seed_all_meals(db: AsyncClient):
     모든 활성 입원 환자(IN_PROGRESS, OBSERVATION)에게 오늘부터 3일간의 식단 데이터를 시딩합니다.
     """
     # KST (UTC+9) 기준 오늘 날짜 계산
-    start_date = (datetime.utcnow() + timedelta(hours=9)).date()
+    start_date = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
     
     res = await execute_with_retry_async(
         db.table("admissions")
@@ -119,7 +125,7 @@ async def seed_all_meals(db: AsyncClient):
         return {"message": "시딩할 활성 입원 세션이 없습니다."}
     
     meal_times = ["BREAKFAST", "LUNCH", "DINNER"]
-    pediatric_types = ['일반식', '죽', '미음']
+    pediatric_types = ["일반식", "죽1", "죽2", "죽3"]
     meal_records = []
     
     for idx, adm in enumerate(admissions):

@@ -44,7 +44,7 @@ export function TransferModal({ isOpen, onClose, currentRoom, onTransfer }: Tran
     return (
         <Portal>
             <div
-                className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200"
+                className="fixed inset-0 z-[10001] flex items-center justify-center p-4 animate-in fade-in duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div

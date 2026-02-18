@@ -74,7 +74,7 @@ export interface AdmissionSummary {
     gender?: string;
 }
 
-export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL' | 'NEW_EXAM_SCHEDULE' | 'DELETE_EXAM_SCHEDULE' | 'ADMISSION_TRANSFERRED' | 'ADMISSION_DISCHARGED' | 'MEAL_UPDATED';
+export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL' | 'NEW_EXAM_SCHEDULE' | 'DELETE_EXAM_SCHEDULE' | 'ADMISSION_TRANSFERRED' | 'ADMISSION_DISCHARGED' | 'MEAL_UPDATED' | 'REFRESH_DASHBOARD';
 
 export type WsMessage =
     | { type: 'NEW_MEAL_REQUEST'; data: { id: number; room: string; request_type: string; admission_id: string; meal_date: string; meal_time: string; pediatric_meal_type?: string; guardian_meal_type?: string } }
@@ -86,7 +86,8 @@ export type WsMessage =
     | { type: 'DELETE_EXAM_SCHEDULE'; data: { id: number; admission_id: string; room: string } }
     | { type: 'ADMISSION_TRANSFERRED'; data: { admission_id: string; old_room: string; new_room: string } }
     | { type: 'ADMISSION_DISCHARGED'; data: { admission_id: string; room: string } }
-    | { type: 'MEAL_UPDATED'; data: MealRequest };
+    | { type: 'MEAL_UPDATED'; data: MealRequest }
+    | { type: 'REFRESH_DASHBOARD'; data: { admission_id: string } };
 
 export interface IVRecord {
     id: number;
