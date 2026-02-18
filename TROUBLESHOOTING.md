@@ -183,3 +183,13 @@
   1. **VitalStatusGrid**: í™˜ì•„ì‹Â·ë³´í˜¸ìžì‹ í…ìŠ¤íŠ¸ ì‚¬ì´ì˜ `/` ì œê±°. ë‘ ì¤„ë¡œë§Œ í‘œì‹œ(í™˜ì•„ì‹ â†’ ë‹¤ìŒ ì¤„ ë³´í˜¸ìžì‹), `gap-0.5`ë¡œ ê°„ê²© ìœ ì§€.
   2. **PatientDetailModal**: ìƒë‹¨ ì˜ì—­ í•˜ë‹¨ í…Œë‘ë¦¬ `border-slate-100` â†’ `border-slate-200`. ì²´ì˜¨ ê¸°ë¡ ì„¹ì…˜ì„ `bg-white`Â·`border border-slate-200`Â·`shadow-sm` ì¹´ë“œ ìŠ¤íƒ€ì¼ë¡œ í†µì¼. ì°¨íŠ¸ ì˜ì—­ì€ `rounded-xl border border-slate-200 bg-slate-50/50` ì ìš©.
   3. **PatientDetailSidebar**: "ì˜ˆì •ëœ ê²€ì‚¬ ì¼ì •" â†’ "ì˜¤ëŠ˜ì˜ ê²€ì‚¬ ì¼ì •"ìœ¼ë¡œ ë¬¸êµ¬ ë³€ê²½. ê²€ì‚¬ ì¼ì •Â·ì‹ ì²­ëœ ì„œë¥˜Â·ìš”ì²­ ì‚¬í•­ ì„¹ì…˜ì„ `bg-white`Â·`border border-slate-200`Â·`shadow-sm`ë¡œ í†µì¼í•´ í° ì¹´ë“œì™€ íšŒìƒ‰ í…Œë‘ë¦¬ ë³µêµ¬.
+
+## 20. ¼ö¾× ¼Óµµ ÃÊ±âÈ­(Ghosting) ¹× ½Ã°£´ë ºÒÀÏÄ¡ ÀÌ½´
+- **¹®Á¦**: ´ë½Ãº¸µå »õ·Î°íÄ§(F5) ½Ã ¼ö¾× ¼Óµµ°¡ ½ÃµùµÈ ÃÊ±â µ¥ÀÌÅÍ(40cc/hr)·Î º¹¿øµÊ.
+- **¿øÀÎ**: 
+  1. **½Ã°£´ë ºÒÀÏÄ¡**: dev_service.py¿¡¼­ datetime.now() (KST)¸¦ »ç¿ëÇÏ¿© µ¥ÀÌÅÍ¸¦ ½ÃµùÇÔ. ¹Ý¸é ½ÇÁ¦ ¼­ºñ½º´Â UTC¸¦ »ç¿ëÇÏ¿© ±â·ÏÇÔ. KST µ¥ÀÌÅÍ´Â UTC ´ëºñ 9½Ã°£ ¾Õ¼± ¹Ì·¡ µ¥ÀÌÅÍ°¡ µÇ¾î SQL ºä¿¡¼­ Ç×»ó °¡Àå ÃÖ½ÅÀÇ µ¥ÀÌÅÍ·Î °£ÁÖµÊ.
+  2. **SQL ºä Á¤·Ä Ãë¾à¼º**: view_station_dashboard ºä¿¡¼­ ÃÖ½Å ±â·Ï ÃßÃâ ½Ã Á¤·Ä Á¶°ÇÀÌ created_at DESC¸¸À¸·Î ½Ç¹«Àû ¼±º°·ÂÀÌ ºÎÁ·ÇßÀ½.
+- **ÇØ°á**: 
+  1. **½Ã°£´ë Á¤±ÔÈ­**: dev_service.py¿Í iv_service.py µî ¸ðµç ¹é¿£µå ½Ã°£ Ã³¸®¸¦ datetime.now(timezone.utc)·Î ÅëÀÏÇÏ¿© À¯·É ¹Ì·¡ µ¥ÀÌÅÍ »ý¼º Â÷´Ü.
+  2. **SQL ºä Àç±¸Ãà**: CASCADE ¿É¼ÇÀ¸·Î ºä¸¦ »èÁ¦ ÈÄ id DESC Á¤·Ä º¸°­ ¹× status ÇÊµå¸¦ Æ÷ÇÔÇÏµµ·Ï Àç»ý¼ºÇÏ¿© µ¥ÀÌÅÍ Á¤ÇÕ¼º È®º¸.
+  3. **µ¥ÀÌÅÍ Å¬¸°¾÷**: DELETE FROM iv_records WHERE created_at > NOW(); Äõ¸®·Î ÀÌÀü¿¡ Àß¸ø »ý¼ºµÈ ¹Ì·¡ ½ÃÁ¡ ±â·ÏµéÀ» Á¦°Å.
