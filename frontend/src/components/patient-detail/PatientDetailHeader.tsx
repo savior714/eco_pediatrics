@@ -35,22 +35,22 @@ export function PatientDetailHeader({ bed, onClose, onDischarge, onTransfer, onS
                     <button
                         onClick={onDischarge}
                         className={`px-4 py-2 text-xs font-bold rounded-xl transition-all border shadow-sm ${bed.status === 'fever'
-                            ? 'bg-white border-red-200 text-red-600 hover:bg-red-600 hover:text-white'
-                            : 'bg-white border-red-100 text-red-600 hover:bg-red-100'
+                                ? 'bg-white border-red-500 text-red-600 hover:bg-red-600 hover:text-white'
+                                : 'bg-white border-red-200 text-red-600 hover:bg-red-100'
                             }`}
                     >
                         퇴원
                     </button>
                     <button
                         onClick={onTransfer}
-                        className="px-4 py-2 bg-white border border-blue-100 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                        className="px-4 py-2 bg-white border border-blue-500 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
                     >
                         전실
                     </button>
                     <button
                         onClick={onSeedData}
                         disabled={isSeeding}
-                        className={`px-4 py-2 bg-white border border-indigo-100 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm ${isSeeding ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`px-4 py-2 bg-white border border-indigo-500 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm ${isSeeding ? 'opacity-50 cursor-not-allowed' : ''}`}
                         title="가상 데이터 생성 (Dev)"
                     >
                         {isSeeding ? '생성 중...' : 'Dev'}

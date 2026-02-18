@@ -74,12 +74,9 @@ function DashboardContent() {
                                 <p className="text-slate-500 text-sm md:text-base font-bold flex items-center gap-2 whitespace-nowrap" suppressHydrationWarning>
                                     <span className="text-slate-400">{vitalsData.roomNumber ? `${vitalsData.roomNumber}호` : '...'}</span>
                                     {vitalsData.dob && (
-                                        <>
-                                            <span className="w-1 md:w-1.5 h-1 md:h-1.5 bg-slate-200 rounded-full shrink-0" />
-                                            <span className={`font-extrabold ${vitalsData.gender === 'M' ? 'text-blue-500' : vitalsData.gender === 'F' ? 'text-rose-500' : 'text-slate-500'}`}>
-                                                {formatPatientDemographics(vitalsData.dob, vitalsData.gender)}
-                                            </span>
-                                        </>
+                                        <span className={`font-extrabold ml-1 ${vitalsData.gender === 'M' ? 'text-blue-500' : vitalsData.gender === 'F' ? 'text-rose-500' : 'text-slate-500'}`}>
+                                            {formatPatientDemographics(vitalsData.dob, vitalsData.gender)}
+                                        </span>
                                     )}
                                 </p>
                             </div>

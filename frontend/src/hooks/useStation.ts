@@ -129,16 +129,8 @@ export function useStation(): UseStationReturn {
                     break;
 
                 case 'NEW_DOC_REQUEST':
-                    // data: { room, request_items: string[] }
-                    const items = (message.data.request_items as string[]).map(it => DOC_MAP[it] || it).join(', ');
-                    setNotifications(prev => [{
-                        id: String(message.data.id), // Use actual DB ID
-                        room: message.data.room,
-                        time: '방금',
-                        content: `서류 신청 (${items})`,
-                        type: 'doc',
-                        admissionId: message.data.admission_id // Store for removal patch
-                    } as any, ...prev]);
+                    // We no longer show notifications for document requests as per user request.
+                    // Instead, they are managed via the 'Document Requests' list in the sidebar.
                     break;
                 case 'DOC_REQUEST_UPDATED':
                     // Remove notification when a document request is updated (e.g., to COMPLETED) by any station
