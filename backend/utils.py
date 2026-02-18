@@ -53,7 +53,10 @@ async def execute_with_retry_async(query_builder):
     
     for attempt in range(max_retries):
         try:
-            return await query_builder.execute()
+            res = await query_builder.execute()
+            if not res.data and str(query_builder.method).upper() in ["DELETE", "UPDATE"]:
+                logger.warning(f"DB Command executed but 0 rows affected (Method: {query_builder.method}). Check RLS policies.")
+            return res
         except Exception as e:
             # Categorize the error
             is_retryable = False
