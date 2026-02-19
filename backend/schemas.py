@@ -43,8 +43,8 @@ class AdmissionResponse(BaseModel):
     id: str
     patient_name_masked: str
     room_number: str
-    discharged_at: Optional[datetime]
-    access_token: Optional[str]
+    discharged_at: Optional[datetime] = None
+    access_token: Optional[str] = None
     check_in_at: Optional[datetime] = None
     dob: Optional[date] = None
     gender: Optional[GenderEnum] = None
