@@ -142,7 +142,20 @@ Rust 패닉/에러는 `panicked at`, `RUST_BACKTRACE`, `Error =` 형태로 출�
 | Background 스크립트 | `python script.py >> logs/script.log 2>&1` |
 | tRPC / gRPC 서버 | 각 언어의 파일 로깅 모듈 사용 |
 
-### 4-3. `WATCH_TARGETS` 등록 예시 (프로젝트별 설정)
+
+### 4-3. 외부 서비스 (SaaS/Cloud Type) 감지 전략
+
+Supabase(PostgreSQL), AWS S3, Firebase 등 **로그 파일에 직접 접근할 수 없는 클라우드 서비스**의 에러는 **연동된 백엔드/프론트엔드 로그**를 통해 간접적으로 감지합니다.
+
+| 서비스 유형 | 감지 경로 | 감지 원리 |
+|---|---|---|
+| **Supabase (DB)** | `Backend` (`app.log`) | `SQLAlchemyError`, `PostgrestError` 발생 시 백엔드 로그에 트레이스백 기록됨 |
+| **Supabase (Auth)** | `Frontend` (`frontend.log`) | `AuthApiError`, `401 Unauthorized` 등이 브라우저 콘솔(stdout)에 출력됨 |
+| **AWS S3 / Redis**| `Backend` (`app.log`) | `Boto3Error`, `RedisConnectionError` 등으로 포착 가능 |
+
+> **Note**: 따라서 별도의 `WATCH_TARGETS` 추가 없이도, **Backend와 Frontend 로그 감시만으로 외부 서비스 연동 에러를 대부분 커버**할 수 있습니다.
+
+### 4-4. `WATCH_TARGETS` 등록 예시 (프로젝트별 설정)
 
 ```python
 # error_monitor.py 상단 설정 — 프로젝트 기술 스택에 맞게 수정
