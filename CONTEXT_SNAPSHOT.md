@@ -3,7 +3,7 @@
 - **Zero-Cost Full-Stack Error Monitoring (2026-02-19)**:
     - **통합 감시 아키텍처**: Frontend, Backend, Database(간접) 에러를 `error_monitor.py` 하나로 실시간 감지하는 Pure-Python 솔루션 구축.
     - **Tauri/Next.js 호환성**: `frontend.log` (UTF-16 LE) 인코딩 자동 감지 및 React/Next.js 고유 에러 패턴 매칭 지원.
-    - **터미널 레이아웃 혁신**: `run_dev.bat`에 패널 인덱스(`-p 0`) 방식을 도입하여 Backend(좌상)/Frontend(우상)/Monitor(하단) 3분할 레이아웃을 완벽하게 고정.
+    - **터미널 레이아웃 고도화 (Final Fix)**: Windows Terminal 1.23+ 버전의 비동기 실행으로 인한 레이아웃 깨짐(Race Condition)을 `move-focus down` 명령으로 물리적 포커스를 강제 이동시켜 완벽하게 해결. (상:모니터 / 하:개발환경 반반)
     - **LLM Context Automation**: 에러 발생 시 `prompt_for_gemini.md`에 관련 소스 코드(Language Tagging 포함)와 에러 로그를 즉시 패키징하여 디버깅 시간 단축.
 
 - **운영 안정성 및 대시보드 최적화 (2026-02-19)**:
