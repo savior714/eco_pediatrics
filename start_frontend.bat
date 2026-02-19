@@ -31,7 +31,9 @@ echo [SUCCESS] Starting frontend (Tauri Dev)...
 echo [INFO] Backend expected at http://localhost:8000
 echo [INFO] This will launch the desktop window.
 echo:
-call npm run tauri dev
+:: 로그 디렉터리 생성 및 stdout을 파일과 화면에 동시 기록 (에러 모니터용)
+if not exist logs mkdir logs
+powershell -Command "npm run tauri dev 2>&1 | Tee-Object -FilePath '.\logs\frontend.log' -Append"
 if errorlevel 1 goto :FAIL
 goto :END
 

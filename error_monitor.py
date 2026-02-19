@@ -29,7 +29,14 @@ except ImportError:
 # ---------------------------------------------------------------------------
 PROJECT_ROOT: Final[Path] = Path(__file__).parent.resolve()
 BACKEND_DIR: Final[Path] = PROJECT_ROOT / "backend"
-WATCH_LOG_PATH: Final[Path] = (BACKEND_DIR / "logs" / "app.log").resolve()
+# 감시할 로그 파일: {레이블: 경로} 형식
+WATCH_TARGETS: Final[dict[str, Path]] = {
+    "Backend" : (BACKEND_DIR / "logs" / "app.log").resolve(),
+    "Frontend": (PROJECT_ROOT / "frontend" / "logs" / "frontend.log").resolve(),
+}
+
+# 하위 호환: cleanup에서 사용하는 단일 경로 (백엔드 기준)
+WATCH_LOG_PATH: Final[Path] = WATCH_TARGETS["Backend"]
 OUTPUT_FILE: Final[Path] = PROJECT_ROOT / "prompt_for_gemini.md"
 
 POLL_INTERVAL: float = 1.5      # 감시 주기 (초)
@@ -37,6 +44,7 @@ DEBOUNCE_SEC: float = 3.0       # 중복 생성 방지 간격 (초)
 TAIL_LINES: int = 100           # 수집할 최근 로그 줄 수
 
 SOURCE_FILES: Final[list[Path]] = [
+    # Backend
     BACKEND_DIR / "main.py",
     BACKEND_DIR / "routers" / "station.py",
     BACKEND_DIR / "routers" / "admissions.py",
@@ -46,6 +54,12 @@ SOURCE_FILES: Final[list[Path]] = [
     BACKEND_DIR / "models.py",
     BACKEND_DIR / "schemas.py",
     BACKEND_DIR / "constants" / "mappings.py",
+    # Frontend (Next.js + Tauri)
+    PROJECT_ROOT / "frontend" / "src" / "lib" / "api.ts",
+    PROJECT_ROOT / "frontend" / "src" / "hooks" / "useStation.ts",
+    PROJECT_ROOT / "frontend" / "src" / "hooks" / "useWebSocket.ts",
+    PROJECT_ROOT / "frontend" / "src" / "hooks" / "useDashboardStats.ts",
+    PROJECT_ROOT / "frontend" / "src" / "types" / "domain.ts",
 ]
 
 GEMINI_SYSTEM_PROMPT: Final[str] = """\
@@ -111,7 +125,8 @@ def _generate_prompt(session_errors: list[dict[str, str]]) -> None:
 
     error_blocks = []
     for err in session_errors:
-        block = f"### [Error] {err['timestamp']}\n\n```text\n{err['log_tail']}\n```"
+        source_label = err.get('source', 'Unknown')
+        block = f"### [Error] [{source_label}] {err['timestamp']}\n\n```text\n{err['log_tail']}\n```"
         error_blocks.append(block)
     
     errors_content = "\n\n".join(error_blocks) if error_blocks else "_에러 감지 전 (대기 중)_"
@@ -151,13 +166,14 @@ def _generate_prompt(session_errors: list[dict[str, str]]) -> None:
 # 메인 루프
 # ---------------------------------------------------------------------------
 def run_monitor(clear_at_start: bool = False) -> None:
-    WATCH_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    if not WATCH_LOG_PATH.exists():
-        WATCH_LOG_PATH.touch()
-    
-    if clear_at_start:
-         WATCH_LOG_PATH.write_text("", encoding="utf-8")
-         print(f"[✓] 시작 시 로그 초기화 완료: {WATCH_LOG_PATH}")
+    # 모든 감시 대상 디렉터리 생성 및 파일 초기화
+    for label, log_path in WATCH_TARGETS.items():
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        if not log_path.exists():
+            log_path.touch()
+        if clear_at_start:
+            log_path.write_text("", encoding="utf-8")
+            print(f"[✓] [{label}] 시작 시 로그 초기화 완료: {log_path}")
 
     # 리포트 초기화 (빈 양식으로 시작)
     session_errors: list[dict[str, str]] = []
@@ -166,7 +182,8 @@ def run_monitor(clear_at_start: bool = False) -> None:
     print("=" * 60)
     print("  eco_pediatrics Error Monitor (Pure-Polling)")
     print("=" * 60)
-    print(f"  감시 파일  : {WATCH_LOG_PATH}")
+    for label, log_path in WATCH_TARGETS.items():
+        print(f"  [{label}] 감시: {log_path}")
     print(f"  출력 파일  : {OUTPUT_FILE}")
     print(f"  감시 주기  : {POLL_INTERVAL}s  |  디바운스  : {DEBOUNCE_SEC}s")
     print("-" * 60)
@@ -174,32 +191,34 @@ def run_monitor(clear_at_start: bool = False) -> None:
     print("  종료       : Ctrl+C")
     print("=" * 60)
 
-    last_mtime: float = 0.0
+    # 각 감시 대상별 마지막 mtime 추적
+    last_mtimes: dict[str, float] = {label: 0.0 for label in WATCH_TARGETS}
     last_generated_at: float = 0.0
 
     while True:
-        try:
-            current_mtime = WATCH_LOG_PATH.stat().st_mtime
-        except FileNotFoundError:
-            time.sleep(POLL_INTERVAL)
-            continue
+        for label, log_path in WATCH_TARGETS.items():
+            try:
+                current_mtime = log_path.stat().st_mtime
+            except FileNotFoundError:
+                continue
 
-        if current_mtime != last_mtime:
-            last_mtime = current_mtime
-            print(f"[*] 변경 감지 → 분석 중...  ({time.strftime('%H:%M:%S')})", end="\r")
+            if current_mtime != last_mtimes[label]:
+                last_mtimes[label] = current_mtime
+                print(f"[*] [{label}] 변경 감지 → 분석 중...  ({time.strftime('%H:%M:%S')})", end="\r")
 
-            log_tail = _tail(WATCH_LOG_PATH, TAIL_LINES)
+                log_tail = _tail(log_path, TAIL_LINES)
 
-            if _ERROR_PATTERN.search(log_tail):
-                now = time.monotonic()
-                if now - last_generated_at >= DEBOUNCE_SEC:
-                    last_generated_at = now
-                    print(f"\n[!] 에러 감지 → 세션 리포트 업데이트 중...  ({time.strftime('%H:%M:%S')})")
-                    session_errors.append({
-                        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                        "log_tail": log_tail
-                    })
-                    _generate_prompt(session_errors)
+                if _ERROR_PATTERN.search(log_tail):
+                    now = time.monotonic()
+                    if now - last_generated_at >= DEBOUNCE_SEC:
+                        last_generated_at = now
+                        print(f"\n[!] [{label}] 에러 감지 → 세션 리포트 업데이트 중...  ({time.strftime('%H:%M:%S')})")
+                        session_errors.append({
+                            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                            "source": label,
+                            "log_tail": log_tail
+                        })
+                        _generate_prompt(session_errors)
 
         time.sleep(POLL_INTERVAL)
 
