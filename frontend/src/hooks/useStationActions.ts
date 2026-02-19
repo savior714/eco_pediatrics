@@ -103,6 +103,28 @@ export function useStationActions() {
         }
     }, [fetchAdmissions]);
 
+    const actions = useMemo(() => ({
+        setSelectedRoom,
+        setQrBed,
+        setAdmitRoom,
+        setActiveTab,
+        handleAdmit,
+        handleNotificationClick,
+        handleDischargeAll,
+        handleSeedSingle,
+        setBeds
+    }), [
+        setSelectedRoom,
+        setQrBed,
+        setAdmitRoom,
+        setActiveTab,
+        handleAdmit,
+        handleNotificationClick,
+        handleDischargeAll,
+        handleSeedSingle,
+        setBeds
+    ]);
+
     return {
         stationData,
         state: {
@@ -112,16 +134,6 @@ export function useStationActions() {
             activeTab,
             selectedBed
         },
-        actions: {
-            setSelectedRoom,
-            setQrBed,
-            setAdmitRoom,
-            setActiveTab,
-            handleAdmit,
-            handleNotificationClick,
-            handleDischargeAll,
-            handleSeedSingle,
-            setBeds
-        }
+        actions
     };
 }
