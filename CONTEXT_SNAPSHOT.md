@@ -1,5 +1,8 @@
 # Context Snapshot
 
+- **최종 안정화 및 UX 개선 (2026-02-19)**:
+    - **서류 신청 중복 표시 해결**: `PatientDetailSidebar.tsx` 내 실시간 알림과 DB 데이터 병합 시 ID 포맷(`doc_` 접두사)을 통일하여 중복 렌더링 방지.
+    - **보호자 대시보드 종료 로직**: 환자 퇴원 또는 토큰 만료 시 메인 페이지로의 리다이렉트 대신 `window.close()`를 호출하도록 변경하여 보안성 및 UX 향상.
 - **Zero-Cost Full-Stack Error Monitoring (2026-02-19)**:
     - **통합 감시 아키텍처**: Frontend, Backend, Database(간접) 에러를 `error_monitor.py` 하나로 실시간 감지하는 Pure-Python 솔루션 구축.
     - **Tauri/Next.js 호환성**: `frontend.log` (UTF-16 LE) 인코딩 자동 감지 및 React/Next.js 고유 에러 패턴 매칭 지원.

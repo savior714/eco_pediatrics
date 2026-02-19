@@ -106,7 +106,7 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                 const errorMessage = String(err?.message || '');
                 if (errorMessage.includes("403") || errorMessage.includes("404")) {
                     alert("이미 종료되었거나 유효하지 않은 페이지입니다. 병원으로 문의해 주세요.");
-                    window.location.href = "/";
+                    window.close();
                 }
             }
         } finally {
@@ -206,7 +206,7 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     break;
                 case 'ADMISSION_DISCHARGED':
                     alert('환자가 퇴원 처리되었습니다. 페이지를 종료합니다.');
-                    window.location.href = '/';
+                    window.close();
                     break;
                 case 'NEW_MEAL_REQUEST':
                     if (admissionIdRef.current && message.data.admission_id === admissionIdRef.current) {

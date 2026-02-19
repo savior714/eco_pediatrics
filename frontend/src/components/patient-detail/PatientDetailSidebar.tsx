@@ -35,7 +35,7 @@ export function PatientDetailSidebar({
         const docPendings = documentRequests
             .filter(r => r.status === 'PENDING')
             .map(req => ({
-                id: String(req.id),
+                id: `doc_${req.id}`,
                 room: '',
                 time: new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 content: `서류 신청 (${req.request_items.map(it => DOC_MAP[it] || it).join(', ')})`,
