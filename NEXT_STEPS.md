@@ -1,6 +1,6 @@
 # Next Steps — 해야 할 일 정리
 
-> 기준: 2026-02-15  
+> 기준: 2026-02-19  
 > 완료된 항목은 [x], 미완료는 [ ]로 표시.
 
 ---
@@ -14,7 +14,7 @@
 - [x] **서류 신청 시스템 완결**: 사이드바 실시간 알람 복구, 알람 지속성(Persistence) 확보, 중복 신청 방지 로직 고도화 (2026-02-19)
 - [x] **쿼리 및 개발 환경 최적화**: Explicit Column Selection 적용 및 Windows Terminal 분할 패널 연동 (2026-02-19)
 - [x] **PGRST205 대응 및 스키마 최적화**: PostgREST 20.5 호환성 이슈 해결 및 성능 개선
-가능한 웹 UI
+- [x] **Zero-Cost Agent Bridge (Full-Stack Error Monitor)**: Python 기반 에러 감지, LLM 컨텍스트 자동 패키징, 터미널 3분할 레이아웃 구축 완료 (2026-02-19)
 
 ---
 

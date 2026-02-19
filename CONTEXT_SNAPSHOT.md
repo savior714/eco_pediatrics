@@ -1,5 +1,11 @@
 # Context Snapshot
 
+- **Zero-Cost Full-Stack Error Monitoring (2026-02-19)**:
+    - **통합 감시 아키텍처**: Frontend, Backend, Database(간접) 에러를 `error_monitor.py` 하나로 실시간 감지하는 Pure-Python 솔루션 구축.
+    - **Tauri/Next.js 호환성**: `frontend.log` (UTF-16 LE) 인코딩 자동 감지 및 React/Next.js 고유 에러 패턴 매칭 지원.
+    - **터미널 레이아웃 혁신**: `run_dev.bat`에 패널 인덱스(`-p 0`) 방식을 도입하여 Backend(좌상)/Frontend(우상)/Monitor(하단) 3분할 레이아웃을 완벽하게 고정.
+    - **LLM Context Automation**: 에러 발생 시 `prompt_for_gemini.md`에 관련 소스 코드(Language Tagging 포함)와 에러 로그를 즉시 패키징하여 디버깅 시간 단축.
+
 - **운영 안정성 및 대시보드 최적화 (2026-02-19)**:
     - **더미 데이터 품질 개선**: 더미 환자 이름에서 무작위 숫자를 제거하고 현실적인 성함 생성 및 표준 마스킹 규칙(`mask_name`)을 RPC 레이어까지 적용.
     - **서류 신청 알림 복구**: `useStation.ts` 내 누락된 `NEW_DOC_REQUEST` 처리 로직을 복구하여 간호 스테이션 사이드바에 실시간 알람 표시.

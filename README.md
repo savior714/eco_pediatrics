@@ -25,6 +25,10 @@
 *   **Meal Requests CRUD 완전 자율화**: 식단 편집 시 발생하는 500 오류를 해결하기 위해 `meal_requests` 테이블에 `INSERT/UPDATE` 정책을 보강.
 *   **상태 기반 권한 제어**: `IN_PROGRESS` 뿐만 아니라 `OBSERVATION` 환자에 대해서도 일관된 보안 정책 적용.
 
+### 5. 개발 생산성 및 모니터링 혁신 (2026-02-19)
+*   **Zero-Cost Full-Stack Error Monitor**: 별도의 상용 툴(Sentry 등) 없이 Python 스크립트 하나로 Backend/Frontend/DB 에러를 실시간 감지하고 LLM 디버깅 컨텍스트를 자동 생성.
+*   **통합 개발 터미널**: `run_dev.bat` 실행 한 번으로 Backend, Frontend, Error Monitor가 최적의 레이아웃(3분할)으로 실행되는 `tmux` 스타일 환경 구축.
+
 | 분류 | 세부 기능 설명 |
 | :--- | :--- |
 | **보호자 대시보드** | 별도의 로그인 없는 **QR 코드 접속**, 실시간 체온/수액 모니터링, 해열제 투여 시점 시각화. |
