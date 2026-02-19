@@ -78,13 +78,13 @@ export function VitalStatusGrid({
                                 <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-tight">{slot.label}</span>
                                 <div className={`text-[11px] font-bold text-slate-700 flex flex-col items-center leading-tight gap-0.5 ${meal?.isOptimistic ? 'opacity-50' : ''}`}>
                                     <div className="flex flex-col items-center">
-                                        <span>{meal?.pediatric_meal_type || '환아식 미신청'}</span>
+                                        <span>{meal?.pediatric_meal_type || (meal ? '일반식' : '환아식 미신청')}</span>
                                         {meal?.status === 'PENDING' && meal.requested_pediatric_meal_type && meal.requested_pediatric_meal_type !== meal.pediatric_meal_type && (
                                             <span className="text-[9px] text-orange-500 font-medium">→ {meal.requested_pediatric_meal_type} (신청됨)</span>
                                         )}
                                     </div>
                                     <div className="flex flex-col items-center">
-                                        <span>{meal?.guardian_meal_type || '보호자식 미신청'}</span>
+                                        <span>{meal?.guardian_meal_type || (meal ? '신청 안함' : '보호자식 미신청')}</span>
                                         {meal?.status === 'PENDING' && meal.requested_guardian_meal_type && meal.requested_guardian_meal_type !== meal.guardian_meal_type && (
                                             <span className="text-[9px] text-orange-500 font-medium">→ {meal.requested_guardian_meal_type} (신청됨)</span>
                                         )}

@@ -1,5 +1,10 @@
 # Context Snapshot
 
+- **식단 알림 고도화 및 알람 정렬 최적화 (2026-02-20)**:
+    - **알림 데이터 정합성 강화**: `MealRequest` 모델에서 현재 상태(`pediatric_meal_type`) 대신 신청된 변경 값(`requested_pediatric_meal_type`)을 우선적으로 표시하도록 백엔드(`station_service.py`) 로직 수정.
+    - **알림 정렬 다중화**: `created_at`뿐만 아니라 `meal_date`와 `meal_rank`(아침/점심/저녁 순서)를 정렬 기준으로 추가하여 동시 신청 건에 대한 가독성 확보.
+    - **알림 로직 중앙화 (Unified Formatting)**: 백엔드에서 포맷팅된 문자열(`content`)을 생성하여 웹소켓으로 직접 전송하도록 구조 변경. 프론트엔드 중복 로직 제거 및 데이터 일관성 보장.
+    - **식단 설정 상문화**: `SKIPPED_MEAL_KEYWORDS`, `MEAL_DISPLAY_MAPPING` 등을 `meal_config.py`로 집중화하여 향후 용어 변경 및 유지보수성 향상.
 - **최종 안정화 및 UX 개선 (2026-02-19)**:
     - **식단 신청 워크플로우 정규화**: 
         - 식단 신청 시 수락 전에는 기존 식단이 유지되도록 `useStation.ts` 및 `VitalStatusGrid.tsx` 로직 수정.

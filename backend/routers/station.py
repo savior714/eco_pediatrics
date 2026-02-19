@@ -98,7 +98,8 @@ async def request_document(
             "room": room,
             "admission_id": request.admission_id, # Added for context
             "request_items": request.request_items,
-            "created_at": datetime.now().isoformat()
+            "created_at": datetime.now().isoformat(),
+            "content": f"서류 신청 ({', '.join(items)})"
         }
     }
     await manager.broadcast(json.dumps(message), "STATION")

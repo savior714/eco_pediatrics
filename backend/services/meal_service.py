@@ -7,6 +7,7 @@ from logger import get_logger
 from utils import execute_with_retry_async, broadcast_to_station_and_patient, is_pgrst204_error
 from models import MealRequestCreate
 from schemas import CommonMealPlan, PatientMealOverrideCreate
+from services.station_service import format_meal_notification_data
 
 async def get_meal_plans(db: AsyncClient, start_date: date, end_date: date):
     res = await execute_with_retry_async(
@@ -101,7 +102,8 @@ async def upsert_meal_request(db: AsyncClient, req: MealRequestCreate):
                             "pediatric_meal_type": new_req_data.get('pediatric_meal_type'),
                             "guardian_meal_type": new_req_data.get('guardian_meal_type'),
                             "requested_pediatric_meal_type": new_req_data.get('requested_pediatric_meal_type'),
-                            "requested_guardian_meal_type": new_req_data.get('requested_guardian_meal_type')
+                            "requested_guardian_meal_type": new_req_data.get('requested_guardian_meal_type'),
+                            "content": f"[{format_meal_notification_data(new_req_data)['date_label']} {format_meal_notification_data(new_req_data)['time_label']}] 식단 신청 ({format_meal_notification_data(new_req_data)['meal_desc']})"
                         }
                     }
                     await broadcast_to_station_and_patient(manager, msg, adm_res.data.get("access_token"))

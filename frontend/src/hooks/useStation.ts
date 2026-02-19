@@ -108,9 +108,16 @@ export function useStation(): UseStationReturn {
                     const requestedPediatric = message.data.pediatric_meal_type;
                     const requestedGuardian = message.data.guardian_meal_type;
 
-                    const mealTypeDesc = requestedPediatric
-                        ? `${requestedPediatric}${requestedGuardian && requestedGuardian !== '선택 안함' ? ` / ${requestedGuardian}` : ''}`
-                        : (MEAL_MAP[message.data.request_type] || message.data.request_type);
+                    let mealTypeDesc = "";
+                    if (requestedPediatric) {
+                        mealTypeDesc = requestedPediatric;
+                    }
+                    if (requestedGuardian && requestedGuardian !== '선택 안함') {
+                        mealTypeDesc += (mealTypeDesc ? " / " : "") + requestedGuardian;
+                    }
+                    if (!mealTypeDesc) {
+                        mealTypeDesc = (MEAL_MAP[message.data.request_type] || message.data.request_type);
+                    }
 
                     const mealDateRaw = message.data.meal_date; // '2026-02-19'
                     const mealTimeRaw = message.data.meal_time; // 'BREAKFAST'
@@ -127,14 +134,23 @@ export function useStation(): UseStationReturn {
                         }
                     }
 
-                    setNotifications(prev => [{
-                        id: `meal_${message.data.id}`, // 접두사 추가 → 백엔드와 포맷 통일
+                    const newMealId = `meal_${message.data.id}`;
+                    const newMealNotification = {
+                        id: newMealId,
                         room: message.data.room,
                         time: '방금',
-                        content: `[${dateLabel} ${timeLabel}] 식단 신청 (${mealTypeDesc})`,
+                        content: message.data.content || `[${dateLabel} ${timeLabel}] 식단 신청 (${mealTypeDesc})`,
                         type: 'meal',
-                        admissionId: message.data.admission_id // Store for removal patch
-                    } as any, ...prev]);
+                        admissionId: message.data.admission_id
+                    };
+
+                    setNotifications(prev => {
+                        const exists = prev.some(n => n.id === newMealId);
+                        if (exists) {
+                            return prev.map(n => n.id === newMealId ? newMealNotification : n);
+                        }
+                        return [newMealNotification as any, ...prev];
+                    });
 
                     // 2. Patch Bed State (Immediate UI Update)
                     setBeds(prev => prev.map(bed => {
@@ -164,14 +180,23 @@ export function useStation(): UseStationReturn {
 
                 case 'NEW_DOC_REQUEST':
                     const items = message.data.request_items.map(it => DOC_MAP[it] || it);
-                    setNotifications(prev => [{
-                        id: `doc_${message.data.id}`, // 접두사 추가
+                    const newDocId = `doc_${message.data.id}`;
+                    const newDocNotification = {
+                        id: newDocId,
                         room: message.data.room,
                         time: '방금',
-                        content: `서류 신청 (${items.join(', ')})`,
+                        content: message.data.content || `서류 신청 (${items.join(', ')})`,
                         type: 'doc',
                         admissionId: message.data.admission_id
-                    } as any, ...prev]);
+                    };
+
+                    setNotifications(prev => {
+                        const exists = prev.some(n => n.id === newDocId);
+                        if (exists) {
+                            return prev.map(n => n.id === newDocId ? newDocNotification : n);
+                        }
+                        return [newDocNotification as any, ...prev];
+                    });
                     break;
                 case 'DOC_REQUEST_UPDATED':
                     // Remove notification when a document request is updated (e.g., to COMPLETED) by any station

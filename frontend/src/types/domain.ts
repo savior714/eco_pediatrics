@@ -77,8 +77,8 @@ export interface AdmissionSummary {
 export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'DOC_REQUEST_UPDATED' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL' | 'NEW_EXAM_SCHEDULE' | 'DELETE_EXAM_SCHEDULE' | 'ADMISSION_TRANSFERRED' | 'ADMISSION_DISCHARGED' | 'MEAL_UPDATED' | 'REFRESH_DASHBOARD';
 
 export type WsMessage =
-    | { type: 'NEW_MEAL_REQUEST'; data: { id: number; room: string; request_type: string; admission_id: string; meal_date: string; meal_time: string; pediatric_meal_type?: string; guardian_meal_type?: string } }
-    | { type: 'NEW_DOC_REQUEST'; data: { id: number; admission_id: string; room: string; request_items: string[]; created_at?: string } }
+    | { type: 'NEW_MEAL_REQUEST'; data: { id: number; room: string; request_type: string; admission_id: string; meal_date: string; meal_time: string; pediatric_meal_type?: string; guardian_meal_type?: string; requested_pediatric_meal_type?: string; requested_guardian_meal_type?: string; content?: string } }
+    | { type: 'NEW_DOC_REQUEST'; data: { id: number; admission_id: string; room: string; request_items: string[]; created_at?: string; content?: string } }
     | { type: 'DOC_REQUEST_UPDATED'; data: { id: number; status: string; room?: string } }
     | { type: 'IV_PHOTO_UPLOADED'; data: { admission_id: string; room_number: string; photo_url: string } }
     | { type: 'NEW_IV'; data: { id: number; infusion_rate: number; room: string | null; admission_id: string; photo_url?: string; created_at?: string } }
