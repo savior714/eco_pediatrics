@@ -12,7 +12,6 @@
     - **알람 지속성(Persistence) 확보**: `pending-requests` 전용 엔드포인트 및 서비스를 구축하여 페이지 새로고침이나 웹소켓 재연결 시에도 미결제 알람 목록 유지.
     - **중복 신청 방어 강화**: 대시보드 모달에서 `PENDING`뿐만 아니라 이미 완료된 서류 항목도 비활성화 처리하여 불필요한 재신청 방지.
     - **쿼리 아키텍처 최적화**: `fetch_dashboard_data` 내 모든 `select("*")`를 명시적 컬럼 선택(`Explicit Column Selection`)으로 변경하여 페이로드 최적화 및 DB 효율 향상.
-    - **개발 환경 통합**: Windows Terminal(`wt.exe`) 분할 패널을 활용하여 백엔드/프론트엔드 로그를 한 창에서 모니터링할 수 있도록 `run_dev.bat` 고도화.
 
 - **아키텍처 정규화 및 방어적 검증 (2026-02-19)**:
     - **RPC 응답 정규화**: `normalize_rpc_result` 유틸리티를 전역 서비스 레이어(`transfer`, `discharge` 등)에 적용하여 데이터 일관성(SSOT) 확보.
@@ -112,12 +111,12 @@
     - Modernized 1-line patient header with responsive design & indentation.
     - Standardized card headers with w-9 h-9 icon backgrounds across all components.
     - PC layout optimization (Left: Medical/IV, Right: Admin/Notices).
-86: 
-87: - [x] **Dashboard Sync & Resilience (2026-02-15)**:
-88:     - **Optimistic UI**: `PatientDetailModal`에서 체온 입력 시 즉시 반영 (`addOptimisticVital`).
-89:     - **Backend Meals Sorting**: 식단 조회 시 날짜/시간(저녁>점심>아침) 순 서버 정렬 보장.
-90:     - **WebSocket Resilience**: `useWebSocket` 훅 도입으로 지수 백오프(Exponential Backoff) 및 자동 재연결 표준화.
-91:     - **Developer Standards**: `docs/DEVELOPMENT_STANDARDS.md` 생성하여 핵심 로직(중복 제거, ID 체크 등) 문서화.
+
+- [x] **Dashboard Sync & Resilience (2026-02-15)**:
+    - **Optimistic UI**: `PatientDetailModal`에서 체온 입력 시 즉시 반영 (`addOptimisticVital`).
+    - **Backend Meals Sorting**: 식단 조회 시 날짜/시간(저녁>점심>아침) 순 서버 정렬 보장.
+    - **WebSocket Resilience**: `useWebSocket` 훅 도입으로 지수 백오프(Exponential Backoff) 및 자동 재연결 표준화.
+    - **Developer Standards**: `docs/DEVELOPMENT_STANDARDS.md` 생성하여 핵심 로직(중복 제거, ID 체크 등) 문서화.
     - **Sync Refinements (Phase A-D)**:
         - `useStation`: `NEW_MEAL`/`NEW_VITAL` 수신 시 즉시 상태 패치 (체감 속도 향상).
         - `PatientDetailModal`: 중복 `useEffect` 제거로 불필요한 네트워크 요청 방지.
@@ -135,3 +134,4 @@
         - Supabase SDK의 `update().eq().select()` 제약 사항을 반영하여 업데이트와 조회를 분리 처리.
         - 환자 서브모달 내 검사 일정 타이틀을 "예정된 검사 일정"으로 변경하여 용어 통일.
     - **Stability**: `useVitals.ts`에서 메시지 수신 시 `debouncedRefetch`를 호출하여 서버 데이터와의 정합성 극대화.
+

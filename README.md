@@ -43,9 +43,9 @@
 | **Frontend** | Next.js 14 (App Router), Tailwind CSS v4, Lucide React, Recharts, Framer Motion |
 | **Backend** | FastAPI (Python 3.10+), WebSockets, Loguru, Pydantic |
 | **Database** | Supabase (PostgreSQL), Row Level Security (RLS) |
-| **Infra/DevOps** | Batch Scripts (Windows), Docker (Optional) |
+| **Infra/DevOps** | Batch Scripts (Windows), Docker (Optional), `error_monitor.py` (Zero-Cost Error Monitoring) |
 
-## 🏗 시스템 아키텍처 (Refactored 2026-02-14)
+## 🏗 시스템 아키텍처 (Refactored 2026-02-19)
 
 본 프로젝트는 **Layered Architecture**를 따르며, 유지보수성과 확장성을 고려하여 설계되었습니다.
 
