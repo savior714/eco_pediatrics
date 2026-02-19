@@ -254,7 +254,10 @@ while True:
     for label, log_path in WATCH_TARGETS.items():   # 모든 스택 동시 감시
         current_mtime = log_path.stat().st_mtime
         if current_mtime != last_mtimes[label]:      # 변경 감지
+            # 인코딩 자동 감지 (UTF-8 우선, 실패 시 UTF-16 LE 등 시도)
+            # PowerShell Tee-Object 등 다양한 소스 대응
             log_tail = _tail(log_path, 100)
+
             if _ERROR_PATTERN.search(log_tail):      # 패턴 매칭
                 session_errors.append({
                     "timestamp": "...",
