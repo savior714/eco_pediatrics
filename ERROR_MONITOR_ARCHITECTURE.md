@@ -301,10 +301,9 @@ while True:
 
 ```batch
 :: run_dev.bat — 기술 스택 추가 시 패널만 추가
-wt -M -d . --title "Backend"      pwsh -NoExit -Command ".\start_backend.bat" ; ^
-split-pane -H --title "ErrorMonitor" --size 0.2 ^
-           pwsh -NoExit -Command "backend\.venv\Scripts\python error_monitor.py --clear" ; ^
-split-pane -V --title "Frontend"   pwsh -NoExit -Command ".\start_frontend.bat"
+wt -M -d . --title "Backend" pwsh -NoExit -Command ".\start_backend.bat" ; ^
+split-pane -H -p 0 -d . --title "ErrorMonitor" --size 0.2 pwsh -NoExit -Command "backend\.venv\Scripts\python error_monitor.py --clear" ; ^
+split-pane -V -p 0 -d . --title "Frontend" pwsh -NoExit -Command ".\start_frontend.bat"
 ```
 
 ```
