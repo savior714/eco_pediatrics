@@ -9,9 +9,10 @@ echo:
 :: Launch Windows Terminal with side-by-side panes
 :: -d . starts in current directory
 :: split-pane -d . splits the terminal
-wt -M -d . --title "Backend" cmd /c "start_backend.bat" ; ^
+wt -M -d . --title "Backend" pwsh -NoExit -Command ".\start_backend.bat" ; ^
 split-pane -H -d . --title "ErrorMonitor" --size 0.2 pwsh -NoExit -Command "backend\.venv\Scripts\python error_monitor.py --clear" ; ^
-split-pane -t 0 -V -d . --title "Frontend" cmd /c "start_frontend.bat"
+focus-pane -t 0 ; ^
+split-pane -V -d . --title "Frontend" pwsh -NoExit -Command ".\start_frontend.bat"
 
 echo ====================================================
 echo   Terminal session started.
