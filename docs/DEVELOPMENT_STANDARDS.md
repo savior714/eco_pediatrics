@@ -22,3 +22,10 @@
 ## 3. Backend Sorting
 - **In-Memory Sorting**: For data requiring complex sort logic (e.g., Meals: Date > Time Priority), sort in Python after fetching if SQL `ORDER BY` is insufficient.
 - **Meal Priority**: Dinner > Lunch > Breakfast.
+
+## 4. AI Agent Collaboration & Safe Editing
+To prevent document corruption and editing failures (Anti-Pattern Guide):
+- **Avoid Line Numbers**: When providing code to or requesting from Assistant, **NEVER** include the line numbers (e.g., `26: `) provided by tools like `view_file`.
+- **Use Unique Anchors**: Target single, unique lines of code as anchors for editing instead of large blocks.
+- **Verification Loop**: Always verify file integrity and encoding (UTF-8) after AI edits using `view_file`.
+- **CRLF vs LF**: Be aware of Windows line endings. Use multi-line edits only when necessary and prefer single-line anchors.
