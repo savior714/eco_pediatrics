@@ -38,11 +38,26 @@ async def fetch_pending_requests(db: AsyncClient) -> List[Dict]:
         if guardian and guardian != '신청 안함':
             meal_desc += f" / {guardian}"
             
+        # Format Date & Time
+        m_date = m.get('meal_date') # '2026-02-19'
+        m_time = m.get('meal_time') # 'BREAKFAST'
+        time_map = {'BREAKFAST': '아침', 'LUNCH': '점심', 'DINNER': '저녁'}
+        time_label = time_map.get(m_time, m_time)
+        
+        date_label = ""
+        if m_date:
+            try:
+                # 2026-02-19 -> 02/19
+                d_obj = date.fromisoformat(m_date) if isinstance(m_date, str) else m_date
+                date_label = d_obj.strftime("%m/%d")
+            except:
+                date_label = str(m_date)
+
         notifications.append({
             "id": f"meal_{m['id']}",
             "room": room,
             "time": m['created_at'],
-            "content": f"식단 신청 ({meal_desc})",
+            "content": f"[{date_label} {time_label}] 식단 신청 ({meal_desc})",
             "type": "meal",
             "admissionId": m['admission_id']
         })

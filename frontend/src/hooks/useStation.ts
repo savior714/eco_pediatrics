@@ -112,11 +112,26 @@ export function useStation(): UseStationReturn {
                         ? `${requestedPediatric}${requestedGuardian && requestedGuardian !== '선택 안함' ? ` / ${requestedGuardian}` : ''}`
                         : (MEAL_MAP[message.data.request_type] || message.data.request_type);
 
+                    const mealDateRaw = message.data.meal_date; // '2026-02-19'
+                    const mealTimeRaw = message.data.meal_time; // 'BREAKFAST'
+                    const mealTimeMap: Record<string, string> = { BREAKFAST: '아침', LUNCH: '점심', DINNER: '저녁' };
+                    const timeLabel = mealTimeMap[mealTimeRaw] || mealTimeRaw;
+
+                    let dateLabel = '';
+                    if (mealDateRaw) {
+                        try {
+                            const d = new Date(mealDateRaw);
+                            dateLabel = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`;
+                        } catch (e) {
+                            dateLabel = mealDateRaw;
+                        }
+                    }
+
                     setNotifications(prev => [{
                         id: `meal_${message.data.id}`, // 접두사 추가 → 백엔드와 포맷 통일
                         room: message.data.room,
                         time: '방금',
-                        content: `식단 신청 (${mealTypeDesc})`,
+                        content: `[${dateLabel} ${timeLabel}] 식단 신청 (${mealTypeDesc})`,
                         type: 'meal',
                         admissionId: message.data.admission_id // Store for removal patch
                     } as any, ...prev]);
