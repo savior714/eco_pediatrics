@@ -1,12 +1,19 @@
 """
-eco_pediatrics Error Monitor (Pure-Polling)
-==========================================
-watchdog 없이 순수 Python 루프로 app.log 를 감시한다.
-ERROR / CRITICAL 로그 감지 시 prompt_for_gemini.md 를 생성하고 비프음을 낸다.
+eco_pediatrics Error Monitor (Pure-Polling / Multi-Stack)
+=========================================================
+watchdog 없이 순수 Python 루프로 여러 서비스 로그를 동시에 감시한다.
+- 감시 대상 : WATCH_TARGETS 딕셔너리에 등록된 모든 로그 파일
+- 에러 패턴 : Python / TypeScript / Tauri(Rust) / Build 도구 공통 커버
+- 에러 감지 : prompt_for_gemini.md 를 세션 히스토리 형식으로 자동 갱신
 
 사용법:
     python error_monitor.py          # 모니터 시작
-    python error_monitor.py --cleanup # 로그 초기화 후 종료
+    python error_monitor.py --clear  # 로그 전체 초기화 후 모니터 시작
+    python error_monitor.py --cleanup # 로그·리포트 초기화 후 종료
+
+새 서비스 추가:
+    WATCH_TARGETS 딕셔너리에 {"서비스명": Path("로그 경로")} 추가
+    SOURCE_FILES 리스트에 해당 소스 파일 추가
 """
 
 from __future__ import annotations
@@ -129,9 +136,14 @@ def _generate_prompt(session_errors: list[dict[str, str]]) -> None:
         except ValueError:
             rel = src.name
         # 파일 확장자별 코드 블록 언어 태그 분기
-        lang = {".ts": "typescript", ".tsx": "typescript", ".js": "javascript"}.get(
-            src.suffix, "python"
-        )
+        lang = {
+            ".ts" : "typescript",
+            ".tsx": "typescript",
+            ".js" : "javascript",
+            ".jsx": "javascript",
+            ".rs" : "rust",
+            ".sql": "sql",
+        }.get(src.suffix, "python")
         source_sections.append(f"#### `{rel}`\n```{lang}\n{code}\n```")
 
     sources_block = "\n\n".join(source_sections) or "_소스 파일 없음_"
@@ -246,12 +258,12 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.cleanup:
-        # ... (생략)
         cleaned = False
-        if WATCH_LOG_PATH.exists():
-            WATCH_LOG_PATH.write_text("", encoding="utf-8")
-            print(f"[✓] 로그 초기화 : {WATCH_LOG_PATH}")
-            cleaned = True
+        for label, log_path in WATCH_TARGETS.items():
+            if log_path.exists():
+                log_path.write_text("", encoding="utf-8")
+                print(f"[✓] [{label}] 로그 초기화 : {log_path}")
+                cleaned = True
         if OUTPUT_FILE.exists():
             OUTPUT_FILE.unlink()
             print(f"[✓] 리포트 삭제 : {OUTPUT_FILE}")
