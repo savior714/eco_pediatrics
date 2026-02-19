@@ -9,7 +9,7 @@ async def fetch_pending_requests(db: AsyncClient) -> List[Dict]:
     # 1. Fetch pending meals
     meals_task = execute_with_retry_async(
         db.table("meal_requests")
-        .select("id, admission_id, request_type, meal_date, meal_time, pediatric_meal_type, guardian_meal_type, created_at, admissions(room_number)")
+        .select("id, admission_id, request_type, meal_date, meal_time, pediatric_meal_type, guardian_meal_type, created_at, admissions!inner(room_number)")
         .eq("status", "PENDING")
         .order("created_at", desc=True)
     )
@@ -17,7 +17,7 @@ async def fetch_pending_requests(db: AsyncClient) -> List[Dict]:
     # 2. Fetch pending document requests
     docs_task = execute_with_retry_async(
         db.table("document_requests")
-        .select("id, admission_id, request_items, created_at, admissions(room_number)")
+        .select("id, admission_id, request_items, created_at, admissions!inner(room_number)")
         .eq("status", "PENDING")
         .order("created_at", desc=True)
     )
@@ -29,7 +29,8 @@ async def fetch_pending_requests(db: AsyncClient) -> List[Dict]:
     
     # Process Meals
     for m in (meals_res.data or []):
-        room = m.get('admissions', {}).get('room_number', '??')
+        admissions_data = m.get('admissions') or {}
+        room = admissions_data.get('room_number', '??')
         pediatric = m.get('pediatric_meal_type')
         guardian = m.get('guardian_meal_type')
         
@@ -38,7 +39,7 @@ async def fetch_pending_requests(db: AsyncClient) -> List[Dict]:
             meal_desc += f" / {guardian}"
             
         notifications.append({
-            "id": str(m['id']),
+            "id": f"meal_{m['id']}",
             "room": room,
             "time": m['created_at'],
             "content": f"식단 신청 ({meal_desc})",
@@ -49,12 +50,13 @@ async def fetch_pending_requests(db: AsyncClient) -> List[Dict]:
     # Process Docs
     from constants.mappings import DOC_MAP
     for d in (docs_res.data or []):
-        room = d.get('admissions', {}).get('room_number', '??')
+        admissions_data = d.get('admissions') or {}
+        room = admissions_data.get('room_number', '??')
         items = d.get('request_items', [])
         item_names = [DOC_MAP.get(it, it) for it in items]
         
         notifications.append({
-            "id": str(d['id']),
+            "id": f"doc_{d['id']}",
             "room": room,
             "time": d['created_at'],
             "content": f"서류 신청 ({', '.join(item_names)})",

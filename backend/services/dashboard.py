@@ -9,7 +9,7 @@ async def fetch_dashboard_data(db: AsyncClient, admission_id: str):
     """
     # Define all query tasks
     tasks = [
-        execute_with_retry_async(db.table("admissions").select("id, patient_name_masked, display_name, room_number, check_in_at, dob, gender, status").eq("id", admission_id)),
+        execute_with_retry_async(db.table("admissions").select("id, patient_name_masked, room_number, check_in_at, dob, gender, status").eq("id", admission_id)),
         execute_with_retry_async(db.table("vital_signs").select("id, admission_id, temperature, has_medication, medication_type, recorded_at").eq("admission_id", admission_id).order("recorded_at", desc=True).limit(100)),
         execute_with_retry_async(db.table("iv_records").select("id, admission_id, photo_url, infusion_rate, created_at").eq("admission_id", admission_id).order("created_at", desc=True).limit(50)),
         execute_with_retry_async(db.table("meal_requests").select("id, admission_id, request_type, pediatric_meal_type, guardian_meal_type, meal_date, meal_time, status, created_at").eq("admission_id", admission_id).order("meal_date", desc=True).limit(50)),
@@ -32,8 +32,9 @@ async def fetch_dashboard_data(db: AsyncClient, admission_id: str):
         raise HTTPException(status_code=404, detail="Admission not found")
     admission = adm_res.data[0]
     
-    if "display_name" not in admission or not admission["display_name"]:
-         admission["display_name"] = admission.get("patient_name_masked", "환자")
+    # Ensure name fallback
+    if not admission.get("patient_name_masked"):
+        admission["patient_name_masked"] = "환자"
     
     # 2. Vitals
     vitals = vitals_res.data or []

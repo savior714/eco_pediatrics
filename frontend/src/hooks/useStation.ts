@@ -113,7 +113,7 @@ export function useStation(): UseStationReturn {
                         : (MEAL_MAP[message.data.request_type] || message.data.request_type);
 
                     setNotifications(prev => [{
-                        id: String(message.data.id), // Use actual DB ID
+                        id: `meal_${message.data.id}`, // 접두사 추가 → 백엔드와 포맷 통일
                         room: message.data.room,
                         time: '방금',
                         content: `식단 신청 (${mealTypeDesc})`,
@@ -146,7 +146,7 @@ export function useStation(): UseStationReturn {
                 case 'NEW_DOC_REQUEST':
                     const items = message.data.request_items.map(it => DOC_MAP[it] || it);
                     setNotifications(prev => [{
-                        id: String(message.data.id),
+                        id: `doc_${message.data.id}`, // 접두사 추가
                         room: message.data.room,
                         time: '방금',
                         content: `서류 신청 (${items.join(', ')})`,
@@ -156,7 +156,7 @@ export function useStation(): UseStationReturn {
                     break;
                 case 'DOC_REQUEST_UPDATED':
                     // Remove notification when a document request is updated (e.g., to COMPLETED) by any station
-                    setNotifications(prev => prev.filter(n => n.id !== String(message.data.id)));
+                    setNotifications(prev => prev.filter(n => n.id !== `doc_${message.data.id}`));
                     break;
 
                 case 'IV_PHOTO_UPLOADED':
@@ -227,13 +227,13 @@ export function useStation(): UseStationReturn {
     const removeNotification = useCallback(async (id: string, type?: string, admissionId?: string) => {
         setNotifications(prev => prev.filter(n => n.id !== id));
 
-        // If it's a doc or meal request and it's a numeric DB ID, update status
-        if (admissionId && !isNaN(Number(id))) {
+        // id 접두사에서 type과 rawId 추출 (예: 'meal_34' → type='meal', rawId='34')
+        const match = id.match(/^(meal|doc)_(\d+)$/);
+        if (admissionId && match) {
             try {
-                const endpoint = type === 'doc' ? 'documents' : 'meals';
-                // Pass status as query param or body as per backend implementation
-                // backend/routers/station.py update_document_request_status uses query param 'status'
-                await api.patch(`/api/v1/${endpoint}/requests/${id}?status=COMPLETED`, {});
+                const [, parsedType, rawId] = match;
+                const endpoint = (type || parsedType) === 'doc' ? 'documents' : 'meals';
+                await api.patch(`/api/v1/${endpoint}/requests/${rawId}?status=COMPLETED`, {});
             } catch (e) {
                 console.error('Status Update Failed', e);
             }

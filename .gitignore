@@ -21,3 +21,7 @@ node_modules/.cache/
 *.log
 tsc_output.txt
 *.tsbuildinfo
+
+# Gemini & Debug (에러 모니터 생성 파일)
+prompt_for_gemini.md
+test_run_output.txt

@@ -132,9 +132,9 @@ async def update_document_request_status(
     updated_request = response.data[0]
     
     # 3. STATION 및 해당 환자 채널 브로드캐스트
-    admission_data = updated_request.get('admissions', {})
-    room_number = admission_data.get('room_number') if isinstance(admission_data, dict) else None
-    admission_token = admission_data.get('access_token') if isinstance(admission_data, dict) else None
+    admission_data = updated_request.get('admissions') or {}
+    room_number = admission_data.get('room_number')
+    admission_token = admission_data.get('access_token')
 
     message = {
         "type": "DOC_REQUEST_UPDATED",
