@@ -75,7 +75,16 @@ GEMINI_SYSTEM_PROMPT: Final[str] = """\
 """
 
 _ERROR_PATTERN: re.Pattern[str] = re.compile(
-    r"\b(ERROR|CRITICAL|Traceback|Exception|Error|ModuleNotFoundError|AttributeError|ValueError|TypeError)\b",
+    r"\b("
+    # Python / Backend
+    r"ERROR|CRITICAL|Traceback|Exception|ModuleNotFoundError|AttributeError|ValueError|TypeError"
+    r"|"
+    # JavaScript / TypeScript / Next.js / Tauri
+    r"FAILED|Failed to|Unhandled|Uncaught|SyntaxError|ReferenceError|RangeError"
+    r"|"
+    # Chromium / Tauri / Rust
+    r"panicked|RUST_BACKTRACE|Error =|error\[|ENOENT|ECONNREFUSED"
+    r")\b",
     re.IGNORECASE,
 )
 
@@ -119,7 +128,11 @@ def _generate_prompt(session_errors: list[dict[str, str]]) -> None:
             rel = src.relative_to(PROJECT_ROOT)
         except ValueError:
             rel = src.name
-        source_sections.append(f"#### `{rel}`\n```python\n{code}\n```")
+        # 파일 확장자별 코드 블록 언어 태그 분기
+        lang = {".ts": "typescript", ".tsx": "typescript", ".js": "javascript"}.get(
+            src.suffix, "python"
+        )
+        source_sections.append(f"#### `{rel}`\n```{lang}\n{code}\n```")
 
     sources_block = "\n\n".join(source_sections) or "_소스 파일 없음_"
 
