@@ -111,7 +111,18 @@ def _tail(path: Path, n: int) -> str:
             buf = min(filesize, 1024 * 16)  # 최대 16KB
             f.seek(max(0, filesize - buf))
             data = f.read()
-        lines = data.decode("utf-8", errors="replace").splitlines()
+
+        # 인코딩 자동 감지 (UTF-8 우선, 실패 시 UTF-16LE 시도)
+        # PowerShell Tee-Object는 기본적으로 UTF-16 LE를 사용함
+        try:
+            decoded = data.decode("utf-8")
+        except UnicodeDecodeError:
+            try:
+                decoded = data.decode("utf-16-le")
+            except UnicodeDecodeError:
+                decoded = data.decode("utf-8", errors="replace")
+
+        lines = decoded.splitlines()
         return "\n".join(lines[-n:])
     except Exception as exc:
         return f"[로그 읽기 실패: {exc}]"
