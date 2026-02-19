@@ -99,7 +99,9 @@ async def upsert_meal_request(db: AsyncClient, req: MealRequestCreate):
                             "meal_date": req.meal_date.isoformat(),
                             "meal_time": req.meal_time.value,
                             "pediatric_meal_type": new_req_data.get('pediatric_meal_type'),
-                            "guardian_meal_type": new_req_data.get('guardian_meal_type')
+                            "guardian_meal_type": new_req_data.get('guardian_meal_type'),
+                            "requested_pediatric_meal_type": new_req_data.get('requested_pediatric_meal_type'),
+                            "requested_guardian_meal_type": new_req_data.get('requested_guardian_meal_type')
                         }
                     }
                     await broadcast_to_station_and_patient(manager, msg, adm_res.data.get("access_token"))

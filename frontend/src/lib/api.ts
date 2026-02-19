@@ -10,6 +10,9 @@ const isTauri = typeof window !== 'undefined' &&
 let cachedTauriFetch: any = null;
 let cachedTauriLog: any = null;
 
+// 중복 요청 방지를 위한 단순 캐시 (100ms 내 동일 URL 무시)
+const pendingRequests = new Map<string, number>();
+
 const getTauriFetch = async () => {
     if (!isTauri) return window.fetch;
     if (cachedTauriFetch) return cachedTauriFetch;
@@ -32,9 +35,11 @@ const tauriLog = async (level: 'info' | 'warn' | 'error' | 'debug', message: str
             const { info, warn, error, debug } = await import('@tauri-apps/plugin-log');
             cachedTauriLog = { info, warn, error, debug };
         }
+        // WebView2 상태 확인 및 가드: 윈도우가 닫히는 중이면 실행 중단
+        if (typeof window === 'undefined' || !(window as any).__TAURI_INTERNALS__) return;
         cachedTauriLog[level](`[Frontend] ${message}`);
     } catch (e) {
-        console.error('Failed to log to Tauri:', e);
+        /* 0x8007139F 방지를 위해 에러 캡슐화 */
     }
 };
 
@@ -47,6 +52,16 @@ class ApiClient {
 
     private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
         const url = `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+
+        // 중복 요청 디바운싱 (특히 GET 요청에 대해)
+        const requestKey = `${options?.method || 'GET'}:${url}`;
+        const now = Date.now();
+        if ((options?.method || 'GET') === 'GET' && pendingRequests.has(requestKey)) {
+            if (now - (pendingRequests.get(requestKey) || 0) < 100) {
+                return {} as T; // 100ms 이내 중복 요청은 무시
+            }
+        }
+        pendingRequests.set(requestKey, now);
 
         // Use Tauri Native Fetch if available (Bypasses CORS/CSP)
         const fetchFn = await getTauriFetch();

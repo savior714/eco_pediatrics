@@ -142,11 +142,15 @@ export function useStation(): UseStationReturn {
                             return {
                                 ...bed,
                                 latest_meal: {
-                                    id: message.data.id, // Use actual server/DB ID from message
+                                    id: message.data.id,
                                     admission_id: message.data.admission_id,
                                     request_type: message.data.request_type,
-                                    pediatric_meal_type: message.data.pediatric_meal_type,
-                                    guardian_meal_type: message.data.guardian_meal_type,
+                                    // Preserve current values to avoid premature UI change
+                                    pediatric_meal_type: bed.latest_meal?.pediatric_meal_type,
+                                    guardian_meal_type: bed.latest_meal?.guardian_meal_type,
+                                    // Store requested values
+                                    requested_pediatric_meal_type: message.data.requested_pediatric_meal_type || message.data.pediatric_meal_type,
+                                    requested_guardian_meal_type: message.data.requested_guardian_meal_type || message.data.guardian_meal_type,
                                     status: 'PENDING',
                                     created_at: new Date().toISOString(),
                                     meal_date: message.data.meal_date,

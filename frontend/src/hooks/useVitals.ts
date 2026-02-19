@@ -34,7 +34,7 @@ interface DashboardResponse {
     exam_schedules: ExamScheduleItem[];
 }
 
-export function useVitals(token: string | null | undefined, enabled: boolean = true): UseVitalsReturn {
+export function useVitals(token: string | null | undefined, enabled: boolean = true, onDischarge?: () => void): UseVitalsReturn {
     const [vitals, setVitals] = useState<VitalData[]>([]);
     const [checkInAt, setCheckInAt] = useState<string | null>(null);
     const [meals, setMeals] = useState<MealRequest[]>([]);
@@ -205,8 +205,14 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     debouncedRefetch();
                     break;
                 case 'ADMISSION_DISCHARGED':
-                    alert('환자가 퇴원 처리되었습니다. 페이지를 종료합니다.');
-                    window.close();
+                    if (onDischarge) {
+                        onDischarge();
+                    } else {
+                        alert('환자가 퇴원 처리되었습니다. 페이지를 종료합니다.');
+                        window.close();
+                        // Fallback if window.close() is blocked
+                        setTimeout(() => window.location.href = '/', 500);
+                    }
                     break;
                 case 'NEW_MEAL_REQUEST':
                     if (admissionIdRef.current && message.data.admission_id === admissionIdRef.current) {

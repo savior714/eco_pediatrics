@@ -156,12 +156,66 @@ async def update_meal_request_status(
     status: str,
     db: AsyncClient = Depends(get_supabase)
 ):
-    """Update meal request status"""
+    """Update meal request status and finalize types if COMPLETED"""
+    # 1. 기존 요청 데이터 가져오기 (이후 가공 필요)
+    req_res = await execute_with_retry_async(
+        db.table("meal_requests").select("*").eq("id", request_id).single()
+    )
+    if not req_res.data:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    req_data = req_res.data
+    update_payload = {"status": status}
+
+    # 2. 상태가 COMPLETED라면 요청된 값을 실제 식단으로 확정
+    if status == 'COMPLETED':
+        if req_data.get('requested_pediatric_meal_type'):
+            update_payload['pediatric_meal_type'] = req_data['requested_pediatric_meal_type']
+            update_payload['requested_pediatric_meal_type'] = None
+        
+        if req_data.get('requested_guardian_meal_type'):
+            update_payload['guardian_meal_type'] = req_data['requested_guardian_meal_type']
+            update_payload['requested_guardian_meal_type'] = None
+
+    # 3. DB 업데이트 수행
     response = await execute_with_retry_async(
         db.table("meal_requests")
-        .update({"status": status})
+        .update(update_payload)
         .eq("id", request_id)
     )
+    
     if not response.data:
-        raise HTTPException(status_code=404, detail="Request not found")
+         raise HTTPException(status_code=404, detail="Update failed")
+
+    # 브로드캐스트를 위해 전체 데이터 패치 (admissions 정보 포함)
+    full_resp = await execute_with_retry_async(
+        db.table("meal_requests")
+        .select("*, admissions(room_number, access_token)")
+        .eq("id", request_id)
+        .single()
+    )
+    
+    if full_resp.data:
+        updated_data = full_resp.data
+        admission_data = updated_data.get('admissions') or {}
+        
+        msg = {
+            "type": "MEAL_UPDATED",
+            "data": {
+                "id": updated_data['id'],
+                "admission_id": updated_data['admission_id'],
+                "status": status,
+                "room": admission_data.get('room_number'),
+                "pediatric_meal_type": updated_data.get('pediatric_meal_type'),
+                "guardian_meal_type": updated_data.get('guardian_meal_type'),
+                "requested_pediatric_meal_type": updated_data.get('requested_pediatric_meal_type'),
+                "requested_guardian_meal_type": updated_data.get('requested_guardian_meal_type'),
+                "meal_date": updated_data.get('meal_date'),
+                "meal_time": updated_data.get('meal_time')
+            }
+        }
+        await manager.broadcast(json.dumps(msg), "STATION")
+        if admission_data.get('access_token'):
+            await manager.broadcast(json.dumps(msg), admission_data['access_token'])
+
     return response.data[0]
