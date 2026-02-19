@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { PatientCard } from '@/components/PatientCard';
 import { Card } from '@/components/Card';
 import { Bell } from 'lucide-react';
@@ -21,6 +21,15 @@ export default function Station() {
 
     const { beds, notifications, lastUploadedIv, lastUpdated, removeNotification } = stationData;
     const { selectedRoom, qrBed, admitRoom, activeTab, selectedBed } = state;
+
+    const handleCardClick = useCallback((room: string) => {
+        actions.setSelectedRoom(room);
+    }, [actions]);
+
+    const handleQrClick = useCallback((bed: Bed) => {
+        if (bed.token) actions.setQrBed(bed);
+        else alert('토큰 없음');
+    }, [actions]);
 
     return (
         <div className="flex h-screen bg-slate-100 overflow-hidden">
@@ -89,19 +98,9 @@ export default function Station() {
                             return (
                                 <PatientCard
                                     key={bed.room}
-                                    name={bed.name}
-                                    roomNumber={bed.room}
-                                    temperature={bed.temp !== null ? bed.temp.toFixed(1) : '-'}
-                                    infusionRate={bed.drops ?? '-'}
-                                    status={bed.status}
-                                    onCardClick={() => actions.setSelectedRoom(bed.room)}
-                                    onQrClick={(e) => {
-                                        e.stopPropagation();
-                                        if (bed.token) actions.setQrBed(bed);
-                                        else alert('토큰 없음');
-                                    }}
-                                    dob={bed.dob}
-                                    gender={bed.gender}
+                                    bed={bed}
+                                    onCardClick={handleCardClick}
+                                    onQrClick={handleQrClick}
                                 />
                             );
                         })}
