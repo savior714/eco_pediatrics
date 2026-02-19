@@ -9,12 +9,12 @@ async def fetch_dashboard_data(db: AsyncClient, admission_id: str):
     """
     # Define all query tasks
     tasks = [
-        execute_with_retry_async(db.table("admissions").select("*").eq("id", admission_id)),
-        execute_with_retry_async(db.table("vital_signs").select("*").eq("admission_id", admission_id).order("recorded_at", desc=True).limit(100)),
-        execute_with_retry_async(db.table("iv_records").select("*").eq("admission_id", admission_id).order("created_at", desc=True).limit(50)),
-        execute_with_retry_async(db.table("meal_requests").select("*").eq("admission_id", admission_id).order("meal_date", desc=True).limit(50)),
-        execute_with_retry_async(db.table("exam_schedules").select("*").eq("admission_id", admission_id).order("scheduled_at")),
-        execute_with_retry_async(db.table("document_requests").select("*").eq("admission_id", admission_id).order("created_at", desc=True).limit(10))
+        execute_with_retry_async(db.table("admissions").select("id, patient_name_masked, display_name, room_number, check_in_at, dob, gender, status").eq("id", admission_id)),
+        execute_with_retry_async(db.table("vital_signs").select("id, admission_id, temperature, has_medication, medication_type, recorded_at").eq("admission_id", admission_id).order("recorded_at", desc=True).limit(100)),
+        execute_with_retry_async(db.table("iv_records").select("id, admission_id, photo_url, infusion_rate, created_at").eq("admission_id", admission_id).order("created_at", desc=True).limit(50)),
+        execute_with_retry_async(db.table("meal_requests").select("id, admission_id, request_type, pediatric_meal_type, guardian_meal_type, meal_date, meal_time, status, created_at").eq("admission_id", admission_id).order("meal_date", desc=True).limit(50)),
+        execute_with_retry_async(db.table("exam_schedules").select("id, admission_id, scheduled_at, name, note").eq("admission_id", admission_id).order("scheduled_at")),
+        execute_with_retry_async(db.table("document_requests").select("id, admission_id, request_items, status, created_at").eq("admission_id", admission_id).order("created_at", desc=True).limit(10))
     ]
     
     # Execute in parallel

@@ -22,6 +22,20 @@ export function useStation(): UseStationReturn {
     const [lastUploadedIv, setLastUploadedIv] = useState<LastUploadedIv | null>(null);
     const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
 
+    const fetchPendingRequests = useCallback(async () => {
+        try {
+            const pending = await api.get<Notification[]>('/api/v1/station/pending-requests');
+            if (Array.isArray(pending)) {
+                setNotifications(pending.map(n => ({
+                    ...n,
+                    time: new Date(n.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                })));
+            }
+        } catch (e) {
+            console.error('Failed to fetch pending requests', e);
+        }
+    }, []);
+
     const fetchAdmissions = useCallback(() => {
         api.get<AdmissionSummary[]>('/api/v1/admissions')
             .then(admissions => {
@@ -77,7 +91,8 @@ export function useStation(): UseStationReturn {
         })));
 
         fetchAdmissions();
-    }, [fetchAdmissions]);
+        fetchPendingRequests();
+    }, [fetchAdmissions, fetchPendingRequests]);
 
     // WebSocket Implementation using shared hook
     const handleMessage = useCallback((event: MessageEvent) => {
@@ -129,8 +144,15 @@ export function useStation(): UseStationReturn {
                     break;
 
                 case 'NEW_DOC_REQUEST':
-                    // We no longer show notifications for document requests as per user request.
-                    // Instead, they are managed via the 'Document Requests' list in the sidebar.
+                    const items = message.data.request_items.map(it => DOC_MAP[it] || it);
+                    setNotifications(prev => [{
+                        id: String(message.data.id),
+                        room: message.data.room,
+                        time: '방금',
+                        content: `서류 신청 (${items.join(', ')})`,
+                        type: 'doc',
+                        admissionId: message.data.admission_id
+                    } as any, ...prev]);
                     break;
                 case 'DOC_REQUEST_UPDATED':
                     // Remove notification when a document request is updated (e.g., to COMPLETED) by any station
@@ -195,7 +217,10 @@ export function useStation(): UseStationReturn {
     const { isConnected } = useWebSocket({
         url: `${api.getBaseUrl().replace(/^http/, 'ws')}/ws/${wsToken}`,
         enabled: true,
-        onOpen: fetchAdmissions, // Resync on connect/reconnect
+        onOpen: () => {
+            fetchAdmissions();
+            fetchPendingRequests();
+        }, // Resync on connect/reconnect
         onMessage: handleMessage
     });
 

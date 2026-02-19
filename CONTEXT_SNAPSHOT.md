@@ -1,5 +1,13 @@
 # Context Snapshot
 
+- **운영 안정성 및 대시보드 최적화 (2026-02-19)**:
+    - **더미 데이터 품질 개선**: 더미 환자 이름에서 무작위 숫자를 제거하고 현실적인 성함 생성 및 표준 마스킹 규칙(`mask_name`)을 RPC 레이어까지 적용.
+    - **서류 신청 알림 복구**: `useStation.ts` 내 누락된 `NEW_DOC_REQUEST` 처리 로직을 복구하여 간호 스테이션 사이드바에 실시간 알람 표시.
+    - **알람 지속성(Persistence) 확보**: `pending-requests` 전용 엔드포인트 및 서비스를 구축하여 페이지 새로고침이나 웹소켓 재연결 시에도 미결제 알람 목록 유지.
+    - **중복 신청 방어 강화**: 대시보드 모달에서 `PENDING`뿐만 아니라 이미 완료된 서류 항목도 비활성화 처리하여 불필요한 재신청 방지.
+    - **쿼리 아키텍처 최적화**: `fetch_dashboard_data` 내 모든 `select("*")`를 명시적 컬럼 선택(`Explicit Column Selection`)으로 변경하여 페이로드 최적화 및 DB 효율 향상.
+    - **개발 환경 통합**: Windows Terminal(`wt.exe`) 분할 패널을 활용하여 백엔드/프론트엔드 로그를 한 창에서 모니터링할 수 있도록 `run_dev.bat` 고도화.
+
 - **아키텍처 정규화 및 방어적 검증 (2026-02-19)**:
     - **RPC 응답 정규화**: `normalize_rpc_result` 유틸리티를 전역 서비스 레이어(`transfer`, `discharge` 등)에 적용하여 데이터 일관성(SSOT) 확보.
     - **백엔드 유효성 검증**: Pydantic `field_validator`를 통해 생년월일 및 입원일시의 미래 날짜 입력을 차단하고 `422 Unprocessable Entity` 에러 표준화.

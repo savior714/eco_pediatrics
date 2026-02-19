@@ -4,7 +4,7 @@ import json
 from datetime import datetime, date, timedelta, timezone
 from supabase._async.client import AsyncClient
 from websocket_manager import manager
-from utils import execute_with_retry_async, broadcast_to_station_and_patient, normalize_rpc_result
+from utils import execute_with_retry_async, broadcast_to_station_and_patient, normalize_rpc_result, mask_name
 from logger import logger
 
 async def discharge_all(db: AsyncClient):
@@ -184,8 +184,10 @@ async def seed_single_patient(db: AsyncClient):
     target_room = available_rooms[0]
     
     # 3. 더미 환자 생성 (RPC 사용)
-    names = ["김더미", "이더미", "박더미", "최더미", "정더미"]
-    dummy_name = random.choice(names) + str(random.randint(1, 99))
+    last_names = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임"]
+    first_names = ["서준", "하준", "도윤", "시우", "지호", "서아", "이서", "하윤", "아윤", "지아"]
+    real_name = random.choice(last_names) + random.choice(first_names)
+    dummy_name_masked = mask_name(real_name)
     
     today = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
     birth_year = today.year - random.randint(3, 10)
@@ -193,7 +195,7 @@ async def seed_single_patient(db: AsyncClient):
     
     # create_admission_transaction은 {id, access_token}을 반환함
     adm_res = await db.rpc("create_admission_transaction", {
-        "p_patient_name_masked": dummy_name,
+        "p_patient_name_masked": dummy_name_masked,
         "p_room_number": target_room,
         "p_dob": dummy_dob.isoformat(),
         "p_gender": random.choice(["M", "F"]),

@@ -7,6 +7,7 @@ import json
 from dependencies import get_supabase, get_admission_token_optional, verify_admission_token
 from utils import execute_with_retry_async
 from services.dashboard import fetch_dashboard_data
+from services.station_service import fetch_pending_requests
 from websocket_manager import manager
 from models import MealRequest, MealRequestCreate, DocumentRequest, DocumentRequestCreate
 from schemas import DashboardResponse
@@ -39,6 +40,11 @@ async def get_dashboard_data_by_token(
 
     admission_id = res.data[0]['id']
     return await fetch_dashboard_data(db, admission_id)
+    
+@router.get("/station/pending-requests")
+async def get_pending_requests(db: AsyncClient = Depends(get_supabase)):
+    """Fetch all pending notifications for the station sidebar"""
+    return await fetch_pending_requests(db)
 
 
 

@@ -2,16 +2,18 @@
 title Eco-Pediatrics Full Stack Dev
 cd /d "%~dp0"
 
-echo [1/2] Starting Backend...
-start "PID Backend" cmd /c "start_backend.bat"
-
-echo [2/2] Starting Frontend (Tauri)...
-start "PID Frontend" cmd /c "start_frontend.bat"
-
+echo [WT] Launching Windows Terminal with Split Panes...
+echo [INFO] Left: Backend (8000), Right: Frontend (Tauri)
 echo:
+
+:: Launch Windows Terminal with side-by-side panes
+:: -d . starts in current directory
+:: split-pane -d . splits the terminal
+wt -d . --title "Backend" pwsh -NoExit -Command ".\start_backend.bat" ; ^
+split-pane -d . --title "Frontend" pwsh -NoExit -Command ".\start_frontend.bat"
+
 echo ====================================================
-echo   All services are starting in separate windows.
+echo   Terminal session started.
 echo   - Backend: http://localhost:8000
 echo   - Frontend: http://localhost:3000
-echo   - Desktop App: Starting via Tauri...
 echo ====================================================

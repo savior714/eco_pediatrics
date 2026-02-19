@@ -50,9 +50,9 @@ export function useDashboardStats() {
         .filter(req => req.status !== 'CANCELED')
         .flatMap(req => req.request_items);
 
-    // List of ONLY pending items to disable them in the request modal
-    const pendingDocItems = vitalsData.documentRequests
-        .filter(req => req.status === 'PENDING')
+    // List of ALL non-canceled requested items to disable them in the modal
+    const requestedDocItems = vitalsData.documentRequests
+        .filter(req => req.status !== 'CANCELED')
         .flatMap(req => req.request_items);
 
     // Remove duplicates and map to labels
@@ -65,7 +65,7 @@ export function useDashboardStats() {
         latestIv,
         currentMealLabel,
         currentDocLabels,
-        pendingDocItems,
+        requestedDocItems,
         viewMode,
         modalState: {
             isMealModalOpen,
