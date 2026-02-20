@@ -1,5 +1,13 @@
 # Context Snapshot
 
+- **운영 로직 표준화 및 SSOT 구축 (2026-02-20)**:
+    - **Logic SSOT 도입**: `docs/CRITICAL_LOGIC.md`를 생성하여 KST 관리, 중복 호출 방지, 식단 워크플로우 등 시스템의 핵심 운영 원칙을 명문화. 향후 모든 로직 변경의 최상위 권위문서(프로젝트 헌법)로 지정.
+    - **시간대 정합성(SSOT) 강화**: `dateUtils.ts`와 `page.tsx`를 전면 개편하여 클라이언트 시스템 시간과 무관한 KST(Asia/Seoul) 고정 출력 및 계산 구현.
+- **PR #15 시스템 안정화 및 리팩토링 (2026-02-20)**:
+    - **Backend Logic Unification**: `station.py` 내 분산된 식단 상태 변경 로직을 통합하여 신청값(`requested_*`)이 실제값(`pediatric_*`)으로 정확히 전이되도록 수정.
+    - **Frontend Upsert Logic**: `useStation.ts` 알림 수신 시 중복 생성 방지를 위한 Upsert(Update+Insert) 메커니즘 도입.
+    - **WebView2 Resource Guard**: `api.ts` 내 `tauriLog` 호출 시 윈도우 객체 유효성 검사로 `0x8007139F` 에러 원천 차단.
+    - **Request Debouncing**: 100ms 이내 중복 GET 요청 제한으로 Native Bridge 부하 최소화.
 - **식단 알림 고도화 및 알람 정렬 최적화 (2026-02-20)**:
     - **알림 데이터 정합성 강화**: `MealRequest` 모델에서 현재 상태(`pediatric_meal_type`) 대신 신청된 변경 값(`requested_pediatric_meal_type`)을 우선적으로 표시하도록 백엔드(`station_service.py`) 로직 수정.
     - **알림 정렬 다중화**: `created_at`뿐만 아니라 `meal_date`와 `meal_rank`(아침/점심/저녁 순서)를 정렬 기준으로 추가하여 동시 신청 건에 대한 가독성 확보.

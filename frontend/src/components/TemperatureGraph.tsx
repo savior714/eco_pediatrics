@@ -19,7 +19,7 @@ import { Card } from './Card';
 import { Thermometer } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { calculateHospitalDay } from '@/utils/dateUtils';
+import { calculateHospitalDay, getKSTMidnight, getKSTDate } from '@/utils/dateUtils';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -41,9 +41,14 @@ interface TemperatureGraphProps {
 }
 
 function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphProps) {
+    // [SSOT] Calculate KST Midnight once for shared use
+    const startDayMidnight = useMemo(() => {
+        return checkInAt ? getKSTMidnight(checkInAt) : 0;
+    }, [checkInAt]);
+
     // 1. Calculate hospital days logic
     const { chartData, totalWidthPercent, gridTicks, labelTicks, yDomain } = useMemo(() => {
-        if (!checkInAt || data.length === 0) {
+        if (!checkInAt || data.length === 0 || !startDayMidnight) {
             return {
                 chartData: data,
                 totalWidthPercent: 100,
@@ -53,21 +58,19 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
             };
         }
 
-        const startDate = new Date(checkInAt);
-        const startDayMidnight = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
+        // [SSOT] Data timestamp handling
+        const processTimestamp = (iso: string) => getKSTDate(iso).getTime();
 
-        // Filter and process data to add 'hospitalDay' and precise timestamp
         const processed = data
-            .filter(d => new Date(d.recorded_at).getTime() >= startDayMidnight) // Strictly filter out pre-admission data
             .map(d => {
-                const date = new Date(d.recorded_at);
-                const ts = date.getTime();
+                const ts = processTimestamp(d.recorded_at);
                 return {
                     ...d,
-                    hospitalDay: calculateHospitalDay(checkInAt, date),
+                    hospitalDay: calculateHospitalDay(checkInAt, new Date(d.recorded_at)),
                     timestamp: ts
                 };
             })
+            .filter(d => d.timestamp >= startDayMidnight) // Strictly filter out pre-admission data
             .sort((a, b) => a.timestamp - b.timestamp);
 
         // Calculate Y-axis domain based on data
@@ -83,7 +86,9 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
 
         // Determine range for the X-axis (strictly from admission midnight)
         const lastDataPoint = processed[processed.length - 1];
-        const lastTs = lastDataPoint ? lastDataPoint.timestamp : Date.now();
+        // If no data, default to "Now" in KST
+        const lastTs = lastDataPoint ? lastDataPoint.timestamp : getKSTDate(new Date()).getTime();
+
         const diffMs = lastTs - startDayMidnight;
         const daysInRange = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
         const displayDays = Math.max(5, daysInRange);
@@ -111,7 +116,7 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
             labelTicks,
             yDomain: [minTemp, maxTemp]
         };
-    }, [data, checkInAt]);
+    }, [data, checkInAt, startDayMidnight]);
 
     // Generate unique ID for the gradient to prevent conflicts when multiple charts are present
     // Note: useId returns a string containing colons (e.g. ":r1:"), which are invalid in CSS usageUrl without escaping.
@@ -189,8 +194,12 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
                                 scale="time"
                                 ticks={labelTicks}
                                 tickFormatter={(unixTime) => {
-                                    if (!checkInAt) return '';
-                                    return `${calculateHospitalDay(checkInAt, new Date(unixTime))}일차`;
+                                    if (!checkInAt || !startDayMidnight) return '';
+                                    // [SSOT] unixTime is KST-shifted, startDayMidnight is KST-shifted.
+                                    // Use simple math to avoid double-shifting.
+                                    const diffMs = unixTime - startDayMidnight;
+                                    const day = Math.floor(diffMs / (24 * 60 * 60 * 1000)) + 1;
+                                    return `${day}일차`;
                                 }}
                                 stroke="#94a3b8"
                                 fontSize={12}

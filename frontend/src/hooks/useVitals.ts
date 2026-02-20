@@ -51,9 +51,15 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const requestRef = useRef(0);
+    // [Optimization] Prevent double-fetch on mount
+    const lastFetchRef = useRef<number>(0);
 
     const fetchDashboardData = useCallback(async () => {
         if (!token) return;
+
+        const now = Date.now();
+        if (now - lastFetchRef.current < 500) return;
+        lastFetchRef.current = now;
 
         const currentRequestId = ++requestRef.current;
         setIsRefreshing(true);
@@ -105,8 +111,18 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                 // 3rd Priority: Defense Layer. Handle invalid/expired tokens gracefully.
                 const errorMessage = String(err?.message || '');
                 if (errorMessage.includes("403") || errorMessage.includes("404")) {
-                    alert("이미 종료되었거나 유효하지 않은 페이지입니다. 병원으로 문의해 주세요.");
-                    window.close();
+                    if (onDischarge) {
+                        onDischarge();
+                    } else {
+                        alert("이미 종료되었거나 유효하지 않은 페이지입니다. 병원으로 문의해 주세요.");
+                        if (typeof window !== 'undefined') {
+                            window.close();
+                            // Fallback if window.close() is blocked
+                            setTimeout(() => {
+                                window.location.href = '/403';
+                            }, 500);
+                        }
+                    }
                 }
             }
         } finally {
@@ -208,10 +224,15 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     if (onDischarge) {
                         onDischarge();
                     } else {
-                        alert('환자가 퇴원 처리되었습니다. 페이지를 종료합니다.');
-                        window.close();
-                        // Fallback if window.close() is blocked
-                        setTimeout(() => window.location.href = '/', 500);
+                        // 기본 동작: 퇴원 안내 후 안전하게 페이지 이탈
+                        alert('환자가 퇴원 처리되었습니다.');
+                        if (typeof window !== 'undefined') {
+                            window.close();
+                            // window.close()가 작동하지 않을 경우(일반 브라우저 탭 등)에만 403 페이지로 이동
+                            setTimeout(() => {
+                                window.location.href = '/403';
+                            }, 500);
+                        }
                     }
                     break;
                 case 'NEW_MEAL_REQUEST':

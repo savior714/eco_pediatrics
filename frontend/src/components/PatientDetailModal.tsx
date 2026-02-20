@@ -45,7 +45,7 @@ export function PatientDetailModal({
         addOptimisticExam,
         deleteOptimisticExam,
         updateOptimisticMeal
-    } = useVitals(bed?.token, isOpen);
+    } = useVitals(bed?.token, isOpen, onClose);
 
     const { state, actions } = usePatientActions({
         bed,

@@ -32,28 +32,11 @@ export function PatientDetailSidebar({
 }: PatientDetailSidebarProps) {
     // DB의 PENDING 데이터와 실시간 알림을 병합 (F5 대응)
     const displayNotifications = React.useMemo(() => {
-        const docPendings = documentRequests
-            .filter(r => r.status === 'PENDING')
-            .map(req => ({
-                id: `doc_${req.id}`,
-                room: '',
-                time: new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                content: `서류 신청 (${req.request_items.map(it => DOC_MAP[it] || it).join(', ')})`,
-                type: 'doc',
-                admissionId: req.admission_id
-            }));
-
-        const existingIds = new Set(roomNotifications.map(n => n.id));
-        const merged = [...roomNotifications];
-
-        docPendings.forEach(dp => {
-            if (!existingIds.has(dp.id)) {
-                merged.push(dp as any);
-            }
-        });
-
-        return merged;
-    }, [roomNotifications, documentRequests]);
+        // [Fix] Remove merging logic. Rely solely on roomNotifications which are sourced from useStation
+        // useStation initializes with fetchPendingRequests, so it already contains the initial state.
+        // Merging with documentRequests (which updates slower) causes the "flicker" (zombie item reappearing).
+        return roomNotifications;
+    }, [roomNotifications]);
 
     return (
         <div className="lg:col-span-5 space-y-6 flex flex-col">

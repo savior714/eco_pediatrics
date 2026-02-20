@@ -16,6 +16,7 @@
 - [x] **쿼리 및 개발 환경 최적화**: Explicit Column Selection 적용 및 Windows Terminal 분할 패널 연동 (2026-02-19)
 - [x] **PGRST205 대응 및 스키마 최적화**: PostgREST 20.5 호환성 이슈 해결 및 성능 개선
 - [x] **Zero-Cost Agent Bridge (Full-Stack Error Monitor)**: Python 기반 에러 감지, LLM 컨텍스트 자동 패키징, 터미널 3분할 레이아웃 구축 완료 (2026-02-19)
+- [x] **PR #15 Refactoring (Stability)**: Backend 식단 로직 통합, Frontend Upsert 도입, WebView2 리소스 가드 적용 완료 (2026-02-20)
 
 ---
 

@@ -97,5 +97,6 @@
 ## 📂 문서 (Documentation)
 
 *   [CONTEXT_SNAPSHOT.md](./CONTEXT_SNAPSHOT.md): 프로젝트의 상세 개발 현황 및 히스토리 (최신)
+*   [docs/CRITICAL_LOGIC.md](./docs/CRITICAL_LOGIC.md): **시스템 핵심 운영 로직 SSOT (프로젝트 헌법)**
 *   [TROUBLESHOOTING.md](./TROUBLESHOOTING.md): 주요 이슈 및 해결 가이드
 *   [NEXT_STEPS.md](./NEXT_STEPS.md): 향후 개발 계획

@@ -22,6 +22,9 @@ export function useStation(): UseStationReturn {
     const [lastUploadedIv, setLastUploadedIv] = useState<LastUploadedIv | null>(null);
     const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
 
+    // [Optimization] Prevent double-fetch on mount (useEffect + WS onOpen)
+    const lastFetchRef = useRef<number>(0);
+
     const fetchPendingRequests = useCallback(async () => {
         try {
             const pending = await api.get<Notification[]>('/api/v1/station/pending-requests');
@@ -37,6 +40,12 @@ export function useStation(): UseStationReturn {
     }, []);
 
     const fetchAdmissions = useCallback(() => {
+        const now = Date.now();
+        // Throttle: If fetched less than 500ms ago, skip. 
+        // This handles the race between useEffect and WS onOpen.
+        if (now - lastFetchRef.current < 500) return;
+        lastFetchRef.current = now;
+
         api.get<AdmissionSummary[]>('/api/v1/admissions')
             .then(admissions => {
                 if (!Array.isArray(admissions)) return;
@@ -126,10 +135,11 @@ export function useStation(): UseStationReturn {
 
                     let dateLabel = '';
                     if (mealDateRaw) {
-                        try {
-                            const d = new Date(mealDateRaw);
-                            dateLabel = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`;
-                        } catch (e) {
+                        // [SSOT Fix] Parse string directly to avoid timezone shifts (e.g. 2026-02-20 -> 02/20)
+                        const parts = mealDateRaw.split('-');
+                        if (parts.length === 3) {
+                            dateLabel = `${parts[1]}/${parts[2]}`;
+                        } else {
                             dateLabel = mealDateRaw;
                         }
                     }
@@ -248,6 +258,9 @@ export function useStation(): UseStationReturn {
                 case 'ADMISSION_TRANSFERRED':
                 case 'ADMISSION_DISCHARGED':
                     // Re-fetch entire bed list to reflect room changes or discharge
+                    fetchAdmissions();
+                    break;
+                case 'REFRESH_DASHBOARD':
                     fetchAdmissions();
                     break;
             }

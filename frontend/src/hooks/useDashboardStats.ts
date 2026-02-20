@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useVitals } from './useVitals';
 
 const STORAGE_KEY = 'dashboardViewMode';
@@ -15,10 +15,20 @@ const DOC_LABEL_MAP: Record<string, string> = {
 };
 
 export function useDashboardStats() {
+    const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
 
-    const vitalsData = useVitals(token);
+    const vitalsData = useVitals(token, true, () => {
+        alert("퇴원 처리되었거나 유효하지 않은 접근입니다.");
+        if (typeof window !== 'undefined') {
+            window.close();
+            // Fallback for browsers that block window.close()
+            setTimeout(() => {
+                router.push('/403');
+            }, 500);
+        }
+    });
 
     const [isMealModalOpen, setIsMealModalOpen] = useState(false);
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);

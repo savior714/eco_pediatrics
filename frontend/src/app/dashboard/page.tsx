@@ -8,26 +8,10 @@ import { Utensils, FileText, CalendarCheck, Bell, Smartphone, Monitor, AlertCirc
 import { API_BASE } from '@/lib/api';
 import { MealRequestModal } from '@/components/MealRequestModal';
 import { DocumentRequestModal } from '@/components/DocumentRequestModal';
-import { getNextThreeMealSlots, formatPatientDemographics } from '@/utils/dateUtils';
+import { getNextThreeMealSlots, formatPatientDemographics, formatKSTDate, formatKSTTime } from '@/utils/dateUtils';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { NoticeItem } from '@/components/dashboard/NoticeItem';
 import { ExamScheduleItem } from '@/components/dashboard/ExamScheduleItem';
-
-function formatExamDate(iso: string): string {
-    const d = new Date(iso);
-    const m = d.getMonth() + 1;
-    const day = d.getDate();
-    const week = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
-    return `${m.toString().padStart(2, '0')}.${day.toString().padStart(2, '0')} (${week})`;
-}
-
-function formatExamTime(iso: string): string {
-    const d = new Date(iso);
-    const h = d.getHours();
-    const m = d.getMinutes();
-    if (h < 12) return `오전 ${h === 0 ? 12 : h}${m ? `:${m.toString().padStart(2, '0')}` : ':00'}`;
-    return `오후 ${h === 12 ? 12 : h - 12}${m ? `:${m.toString().padStart(2, '0')}` : ':00'}`;
-}
 
 function DashboardContent() {
     const {
@@ -117,7 +101,7 @@ function DashboardContent() {
                         <IVStatusCard
                             photoUrl={latestIv?.photo_url ? (latestIv.photo_url.startsWith('/') ? `${API_BASE}${latestIv.photo_url}` : latestIv.photo_url) : ""}
                             infusionRate={latestIv?.infusion_rate || 0}
-                            lastChecked={latestIv ? new Date(latestIv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-"}
+                            lastChecked={latestIv ? formatKSTTime(latestIv.created_at) : "-"}
                             className="bg-white"
                         />
                     </div>
@@ -172,8 +156,8 @@ function DashboardContent() {
                                     vitalsData.examSchedules.map((ex, index) => (
                                         <ExamScheduleItem
                                             key={`${ex.id}-${index}`}
-                                            date={formatExamDate(ex.scheduled_at)}
-                                            time={formatExamTime(ex.scheduled_at)}
+                                            date={formatKSTDate(ex.scheduled_at)}
+                                            time={formatKSTTime(ex.scheduled_at)}
                                             name={ex.name}
                                             note={ex.note || ''}
                                         />

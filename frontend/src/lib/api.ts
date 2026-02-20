@@ -50,7 +50,7 @@ class ApiClient {
         this.baseUrl = baseUrl;
     }
 
-    private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    private async request<T>(endpoint: string, options?: RequestInit, retryCount = 0): Promise<T> {
         const url = `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
         // 중복 요청 디바운싱 (특히 GET 요청에 대해)
@@ -58,7 +58,9 @@ class ApiClient {
         const now = Date.now();
         if ((options?.method || 'GET') === 'GET' && pendingRequests.has(requestKey)) {
             if (now - (pendingRequests.get(requestKey) || 0) < 100) {
-                return {} as T; // 100ms 이내 중복 요청은 무시
+                // 100ms 이내 중복 요청은 무시하고 이전 성공 데이터가 있다면 좋겠지만, 
+                // 없으면 빈 객체 반환 (에러 유발 방지)
+                return {} as T;
             }
         }
         pendingRequests.set(requestKey, now);
@@ -67,7 +69,9 @@ class ApiClient {
         const fetchFn = await getTauriFetch();
         const fetchType = fetchFn === window.fetch ? 'Browser Fetch' : 'Tauri Native Fetch';
 
-        await tauriLog('info', `Requesting [${fetchType}]: ${options?.method || 'GET'} ${url}`);
+        if (retryCount === 0) {
+            await tauriLog('info', `Requesting [${fetchType}]: ${options?.method || 'GET'} ${url}`);
+        }
 
         try {
             const res = await fetchFn(url, {
@@ -81,6 +85,8 @@ class ApiClient {
             if (!res.ok) {
                 const errorText = await res.text().catch(() => 'Unknown error');
                 const errorMsg = `API Error ${res.status}: ${errorText}`;
+
+                // 404, 403 등 명확한 에러는 재시도하지 않음
                 console.error(errorMsg);
                 await tauriLog('error', `API Failure: ${options?.method || 'GET'} ${url} -> ${errorMsg}`);
                 throw new Error(errorMsg);
@@ -89,19 +95,32 @@ class ApiClient {
             // Return empty object for 204 No Content, otherwise JSON
             if (res.status === 204) return {} as T;
 
-            // Check if response has content
             const text = await res.text();
             return text ? JSON.parse(text) : ({} as T);
         } catch (err: any) {
             const detail = err instanceof Error ? err.message : JSON.stringify(err);
+            const isConnectionError = /sending request|ECONNREFUSED|Failed to fetch|NetworkError|fetch/i.test(detail);
+
+            // 연결 에러이고 재시도 횟수가 남았다면 (최대 2회)
+            if (isConnectionError && retryCount < 2) {
+                const delay = (retryCount + 1) * 300; // 300ms, 600ms
+                await tauriLog('warn', `Fetch Retrying (${retryCount + 1}/2) in ${delay}ms: ${url}`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return this.request<T>(endpoint, options, retryCount + 1);
+            }
+
             await tauriLog('error', `Fetch Fatal: ${options?.method || 'GET'} ${url} -> ${detail}`);
-            const isConnectionError = /sending request|ECONNREFUSED|Failed to fetch|NetworkError/i.test(detail);
+
             if (isConnectionError) {
+                const guides = [
+                    '1. 백엔드 서버(uvicorn)가 실행 중인지 확인하세요.',
+                    `2. URL 접근성 확인: ${url}`,
+                    '3. 네트워크 연결 및 방화벽 설정을 확인하세요.',
+                    '4. Windows Terminal에서 BE 패널의 로그에 에러가 없는지 확인하세요.'
+                ].join('\n');
+
                 console.error(
-                    'Fetch Fatal Detail: 백엔드에 연결할 수 없습니다. 백엔드가 실행 중인지 확인하세요.\n' +
-                    `  URL: ${url}\n` +
-                    '  예: backend 폴더에서 uv run uvicorn main:app --port 8000 --host 0.0.0.0\n' +
-                    '  (Windows 포트 이슈 시 8080 사용 및 NEXT_PUBLIC_API_URL=http://localhost:8080 설정)',
+                    `[연결 실패] 백엔드에 접속할 수 없습니다. (시도: ${retryCount + 1}회)\n${guides}`,
                     err
                 );
             } else {
