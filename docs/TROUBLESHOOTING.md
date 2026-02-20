@@ -87,6 +87,36 @@
 
 ---
 
+## 6. [1번] Dev Mode 선택 시 터미널이 모두 사라짐 (WT까지 안 뜸)
+
+### 현상
+- eco.bat 실행 후 **[1] Start Dev Mode** 선택 시, 런처 창이 닫히는 것은 의도이나 **Windows Terminal(3분할) 창도 뜨지 않거나**, 잠깐 뜨었다가 연달아 모두 사라짐.
+- “하나 뜨고 사라지고, 하나 뜨고 사라지고” 반복 후 결국 아무 창도 남지 않음.
+
+### 시도했던 방식과 원인
+
+| 방식 | 동작 | 원인 |
+|------|------|------|
+| **`start /b`** 후 `exit` | 런처만 닫히려 했으나 WT도 안 뜸 또는 같이 사라짐 | `start /b`로 띄운 PowerShell이 **부모 CMD와 같은 세션**에서 백그라운드로만 동작. CMD가 `exit`로 종료되면 자식 프로세스까지 함께 종료됨. |
+| **`start ""`** (새 창) 후 `exit` | 창이 여러 번 뜨었다 사라짐 | 새 창으로 띄운 PowerShell이 WT를 띄운 뒤 종료할 때, **부모‑자식 관계나 작업 그룹** 때문에 WT 프로세스까지 정리되는 환경이 있을 수 있음. |
+
+### 해결 (적용됨)
+- **PowerShell을 별도 창으로 띄우지 말고**, **런처 CMD와 같은 콘솔**에서 실행.
+- `eco.bat`의 `:dev`에서 `start`를 제거하고, 곧바로 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\launch_wt_dev.ps1" -Root "%ROOT%"` 호출.
+- 스크립트가 `Start-Process "wt" -ArgumentList $wtArgs`로 WT만 띄우고 **즉시 반환**하면, 제어가 다시 CMD로 돌아옴.
+- 이어서 CMD가 **`exit`**로 런처만 종료. WT는 이미 **독립 프로세스**로 떠 있으므로 유지됨.
+
+```batch
+:: Run PowerShell in same console; script starts WT then returns, then launcher exits
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\launch_wt_dev.ps1" -Root "%ROOT%"
+exit
+```
+
+### 요약
+- **같은 콘솔에서 PowerShell 실행 → 스크립트가 WT만 띄우고 반환 → 런처만 exit** 순서를 지키면, 런처 창만 닫히고 3분할 WT 창은 정상적으로 남음.
+
+---
+
 ## 해결 과정 요약 (타임라인)
 
 | 순서 | 이슈 | 조치 |
@@ -95,6 +125,7 @@
 | 2 | Doctor Node [FAIL] (v24.13 등) | doctor.py: Node major/minor 파싱, major 24 & minor ≥ 12 허용 |
 | 3 | Doctor MSVC [FAIL] (경로 주입 환경) | doctor.py: `INCLUDE`에 `ucrt` 있으면 "Environment Injection"으로 통과 |
 | 4 | Python 3.14/VS 최신 환경에서 SDK 미인식 | eco.bat Setup에서 Windows Kits 10 최신 버전 자동 탐색 후 INCLUDE/LIB/PATH 주입 |
-| 5 | WT 3분할 미동작 / 탭 과다 / 런처 탭 잔류 | launch_wt_dev.ps1 인자 배열로 `;` 전달, eco.bat [1]에서 start /b 후 exit |
+| 5 | WT 3분할 미동작 / 탭 과다 / 런처 탭 잔류 | launch_wt_dev.ps1 인자 배열로 `;` 전달 |
+| 6 | [1번] 선택 시 터미널이 모두 사라짐 (WT까지 종료) | eco.bat [1]에서 **start 없이** 같은 콘솔에서 PowerShell 실행 → 스크립트가 WT 띄우고 반환 → exit로 런처만 종료 |
 
-위 조치 적용 후 **[2] Environment Setup** 실행 시 Doctor까지 [OK]로 통과하고, **[1] Start Dev Mode** 실행 시 3분할 한 탭만 정상적으로 뜨는 상태를 목표로 유지합니다.
+위 조치 적용 후 **[2] Environment Setup** 실행 시 Doctor까지 [OK]로 통과하고, **[1] Start Dev Mode** 실행 시 런처는 닫히고 3분할 WT 창만 정상적으로 유지됩니다.
