@@ -262,7 +262,14 @@ def run_monitor(clear_at_start: bool = False) -> None:
 # ---------------------------------------------------------------------------
 # 엔트리 포인트
 # ---------------------------------------------------------------------------
+def _ensure_log_directories() -> None:
+    """감시 대상 로그 디렉터리를 선제 생성하여 경로/초기화 오류를 방지한다."""
+    for _label, log_path in WATCH_TARGETS.items():
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+
+
 def main() -> None:
+    _ensure_log_directories()
     parser = argparse.ArgumentParser(description="eco_pediatrics Error Monitor")
     parser.add_argument("--cleanup", action="store_true", help="로그·리포트 파일 초기화 후 종료")
     parser.add_argument("--clear", action="store_true", help="감시 시작 시 기존 로그를 비웁니다.")

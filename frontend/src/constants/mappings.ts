@@ -5,12 +5,13 @@ export const MEAL_MAP: Record<string, string> = {
 };
 // No changes here yet, I'll fix the logic in useStation.ts instead.
 
+/** 서류 신청 항목 코드 → 한글 라벨 (스테이션 알림·사이드바·대시보드 공통) */
 export const DOC_MAP: Record<string, string> = {
-    RECEIPT: '영수증',
-    DETAIL: '세부내역서',
-    CERT: '진단서',
-    DIAGNOSIS: '소견서',
-    INITIAL: '기록지'
+    RECEIPT: '진료비 계산서(영수증)',
+    DETAIL: '진료비 세부내역서',
+    CERT: '입퇴원확인서',
+    DIAGNOSIS: '진단서',
+    INITIAL: '초진기록지',
 };
 
 export const EXAM_TYPE_OPTIONS = [

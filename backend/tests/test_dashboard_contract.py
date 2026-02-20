@@ -8,9 +8,10 @@ import asyncio
 sys.path.append(os.path.join(os.getcwd(), 'backend'))
 
 from schemas import DashboardResponse
+from logger import logger
 
 def test_dashboard_response_schema():
-    print("--- Testing DashboardResponse Schema ---")
+    logger.info("--- Testing DashboardResponse Schema ---")
     
     # Mock data simulating what services/dashboard.py returns
     mock_data = {
@@ -44,15 +45,15 @@ def test_dashboard_response_schema():
     
     try:
         model = DashboardResponse(**mock_data)
-        print("SUCCESS: Data validated against DashboardResponse")
-        print(f"Serialized: {model.dict()}")
+        logger.info("SUCCESS: Data validated against DashboardResponse")
+        logger.info(f"Serialized: {model.dict()}")
         
         # Verify patient_name_masked is present
         assert model.admission.patient_name_masked == "김*수"
-        print("SUCCESS: patient_name_masked verified")
+        logger.info("SUCCESS: patient_name_masked verified")
         
     except Exception as e:
-        print(f"FAILURE: Validation error: {e}")
+        logger.error(f"FAILURE: Validation error: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

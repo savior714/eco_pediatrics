@@ -44,7 +44,8 @@ app = FastAPI(lifespan=lifespan)
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    logger.error(f"HTTP error {exc.status_code}: {exc.detail}")
+    log_fn = logger.error if exc.status_code >= 500 else logger.warning
+    log_fn(f"HTTP {exc.status_code} ({request.url.path}): {exc.detail}")
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail},

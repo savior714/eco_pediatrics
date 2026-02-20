@@ -149,5 +149,23 @@ exit
 | 6 | [1번] 선택 시 터미널이 모두 사라짐 (WT까지 종료) | eco.bat [1]에서 **start 없이** 같은 콘솔에서 PowerShell 실행 → 스크립트가 WT 띄우고 반환 → exit로 런처만 종료 |
 | 7 | 3분할 레이아웃 역전 (상단 2분할 + 하단 1개) | `split-pane -H` 직후 **`move-focus down`** 추가 → 그 다음 `split-pane -V`로 하단만 좌우 분할 (포커스 의존 제거) |
 | 8 | Frontend `cargo ... program not found` (Tauri) | Rust 툴체인 설치: rustup (https://rustup.rs/ 또는 `winget install Rustlang.Rustup`). 설치 후 터미널 재시작. doctor에 cargo 검사 추가. |
+| 9 | 에러 모니터 미동작 / 프론트 에러 미감지 | launch_wt_dev.ps1: 모니터는 backend\\.venv\\Scripts\\python.exe 사용, Frontend는 Tee-Object로 frontend/logs/frontend.log 기록. error_monitor.py: main() 진입 시 로그 디렉터리 선제 생성. |
 
 위 조치 적용 후 **[2] Environment Setup** 실행 시 Doctor까지 [OK]로 통과하고, **[1] Start Dev Mode** 실행 시 런처는 닫히고 **상단 20% Error Monitor + 하단 80% Backend/Frontend 2분할** WT 창이 정상적으로 유지됩니다.
+
+---
+
+## 9. 에러 모니터가 동작하지 않거나 프론트 에러를 감지하지 못함
+
+### 현상
+- Error Monitor 패널은 떠 있으나 `prompt_for_gemini.md`가 갱신되지 않음.
+- Backend 에러만 잡히고 Frontend(Tauri/Next) 에러는 반영되지 않음.
+
+### 원인
+- **프론트엔드 로그 미수집**: `npm run tauri dev`는 터미널에만 출력되므로, **Tee-Object** 등으로 `frontend/logs/frontend.log`에 리다이렉트하지 않으면 모니터가 파일 변화를 감지할 수 없음.
+- **모니터 Python 경로**: 시스템 기본 `python`을 쓰면 venv 미적용으로 의존성 오류로 즉시 종료될 수 있음. **backend\\.venv\\Scripts\\python.exe**를 사용해야 함.
+
+### 해결 (적용됨)
+- **launch_wt_dev.ps1**: (1) Error Monitor 패널에서 `backend\.venv\Scripts\python.exe error_monitor.py --clear` 실행. (2) Frontend 패널에서 `npm run tauri dev` 출력을 `powershell -Command "npm run tauri dev 2>&1 | Tee-Object -FilePath 'logs\frontend.log' -Append"`로 실행해 `frontend/logs/frontend.log`에 기록.
+- **error_monitor.py**: `main()` 진입 시 `_ensure_log_directories()`로 감시 대상 로그 디렉터리(`backend/logs`, `frontend/logs`)를 선제 생성.
+- **검증**: `frontend/logs/frontend.log` 파일이 생성·갱신되는지, Backend 로그 끝에 `ERROR: Manual Test`를 넣었을 때 `prompt_for_gemini.md`가 갱신되는지 확인.

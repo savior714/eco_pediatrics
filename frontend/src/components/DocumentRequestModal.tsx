@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { DOC_MAP } from '@/constants/mappings';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -19,13 +20,8 @@ interface DocumentRequestModalProps {
     onSuccess?: () => void;
 }
 
-const DOCUMENT_OPTIONS = [
-    { id: 'RECEIPT', label: '진료비 계산서(영수증)' },
-    { id: 'DETAIL', label: '진료비 세부내역서' },
-    { id: 'CERT', label: '입퇴원확인서' },
-    { id: 'DIAGNOSIS', label: '진단서' },
-    { id: 'INITIAL', label: '초진기록지' }
-];
+const DOCUMENT_IDS = ['RECEIPT', 'DETAIL', 'CERT', 'DIAGNOSIS', 'INITIAL'] as const;
+const DOCUMENT_OPTIONS = DOCUMENT_IDS.map(id => ({ id, label: DOC_MAP[id] || id }));
 
 export function DocumentRequestModal({ isOpen, onClose, admissionId, token, pendingItems = [], onSuccess }: DocumentRequestModalProps) {
     const [selectedItems, setSelectedItems] = useState<string[]>([]);

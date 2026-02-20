@@ -53,9 +53,12 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
     const requestRef = useRef(0);
     // [Optimization] Prevent double-fetch on mount
     const lastFetchRef = useRef<number>(0);
+    // 404/403 시 이후 모든 fetch 차단 (폴링/재호출로 인한 무한 404 방지)
+    const tokenInvalidatedRef = useRef(false);
 
     const fetchDashboardData = useCallback(async () => {
         if (!token) return;
+        if (tokenInvalidatedRef.current) return;
 
         const now = Date.now();
         if (now - lastFetchRef.current < 500) return;
@@ -105,31 +108,33 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                 setExamSchedules(data.exam_schedules || []);
             }
         } catch (err: any) {
-            if (currentRequestId === requestRef.current) {
-                console.error('Dashboard Fetch Error:', err);
+            if (currentRequestId !== requestRef.current) return;
 
-                // 3rd Priority: Defense Layer. Handle invalid/expired tokens gracefully.
-                const errorMessage = String(err?.message || '');
-                if (errorMessage.includes("403") || errorMessage.includes("404")) {
-                    if (onDischarge) {
-                        onDischarge();
-                    } else {
-                        alert("이미 종료되었거나 유효하지 않은 페이지입니다. 병원으로 문의해 주세요.");
-                        if (typeof window !== 'undefined') {
-                            window.close();
-                            // Fallback if window.close() is blocked
-                            setTimeout(() => {
-                                window.location.href = '/403';
-                            }, 500);
-                        }
+            const errorMessage = String(err?.message || '');
+            if (errorMessage.includes('403') || errorMessage.includes('404')) {
+                tokenInvalidatedRef.current = true;
+                console.warn('Invalid token detected. Stopping further dashboard fetches.');
+                if (onDischarge) {
+                    onDischarge();
+                } else {
+                    alert('이미 종료되었거나 유효하지 않은 페이지입니다. 병원으로 문의해 주세요.');
+                    if (typeof window !== 'undefined') {
+                        window.close();
+                        setTimeout(() => { window.location.href = '/403'; }, 500);
                     }
                 }
+                return;
             }
+            console.error('Dashboard Fetch Error:', err);
         } finally {
             if (currentRequestId === requestRef.current) {
                 setIsRefreshing(false);
             }
         }
+    }, [token, onDischarge]);
+
+    useEffect(() => {
+        tokenInvalidatedRef.current = false;
     }, [token]);
 
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);

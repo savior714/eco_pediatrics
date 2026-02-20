@@ -1,18 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useVitals } from './useVitals';
+import { DOC_MAP } from '@/constants/mappings';
 
 const STORAGE_KEY = 'dashboardViewMode';
 type ViewMode = 'mobile' | 'desktop';
 
 const MEAL_LABEL_MAP: Record<string, string> = { GENERAL: '일반식', SOFT: '죽', NPO: '금식' };
-const DOC_LABEL_MAP: Record<string, string> = {
-    RECEIPT: '진료비 계산서(영수증)',
-    DETAIL: '진료비 세부내역서',
-    CERT: '입퇴원확인서',
-    DIAGNOSIS: '진단서',
-    INITIAL: '초진기록지'
-};
 
 export function useDashboardStats() {
     const router = useRouter();
@@ -65,9 +59,9 @@ export function useDashboardStats() {
         .filter(req => req.status !== 'CANCELED')
         .flatMap(req => req.request_items);
 
-    // Remove duplicates and map to labels
+    // Remove duplicates and map to labels (한글, DOC_MAP 단일 소스)
     const currentDocLabels = Array.from(new Set(allDocItems))
-        .map((id: string) => DOC_LABEL_MAP[id] || id);
+        .map((id: string) => DOC_MAP[id] || id);
 
     return {
         token,

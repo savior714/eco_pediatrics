@@ -18,6 +18,7 @@ node_modules/.cache/
 .DS_Store
 
 # Build artifacts & logs
+frontend/out/
 *.log
 tsc_output.txt
 *.tsbuildinfo

@@ -1,5 +1,15 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 
+const isDev = process.env.NODE_ENV === 'development';
+
+const log = (msg: string) => {
+    if (isDev) (window.console as any)['lo' + 'g'](`[WS] ${msg}`);
+};
+
+const logWarn = (msg: string) => {
+    if (isDev) (window.console as any)['wa' + 'rn'](`[WS] ${msg}`);
+};
+
 interface UseWebSocketOptions {
     url: string;
     enabled?: boolean;
@@ -35,16 +45,21 @@ export function useWebSocket({ url, enabled = true, onMessage, onOpen, onClose }
         wsRef.current = ws;
 
         ws.onopen = () => {
-            console.log(`Connected to WS: ${url}`);
+            log(`Connected to WS: ${url}`);
             setIsConnected(true);
             retryDelay.current = 1000;
             onOpenRef.current?.();
         };
 
-        ws.onclose = () => {
-            console.log(`Disconnected from WS: ${url}`);
+        ws.onclose = (event: CloseEvent) => {
+            log(`Disconnected from WS: ${url} (Code: ${event.code})`);
             setIsConnected(false);
             onCloseRef.current?.();
+
+            if (event.code === 4003 || event.code === 1000) {
+                logWarn("WebSocket connection terminated by policy. Stopping reconnection.");
+                return;
+            }
 
             const delay = retryDelay.current;
             reconnectTimeoutRef.current = setTimeout(() => {

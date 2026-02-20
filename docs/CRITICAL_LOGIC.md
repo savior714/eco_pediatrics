@@ -33,20 +33,48 @@
 
 ---
 
-## 3. Business Workflows: 핵심 업무 프로세스
+## 3. Environment & Configuration
+환경 변수 의존성 및 설정 무결성. 환경 이전/신규 구축 시 휴먼 에러 방지를 위한 SSOT입니다.
+
+### 3.1 UI Visibility Control (DEV UI)
+- **Variable:** `NEXT_PUBLIC_ENABLE_DEV_UI`
+- **Logic:** `frontend/src/app/station/page.tsx`에서 해당 값이 `true`일 때만 개발자 전용 버튼(전체퇴원, 환자추가)을 렌더링함.
+- **Constraint:** Next.js 빌드 타임 주입 변수이므로, 수정 후 반드시 **개발 서버 재시작**이 필요함.
+
+### 3.2 Verification
+- 환경 이전 또는 신규 구축 시 `backend/tests/test_env_integrity.py`를 실행하여 설정 무결성을 검증해야 함.
+- 검증 명령(backend 디렉터리 기준): `pytest tests/test_env_integrity.py -v`
+
+### 3.3 Dashboard Data Contract (Backend → Frontend)
+대시보드 API(`fetch_dashboard_data`)는 반드시 다음 컬럼들을 포함해야 하며, 명칭 변경 시 프론트엔드와 합의가 필요함.
+
+1. **admission**: id, patient_name_masked, room_number, status, discharged_at, access_token, dob, gender, check_in_at, **display_name**(필수 가공 필드)
+2. **vitals**: id, admission_id, temperature, has_medication, medication_type, recorded_at
+3. **iv_records**: id, admission_id, photo_url, infusion_rate, created_at
+4. **meals**: id, admission_id, request_type, pediatric_meal_type, guardian_meal_type, requested_pediatric_meal_type, requested_guardian_meal_type, room_note, meal_date, meal_time, status, created_at
+5. **exam_schedules**: id, admission_id, scheduled_at, name, note
+6. **document_requests**: id, admission_id, request_items, status, created_at
+
+### 3.4 Token Expiration Handling (Client-side)
+- **Status 404/403:** 토큰이 무효하거나 퇴원 처리가 완료된 것으로 간주함.
+- **Client Action:** 프론트엔드는 즉시 이후 대시보드 fetch를 중단하고(토큰 무효화 ref 설정), 사용자에게 서비스 종료 알림(Alert)을 노출한 후 세션을 종료(창 닫기 또는 리다이렉트)해야 함. WebSocket은 4003/1000 시 재연결 중단.
+
+---
+
+## 4. Business Workflows: 핵심 업무 프로세스
 복잡한 상태 전이가 일어나는 비즈니스 흐름입니다.
 
-### 3.1 식단 신청 및 승인 (Meal Workflow)
+### 4.1 식단 신청 및 승인 (Meal Workflow)
 - **슬롯 결정**: `getNextThreeMealSlots` 로직(06시, 14시, 19시 분기)에 따라 표시할 식사 슬롯을 결정한다.
 - **상태 관리**: 보호자의 신청은 `requested_*` 필드에 임시 저장되며, 간호 스테이션의 '완료' 처리가 있어야만 실제 식단 필드로 전이된다. 수락 전까지 UI는 기존 식단을 유지한다.
 
-### 3.2 수액 모니터링 (IV Monitoring)
+### 4.2 수액 모니터링 (IV Monitoring)
 - **표준 단위**: 병원 현장 표준에 따라 모든 수액 주입 속도는 **`cc/hr`** 단위를 사용한다.
 - **데이터 구조**: `IV_Records`는 반드시 확인 시각과 현재 속도 정보를 포함해야 한다.
 
 ---
 
-## 4. Safety Guardrails: 수정 시 필수 점검 사항 (Checklist)
+## 5. Safety Guardrails: 수정 시 필수 점검 사항 (Checklist)
 특정 모듈 수정 시 반드시 함께 검토해야 하는 부수 효과 리스트입니다.
 
 - [ ] **바이탈/체온 수정 시**: `TemperatureGraph.tsx`의 X축 KST Midnight 정렬 로직이 깨지지 않는지 확인.
