@@ -8,6 +8,7 @@ $frontendDir = "$Root\frontend"
 
 # wt argument array: ";" as separate element so PowerShell does not treat it as command separator
 $wtArgs = @(
+  "--maximized",
   # 1. Pane 0: Error Monitor (full pane; error_monitor.py is in project root)
   "-w", "0", "nt", "--title", "Eco-Dev-Stack", "-d", $Root,
   "cmd", "/c", "python error_monitor.py --clear",

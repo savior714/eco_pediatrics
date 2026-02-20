@@ -15,6 +15,7 @@
 | **npm** | **11.6.2** | |
 | **Git** | **2.52.0.windows.1** | |
 | **Visual Studio** | 2022/2025 | C++ 데스크톱 개발 워크로드 필수 |
+| **Rust (cargo)** | rustup 설치 권장 | Tauri 데스크톱 앱 빌드/실행에 필요 |
 
 ### ⚠️ Python 3.14 사용 시 (MSVC 빌드 환경)
 
@@ -117,6 +118,22 @@ eco frontend :: Frontend만 단일 창 실행
 
 ## 4. 프론트엔드 설정 (Standard)
 - **Node.js v24.12.0**를 기준으로 빌드 및 테스트를 수행합니다.
+- **Tauri 데스크톱 앱**(`npm run tauri dev`)을 쓰려면 **Rust 툴체인(cargo)** 이 필요합니다. 미설치 시 `cargo metadata ... program not found` 에러가 납니다.
+
+### 4.1 Rust(cargo) 설치 (Tauri용)
+Windows에서는 **rustup**으로 설치합니다. 설치 후 터미널을 다시 열어야 `PATH`가 반영됩니다.
+
+```powershell
+# 방법 1: 공식 설치 스크립트 (PowerShell)
+winget install Rustlang.Rustup
+# 또는 https://rustup.rs/ 에서 rustup-init.exe 다운로드 후 실행
+
+# 설치 후 새 터미널에서 확인
+cargo --version
+```
+
+설치가 끝나면 `eco check`에서 **Rust (cargo)** 항목이 [OK]로 나와야 하며, `npm run tauri dev`가 동작합니다.
+
 ```cmd
 cd frontend
 npm install

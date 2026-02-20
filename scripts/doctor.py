@@ -11,6 +11,7 @@ REQUIRED_NODE_MAJOR = 24
 REQUIRED_NODE_MINOR_MIN = 12
 REQUIRED_GIT_VERSION_MIN = "2.52"  # Loose check
 REQUIRED_MSVC_CHECK_CMD = "cl"
+REQUIRED_CARGO_CMD = "cargo"  # Tauri desktop app
 
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 
@@ -69,6 +70,27 @@ def check_msvc():
     )
     return False
 
+
+def check_cargo():
+    """Rust/cargo required for Tauri desktop app (npm run tauri dev)."""
+    cargo_path = shutil.which(REQUIRED_CARGO_CMD)
+    if cargo_path:
+        try:
+            output = subprocess.check_output(
+                [REQUIRED_CARGO_CMD, "--version"], text=True
+            ).strip()
+            print_status("Rust (cargo)", True, output)
+            return True
+        except subprocess.CalledProcessError:
+            pass
+    print_status(
+        "Rust (cargo)",
+        False,
+        "cargo not found. Install from https://rustup.rs/ (Tauri desktop app needs it).",
+    )
+    return False
+
+
 def check_project_structure():
     all_good = True
     
@@ -113,7 +135,8 @@ def main():
         check_node(),
         check_git(),
         check_msvc(),
-        check_project_structure()
+        check_cargo(),
+        check_project_structure(),
     ]
     
     print("\n" + "="*50)

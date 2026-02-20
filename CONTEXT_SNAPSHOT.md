@@ -1,5 +1,11 @@
 # Context Snapshot
 
+- **데스크톱(Tauri) 빌드 환경 정비 (2026-02-20)**:
+    - **Rust/cargo 필수화 문서화**: Tauri 데스크톱 앱(`npm run tauri dev`) 빌드에 Rust 툴체인(cargo) 필요. `docs/DEV_ENVIRONMENT.md` §1 표에 Rust 행 추가, §4.1에 rustup/Windows 설치 절 추가.
+    - **Doctor에 cargo 검사**: `scripts/doctor.py`에 `check_cargo()` 추가 — `cargo --version` 출력 및 미설치 시 rustup.rs 안내. `eco check`로 Tauri 빌드 가능 여부 확인.
+    - **트러블슈팅**: `docs/TROUBLESHOOTING.md` §5에 "Frontend: cargo metadata ... program not found" 항목 추가(원인·해결·doctor 안내). 요약표 8번에 cargo/Rust 설치 정리. 루트 `TROUBLESHOOTING.md` 동기화.
+    - **Dev Mode UX**: `scripts/launch_wt_dev.ps1`에서 WT 실행 시 `--maximized` 추가 — 터미널 창이 항상 최대화된 상태로 열리도록 고정.
+
 - **운영 로직 표준화 및 SSOT 구축 (2026-02-20)**:
     - **Logic SSOT 도입**: `docs/CRITICAL_LOGIC.md`를 생성하여 KST 관리, 중복 호출 방지, 식단 워크플로우 등 시스템의 핵심 운영 원칙을 명문화. 향후 모든 로직 변경의 최상위 권위문서(프로젝트 헌법)로 지정.
     - **시간대 정합성(SSOT) 강화**: `dateUtils.ts`와 `page.tsx`를 전면 개편하여 클라이언트 시스템 시간과 무관한 KST(Asia/Seoul) 고정 출력 및 계산 구현.
