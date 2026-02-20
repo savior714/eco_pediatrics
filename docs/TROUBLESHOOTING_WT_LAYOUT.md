@@ -25,3 +25,15 @@ split-pane -V -d . --title "Frontend" pwsh -NoExit -Command "..."
 
 ### Result
 5회 연속 테스트 결과 100% 동일한 레이아웃 보장 확인.
+
+---
+
+## 현재 구현 (scripts\launch_wt_dev.ps1)
+
+위 이슈를 피하기 위해 **인자 배열** 방식으로 전환되어 있습니다.
+
+- **세미콜론 파싱**: `;`를 문자열이 아닌 **wt 인자 배열의 한 요소**로 전달하여, PowerShell이 `;`를 명령 구분자로 해석하지 않음.
+- **실행 방식**: `Start-Process "wt" -ArgumentList $wtArgs`로 호출. (래퍼 배치에서 `start /b` PowerShell 후 `exit`로 런처 탭만 종료.)
+- **레이아웃**: `nt` 한 번 → `split-pane -H --size 0.8` → `split-pane -V --size 0.5`. Backend는 `cmd /k` + `call .venv\Scripts\activate.bat`로 venv 적용.
+
+상세 메뉴·CLI·설정은 `docs\DEV_ENVIRONMENT.md` §3 참고.
