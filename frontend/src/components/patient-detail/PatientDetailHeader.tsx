@@ -14,8 +14,8 @@ interface PatientDetailHeaderProps {
 
 export function PatientDetailHeader({ bed, onClose, onDischarge, onTransfer, onSeedData, isSeeding }: PatientDetailHeaderProps) {
     return (
-        <div className={`px-8 py-6 shrink-0 ${bed.status === 'fever' ? 'bg-red-50' : 'bg-slate-50'} border-b border-slate-100`}>
-            <div className="flex justify-between items-start">
+        <div className={`pl-12 pr-8 py-6 shrink-0 ${bed.status === 'fever' ? 'bg-red-50' : 'bg-slate-50'} border-b border-slate-100`}>
+            <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                     <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{bed.name}</h2>
                     <span className="text-xl text-slate-300 font-light">/</span>
@@ -31,12 +31,12 @@ export function PatientDetailHeader({ bed, onClose, onDischarge, onTransfer, onS
                         </span>
                     )}
                 </div>
-                <div className="flex gap-2 -mt-1">
+                <div className="flex items-center gap-2">
                     <button
                         onClick={onDischarge}
                         className={`px-4 py-2 text-xs font-bold rounded-xl transition-all border shadow-sm ${bed.status === 'fever'
-                                ? 'bg-white border-red-500 text-red-600 hover:bg-red-600 hover:text-white'
-                                : 'bg-white border-red-200 text-red-600 hover:bg-red-100'
+                            ? 'bg-white border-red-500 text-red-600 hover:bg-red-600 hover:text-white'
+                            : 'bg-white border-red-200 text-red-600 hover:bg-red-100'
                             }`}
                     >
                         퇴원
@@ -57,7 +57,7 @@ export function PatientDetailHeader({ bed, onClose, onDischarge, onTransfer, onS
                     </button>
                     <button
                         onClick={onClose}
-                        className="p-2 -mr-2 -mt-2 hover:bg-black/5 rounded-full text-slate-400 transition-colors"
+                        className="p-2 -mr-2 hover:bg-black/5 rounded-full text-slate-400 transition-colors"
                     >
                         <X size={24} />
                     </button>
