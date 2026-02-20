@@ -70,7 +70,12 @@
 ### 해결 (적용됨)
 - **launch_wt_dev.ps1**: `wt`에 넘기는 값을 **인자 배열** `$wtArgs`로 구성. `";"`를 배열의 한 요소로 넣어 **wt가 세미콜론을 받아** split-pane 등을 순서대로 실행.
 - **실행**: `Start-Process "wt" -ArgumentList $wtArgs`. Backend는 `cmd /k` + `call .venv\Scripts\activate.bat`로 venv 적용.
-- **런처 종료**: eco.bat에서 [1] 선택 시 PowerShell을 `start /b`로 실행한 뒤 **exit**로 배치를 즉시 종료해, 런처 탭은 사라지고 Eco-Dev-Stack 한 탭만 유지.
+- **런처 종료**: eco.bat에서 [1] 선택 시 **start 없이** 같은 콘솔에서 PowerShell 실행 후 `exit`로 런처만 종료 (§6 참고).
+
+#### 레이아웃 역전 (상단 2분할로 나오는 현상)
+- **현상**: `split-pane -H` 후 `split-pane -V`만 쓰면, WT 버전/설정에 따라 포커스가 상단(20%)에 머물러 있어 **상단이 좌우로 쪼개지고** 하단이 1개 큰 패널로 나옴.
+- **시도**: `-p 1`로 하단 패널을 지정해 분할했으나, 환경에 따라 동작하지 않음.
+- **최종 해결**: `split-pane -H` 직후 **`move-focus down`** 을 넣어 포커스를 하단 패널로 강제 이동한 뒤 `split-pane -V` 실행. 인덱스에 의존하지 않아 결정론적으로 **상단 1개 + 하단 2분할** 유지.
 
 자세한 레이아웃 원인/전략은 **`TROUBLESHOOTING_WT_LAYOUT.md`** 참고.
 
@@ -127,5 +132,6 @@ exit
 | 4 | Python 3.14/VS 최신 환경에서 SDK 미인식 | eco.bat Setup에서 Windows Kits 10 최신 버전 자동 탐색 후 INCLUDE/LIB/PATH 주입 |
 | 5 | WT 3분할 미동작 / 탭 과다 / 런처 탭 잔류 | launch_wt_dev.ps1 인자 배열로 `;` 전달 |
 | 6 | [1번] 선택 시 터미널이 모두 사라짐 (WT까지 종료) | eco.bat [1]에서 **start 없이** 같은 콘솔에서 PowerShell 실행 → 스크립트가 WT 띄우고 반환 → exit로 런처만 종료 |
+| 7 | 3분할 레이아웃 역전 (상단 2분할 + 하단 1개) | `split-pane -H` 직후 **`move-focus down`** 추가 → 그 다음 `split-pane -V`로 하단만 좌우 분할 (포커스 의존 제거) |
 
-위 조치 적용 후 **[2] Environment Setup** 실행 시 Doctor까지 [OK]로 통과하고, **[1] Start Dev Mode** 실행 시 런처는 닫히고 3분할 WT 창만 정상적으로 유지됩니다.
+위 조치 적용 후 **[2] Environment Setup** 실행 시 Doctor까지 [OK]로 통과하고, **[1] Start Dev Mode** 실행 시 런처는 닫히고 **상단 20% Error Monitor + 하단 80% Backend/Frontend 2분할** WT 창이 정상적으로 유지됩니다.
