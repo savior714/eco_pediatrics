@@ -49,6 +49,16 @@ cmd /c "`"$vcvars`" & set" | ForEach-Object {
 cl   # 확인: 컴파일러 정보 출력
 ```
 
+### 2.3 IDE Terminal 설정 (Standard)
+
+Antigravity 에이전트 및 자동화 도구가 PowerShell 7을 올바르게 참조하도록 VS Code 또는 IDE `settings.json`에 아래 설정을 적용해야 합니다.
+
+```json
+"terminal.integrated.automationProfile.windows": {
+    "path": "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+}
+```
+
 ---
 
 ## 3. 프론트엔드 설정 (Standard)
