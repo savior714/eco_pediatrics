@@ -1,12 +1,14 @@
 import sys
 import os
+import re
 import subprocess
 import shutil
 from pathlib import Path
 
 # --- Configuration (SSOT: docs/DEV_ENVIRONMENT.md) ---
 REQUIRED_PYTHON_VERSION = (3, 14)
-REQUIRED_NODE_VERSION = "v24.12"  # Starts with
+REQUIRED_NODE_MAJOR = 24
+REQUIRED_NODE_MINOR_MIN = 12
 REQUIRED_GIT_VERSION_MIN = "2.52"  # Loose check
 REQUIRED_MSVC_CHECK_CMD = "cl"
 
@@ -28,12 +30,17 @@ def check_python():
 def check_node():
     try:
         output = subprocess.check_output(["node", "-v"], text=True).strip()
-        is_valid = output.startswith(REQUIRED_NODE_VERSION)
-        msg = f"Found {output}"
-        if not is_valid:
-            msg += f" (Required: {REQUIRED_NODE_VERSION}.x)"
-        print_status("Node.js Version", is_valid, msg)
-        return is_valid
+        match = re.search(r"v(\d+)\.(\d+)", output)
+        if match:
+            major, minor = map(int, match.groups())
+            is_valid = (major == REQUIRED_NODE_MAJOR) and (minor >= REQUIRED_NODE_MINOR_MIN)
+            msg = f"Found {output}"
+            if not is_valid:
+                msg += f" (Required: v{REQUIRED_NODE_MAJOR}.{REQUIRED_NODE_MINOR_MIN}.x or higher)"
+            print_status("Node.js Version", is_valid, msg)
+            return is_valid
+        print_status("Node.js Version", False, f"Unparseable version: {output}")
+        return False
     except FileNotFoundError:
         print_status("Node.js Version", False, "Node.js not found in PATH")
         return False
@@ -49,14 +56,18 @@ def check_git():
         return False
 
 def check_msvc():
-    # Check if 'cl' is in path
     cl_path = shutil.which(REQUIRED_MSVC_CHECK_CMD)
-    if cl_path:
-        print_status("MSVC Compiler", True, "Found cl.exe")
+    is_env_set = "INCLUDE" in os.environ and "ucrt" in os.environ.get("INCLUDE", "").lower()
+    if cl_path or is_env_set:
+        msg = "Found cl.exe" if cl_path else "Found via Environment Injection"
+        print_status("MSVC Compiler", True, msg)
         return True
-    else:
-        print_status("MSVC Compiler", False, "cl.exe not found. Install 'Desktop development with C++' in VS Installer.")
-        return False
+    print_status(
+        "MSVC Compiler",
+        False,
+        "cl.exe not found. Install 'Desktop development with C++' in VS Installer.",
+    )
+    return False
 
 def check_project_structure():
     all_good = True
@@ -111,7 +122,7 @@ def main():
         sys.exit(0)
     else:
         print("[WARNING] Environment has ISSUES. Please fix the items marked with [FAIL].")
-        print("   Tip: Run 'setup_env.bat' to fix missing dependencies.")
+        print("   Tip: Run 'eco setup' to fix missing dependencies.")
         sys.exit(1)
 
 if __name__ == "__main__":

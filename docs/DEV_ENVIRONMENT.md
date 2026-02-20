@@ -127,7 +127,7 @@ npm run dev
 
 ## 5. Automated Verification (Standard)
 
-환경 설정 후, 제공된 스크립트를 통해 현재 상태가 표준과 일치하는지 자동 검증할 수 있습니다.
+환경 설정 후, 제공된 스크립트를 통해 현재 상태가 표준과 일치하는지 자동 검증할 수 있습니다. 문제 발생 시 **`docs\TROUBLESHOOTING.md`** 참고.
 
 ```powershell
 eco check
