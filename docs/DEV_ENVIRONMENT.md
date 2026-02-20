@@ -51,11 +51,27 @@ cl   # 확인: 컴파일러 정보 출력
 
 ### 2.3 IDE Terminal 설정 (Standard)
 
-Antigravity 에이전트 및 자동화 도구가 PowerShell 7을 올바르게 참조하도록 VS Code 또는 IDE `settings.json`에 아래 설정을 적용해야 합니다.
+Antigravity 에이전트 및 자동화 도구가 PowerShell 7을 올바르게 참조하고 일관된 테마를 유지하도록 VS Code 또는 IDE `settings.json`에 아래 설정을 적용하는 것을 권장합니다.
 
 ```json
-"terminal.integrated.automationProfile.windows": {
-    "path": "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+{
+    "workbench.colorTheme": "Solarized Light",
+    "redhat.telemetry.enabled": true,
+    "python.languageServer": "Default",
+    // PowerShell 7 프로필 정의
+    "terminal.integrated.profiles.windows": {
+        "PowerShell 7": {
+            "path": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+            "icon": "terminal-powershell"
+        }
+    },
+    // Antigravity가 명령어를 보낼 때 참조하는 기본 경로
+    "terminal.integrated.automationProfile.windows": {
+        "path": "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
+    },
+    // 전체 터미널 기본값도 PS7로 지정
+    "terminal.integrated.defaultProfile.windows": "PowerShell 7",
+    "terminal.integrated.gpuAcceleration": "off"
 }
 ```
 
