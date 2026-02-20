@@ -29,3 +29,7 @@ To prevent document corruption and editing failures (Anti-Pattern Guide):
 - **Use Unique Anchors**: Target single, unique lines of code as anchors for editing instead of large blocks.
 - **Verification Loop**: Always verify file integrity and encoding (UTF-8) after AI edits using `view_file`.
 - **CRLF vs LF**: Be aware of Windows line endings. Use multi-line edits only when necessary and prefer single-line anchors.
+
+## 5. Security Best Practices
+- **Pre-Commit Check**: Before pushing code, run `check_security.bat` locally to scan for leaked `.env` files or debug prints.
+- **Reference**: Detailed security protocols are in `docs/SECURITY_REVIEW.md`.

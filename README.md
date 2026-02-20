@@ -27,7 +27,7 @@
 
 ### 5. 개발 생산성 및 모니터링 혁신 (2026-02-19)
 *   **Zero-Cost Full-Stack Error Monitor**: 별도의 상용 툴(Sentry 등) 없이 Python 스크립트 하나로 Backend/Frontend/DB 에러를 실시간 감지하고 LLM 디버깅 컨텍스트를 자동 생성.
-*   **통합 개발 터미널**: `run_dev.bat` 실행 한 번으로 Backend, Frontend, Error Monitor가 최적의 레이아웃(3분할)으로 실행되는 `tmux` 스타일 환경 구축.
+*   **통합 개발 터미널**: `eco dev` 실행 한 번으로 Backend, Frontend, Error Monitor가 최적의 레이아웃으로 실행되는 환경 구축.
 
 | 분류 | 세부 기능 설명 |
 | :--- | :--- |
@@ -68,17 +68,15 @@
     *   `backend/.env` (참고: `backend/.env.example`)
     *   `frontend/.env.local`
 
-2.  **백엔드 실행**:
+2.  **통합 실행 (Recommended)**:
     ```bash
-    ./start_backend.bat
-    # 또는 python backend/main.py (기본 포트 8000)
+    eco dev
+    # 백엔드(8000)와 프론트엔드(3000)가 동시에 실행됩니다.
     ```
 
-3.  **프론트엔드 실행**:
-    ```bash
-    ./start_frontend.bat
-    # 또는 cd frontend && npm run dev
-    ```
+3.  **개별 실행 (Manual)**:
+    *   **Backend**: `cd backend && python -m uvicorn main:app --reload`
+    *   **Frontend**: `cd frontend && npm run dev`
 
 4.  **Tauri 앱 실행 (데스크톱)**:
     ```bash

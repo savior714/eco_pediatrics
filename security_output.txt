@@ -1,0 +1,19 @@
+[START] Security Audit for: C:\develop\eco_pediatrics
+
+[1] Checking for Git Leaks (Sensitive Files)...
+[OK]   Git Leak Check                 No sensitive files found in git.
+
+[2] Checking for Leftover Debug Code...
+[FAIL] Debug Code Check               Found 20 files with debug code.
+      - backend\debug_data.py: Contains Python print()
+      - backend\debug_delete.py: Contains Python print()
+      - backend\debug_target_meals.py: Contains Python print()
+      - backend\debug_token.py: Contains Python print()
+      - backend\debug_token_v2.py: Contains Python print()
+      - ... and 15 more.
+
+[3] Checking Supabase RLS (Mock/Placeholder)...
+[FAIL] RLS Policy Check               No 'enable row level security' found in migrations. Verify manually.
+
+==================================================
+[FAIL] Security Scan Failed. Please fix issues before deployment.
