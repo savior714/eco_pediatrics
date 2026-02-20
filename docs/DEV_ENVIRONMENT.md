@@ -112,7 +112,12 @@ eco frontend :: Frontend만 단일 창 실행
 
 ### 3.4 Dev [1번] 레이아웃
 
-`scripts\launch_wt_dev.ps1`이 `wt` 인자 **배열**로 `;`를 전달하여 PowerShell 파싱 이슈를 피함. 한 탭만 생성되고, 런처는 `start /b` 후 `exit`로 즉시 종료되어 Eco-Dev-Stack 탭만 남음. 자세한 트러블슈팅은 `docs\TROUBLESHOOTING_WT_LAYOUT.md` 참고.
+`scripts\launch_wt_dev.ps1`은 Windows Terminal을 호출할 때 구형 PowerShell 5.1과 CMD의 파싱 충돌을 피하기 위해 다음 아키텍처를 사용합니다:
+1. **프로세스 격리**: `System.Diagnostics.ProcessStartInfo`를 사용하여 `wt.exe`를 직접 띄우고 런처 콘솔을 즉시 닫습니다.
+2. **명령어 인코딩**: 프론트엔드(`Tauri dev`) 등 파이프라인(`|`)과 에러 제어(`$ErrorActionPreference`)가 포함된 복잡한 PowerShell 명령은 **Base64**로 인코딩(`-EncodedCommand`)하여 전달함으로써 CMD의 사전 파싱 개입을 원천 차단합니다.
+3. **레이아웃 고정**: `nt` → `split-pane -H --size 0.8` (Backend) → **`move-focus down`** → `split-pane -V --size 0.5` (Frontend) 순서로 물리적 커서를 강제 이동시켜 상/하단 분할 역전 현상을 방지합니다.
+
+자세한 트러블슈팅 내역은 `docs\TROUBLESHOOTING.md` 및 `docs\TROUBLESHOOTING_WT_LAYOUT.md`를 참고하세요.
 
 ---
 

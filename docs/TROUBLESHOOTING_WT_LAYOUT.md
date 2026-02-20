@@ -32,9 +32,11 @@ split-pane -V -d . --title "Frontend" pwsh -NoExit -Command "..."
 
 위 이슈를 피하기 위해 **인자 배열** + **move-focus** 조합으로 고정되어 있습니다.
 
-- **세미콜론 파싱**: `;`를 **wt 인자 배열의 한 요소**로 전달하여 PowerShell이 `;`를 명령 구분자로 해석하지 않음.
-- **실행 방식**: `Start-Process "wt" -ArgumentList $wtArgs`. (런처는 같은 콘솔에서 PowerShell 실행 후 `exit`로만 종료.)
+- **세미콜론 파싱 및 백그라운드 런처**: 런처 스크립트(`launch_wt_dev.ps1`)는 Windows Terminal을 호출할 때 PowerShell의 파싱 오작동(`Start-Process` 배열 버그)을 피하기 위해 `System.Diagnostics.ProcessStartInfo`를 사용하여 `wt.exe`를 직접 띄우고 종료합니다.
 - **레이아웃 (결정론적)**: `nt` → `split-pane -H --size 0.8` (Backend) → **`move-focus down`** → `split-pane -V --size 0.5` (Frontend). `move-focus down`으로 포커스를 하단으로 고정한 뒤 수직 분할해, 상단이 2분할로 나오는 역전 현상을 방지. (`-p 1`은 환경에 따라 미동작하여 사용하지 않음.)
-- Backend: `cmd /k` + `call .venv\Scripts\activate.bat`. Frontend: `cmd /k` + `npm run tauri dev` (에러 시에도 패널 유지).
+- Backend: `cmd /k` + `call .venv\Scripts\activate.bat`.
+- Frontend: `pwsh.exe -NoExit -EncodedCommand ...` (npm run tauri dev).
+  - **파이프라인(`|`) 충돌 및 크래시 이슈**: `Tee-Object`를 통한 쉘 로깅 시도가 Windows Terminal의 파싱 부하를 가중시켜 창이 즉시 종료(0x80070002)되거나, Tauri의 서버 준비 완료 신호를 방해하여 무한 대기(Hang)를 유발함.
+  - **해결책 (Clean Execution)**: 모든 쉘 레벨 파이프라인(`|`)을 제거하고 순수 명령만 실행하도록 아키텍처를 단순화함. 로깅은 애플리케이션 레벨(Backend: loguru 등)에 맡기고, 프론트엔드 API 블로킹(`tauriLog`) 해제를 병행하여 안정성을 100% 확보함.
 
 상세 메뉴·CLI·설정은 `docs\DEV_ENVIRONMENT.md` §3, 전체 트러블슈팅은 `docs\TROUBLESHOOTING.md` 참고.

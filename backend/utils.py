@@ -53,8 +53,13 @@ async def execute_with_retry_async(query_builder):
     
     for attempt in range(max_retries):
         try:
+            # [Architect Note] Validate if the executor is awaitable to prevent MagicMock pitfalls in tests
+            executor = query_builder.execute
+            if not asyncio.iscoroutinefunction(executor) and hasattr(executor, "assert_called"):
+                 logger.critical("Test Setup Error: Supabase execute() must be an AsyncMock, not MagicMock.")
+                 raise TypeError(f"Mock object {type(executor)} is not awaitable. Check your test provider.")
+
             res = await query_builder.execute()
-            # method 속성 참조 시 AttributeError 발생 가능하므로 안전하게 제거하거나 getattr 사용
             return res
         except Exception as e:
             # Categorize the error

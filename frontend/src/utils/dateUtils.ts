@@ -75,6 +75,13 @@ export function formatKSTTime(iso: string): string {
     return `오후 ${h === 12 ? 12 : h - 12}${padM}`;
 }
 
+export function formatKSTAMPM(iso: string): string {
+    if (!iso) return '';
+    const d = getKSTDate(iso);
+    const h = d.getHours();
+    return h < 12 ? '오전' : '오후';
+}
+
 /** 현재 시각 기준 "앞으로의 3끼" 라벨 및 메타데이터. 6~13시 / 14~18시 / 19~5시 구간. */
 export function getNextThreeMealSlots(now: Date = new Date()): { label: string; date: string; meal_time: 'BREAKFAST' | 'LUNCH' | 'DINNER' }[] {
     const kstNow = getKSTDate(now);

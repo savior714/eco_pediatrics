@@ -1,0 +1,4 @@
+root = true
+
+[*.{bat,ps1}]
+charset = utf-8-bom

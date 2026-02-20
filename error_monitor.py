@@ -44,7 +44,7 @@ WATCH_TARGETS: Final[dict[str, Path]] = {
 
 # 하위 호환: cleanup에서 사용하는 단일 경로 (백엔드 기준)
 WATCH_LOG_PATH: Final[Path] = WATCH_TARGETS["Backend"]
-OUTPUT_FILE: Final[Path] = PROJECT_ROOT / "prompt_for_gemini.md"
+OUTPUT_FILE: Final[Path] = PROJECT_ROOT / "docs" / "prompts" / "prompt_for_gemini.md"
 
 POLL_INTERVAL: float = 1.5      # 감시 주기 (초)
 DEBOUNCE_SEC: float = 3.0       # 중복 생성 방지 간격 (초)

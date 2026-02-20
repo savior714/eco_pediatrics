@@ -1,34 +1,26 @@
-# scripts\launch_wt_dev.ps1
-# Layout: [Top 20%: Error Monitor] / [Bottom-left: Backend] / [Bottom-right: Frontend]
-# move-focus down before -V ensures the vertical split targets the bottom pane (deterministic).
-# Error Monitor: backend venv Python. Frontend: Tee-Object to frontend/logs/frontend.log for monitor.
 param([string]$Root)
-
 $backendDir = "$Root\backend"
 $frontendDir = "$Root\frontend"
 
-# Ensure frontend log directory exists so Tee-Object can write
-$frontendLogDir = "$frontendDir\logs"
-if (-not (Test-Path $frontendLogDir)) { New-Item -ItemType Directory -Path $frontendLogDir -Force | Out-Null }
+# [Architect Note] 쉘 파이프라인(|)을 제거하여 파싱 안정성 100% 확보
+$psExe = "pwsh.exe"
+# 내부 인코딩 명령에서도 파이프라인 제거하여 Tauri 서버 감지 지연 방지
+$psRawCmd = "npm run tauri dev"
+$encodedCmd = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($psRawCmd))
+$feCmd = "$psExe -NoExit -EncodedCommand $encodedCmd"
 
-# Frontend: tee to logs\frontend.log. Use full path to PowerShell so cmd finds it without PATH.
-$psExe = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
-$frontendCmd = "`"$psExe`" -NoExit -Command `"npm run tauri dev 2>&1 | Tee-Object -FilePath 'logs\frontend.log' -Append`""
+# 각 커맨드를 단순 문자열로 정의 (중첩 따옴표 최소화)
+$monCmd = "cmd /k `"backend\.venv\Scripts\python.exe error_monitor.py --clear`""
+$beCmd = "cmd /k `"call .venv\Scripts\activate.bat && python -m uvicorn main:app --reload --port 8000`""
 
-# wt argument array: ";" as separate element so PowerShell does not treat it as command separator
-$wtArgs = @(
-  "--maximized",
-  # 1. Pane 0: Error Monitor (project root; use backend venv Python)
-  "-w", "0", "nt", "--title", "Eco-Dev-Stack", "-d", $Root,
-  "cmd", "/k", "backend\.venv\Scripts\python.exe error_monitor.py --clear",
-  # 2. Split horizontal: bottom 80% = Backend (Pane 1)
-  ";", "split-pane", "-H", "--size", "0.8", "-d", $backendDir,
-  "cmd", "/k", "call .venv\Scripts\activate.bat && python -m uvicorn main:app --reload --port 8000",
-  # 3. Force focus to bottom pane so next split targets it
-  ";", "move-focus", "down",
-  # 4. Split vertical: current (bottom) pane 50% = Frontend (with log tee)
-  ";", "split-pane", "-V", "--size", "0.5", "-d", $frontendDir,
-  "cmd", "/k", $frontendCmd
-)
+# [Critical Fix] 세미콜론(;)을 기준으로 명확히 분리하고 실행 커맨드 전체를 묶는 따옴표 제거
+$argStr = "--maximized -w 0 nt --title `"Eco-Dev-Stack`" -d `"$Root`" $monCmd ; " +
+"split-pane -H --size 0.8 -d `"$backendDir`" $beCmd ; " +
+"move-focus down ; " +
+"split-pane -V --size 0.5 -d `"$frontendDir`" $feCmd"
 
-Start-Process "wt" -ArgumentList $wtArgs
+$psi = New-Object System.Diagnostics.ProcessStartInfo
+$psi.FileName = "wt.exe"
+$psi.Arguments = $argStr
+$psi.UseShellExecute = $true
+[System.Diagnostics.Process]::Start($psi) | Out-Null

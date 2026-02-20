@@ -15,10 +15,12 @@ interface PatientDetailSidebarProps {
 
 function formatExamTime(iso: string): string {
     const d = new Date(iso);
+    const mth = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
     const h = d.getHours();
-    const m = d.getMinutes();
-    if (h < 12) return `오전 ${h === 0 ? 12 : h}${m ? `:${m.toString().padStart(2, '0')}` : ':00'}`;
-    return `오후 ${h === 12 ? 12 : h - 12}${m ? `:${m.toString().padStart(2, '0')}` : ':00'}`;
+    const ampm = h < 12 ? '오전' : '오후';
+
+    return `${mth}/${day} ${ampm}`;
 }
 
 export function PatientDetailSidebar({

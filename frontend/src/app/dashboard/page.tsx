@@ -8,7 +8,7 @@ import { Utensils, FileText, CalendarCheck, Bell, Smartphone, Monitor, AlertCirc
 import { API_BASE } from '@/lib/api';
 import { MealRequestModal } from '@/components/MealRequestModal';
 import { DocumentRequestModal } from '@/components/DocumentRequestModal';
-import { getNextThreeMealSlots, formatPatientDemographics, formatKSTDate, formatKSTTime } from '@/utils/dateUtils';
+import { getNextThreeMealSlots, formatPatientDemographics, formatKSTDate, formatKSTTime, formatKSTAMPM } from '@/utils/dateUtils';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { NoticeItem } from '@/components/dashboard/NoticeItem';
 import { ExamScheduleItem } from '@/components/dashboard/ExamScheduleItem';
@@ -157,8 +157,8 @@ function DashboardContent() {
                                         <ExamScheduleItem
                                             key={`${ex.id}-${index}`}
                                             date={formatKSTDate(ex.scheduled_at)}
-                                            time={formatKSTTime(ex.scheduled_at)}
-                                            name={ex.name}
+                                            time={formatKSTAMPM(ex.scheduled_at)}
+                                            name={`${formatKSTDate(ex.scheduled_at).split(' ')[0]} ${ex.name}`}
                                             note={ex.note || ''}
                                         />
                                     ))

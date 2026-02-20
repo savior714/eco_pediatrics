@@ -67,9 +67,12 @@ async def fetch_pending_requests(db: AsyncClient) -> List[Dict]:
         })
         
     # Sort by time descending (Primary)
-    # Then by meal_date (Secondary)
-    # Then by meal_rank (Tertiary)
-    notifications.sort(key=lambda x: (x['time'], x['meal_date'] or '', x['meal_rank']), reverse=True)
+    # Then by meal_date ascending (Secondary)
+    # Then by meal_rank ascending (Tertiary)
+    # Since we want descending for time but ascending for the others, we can do it in two steps
+    # or use a custom key if time wasn't string. As strings:
+    notifications.sort(key=lambda x: (x['meal_date'] or '', x['meal_rank']))
+    notifications.sort(key=lambda x: x['time'], reverse=True)
     return notifications
 
 def format_meal_notification_data(m: Dict) -> Dict:

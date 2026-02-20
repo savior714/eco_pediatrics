@@ -169,14 +169,14 @@ async def update_meal_request_status(
     update_payload = {"status": status}
 
     # 2. 상태가 COMPLETED라면 요청된 값을 실제 식단으로 확정
+    # [SSOT Fix] requested_* 컬럼 부재 가능성을 고려하여 확정 필드만 페이로드에 포함
     if status == 'COMPLETED':
-        if req_data.get('requested_pediatric_meal_type'):
-            update_payload['pediatric_meal_type'] = req_data['requested_pediatric_meal_type']
-            update_payload['requested_pediatric_meal_type'] = None
+        p_val = req_data.get('requested_pediatric_meal_type')
+        g_val = req_data.get('requested_guardian_meal_type')
         
-        if req_data.get('requested_guardian_meal_type'):
-            update_payload['guardian_meal_type'] = req_data['requested_guardian_meal_type']
-            update_payload['requested_guardian_meal_type'] = None
+        if p_val: update_payload['pediatric_meal_type'] = p_val
+        if g_val: update_payload['guardian_meal_type'] = g_val
+        # Note: Do not set requested_* to None here to avoid PGRST204 if columns are missing in DB
 
     # 3. DB 업데이트 수행
     response = await execute_with_retry_async(

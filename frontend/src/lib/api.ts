@@ -70,7 +70,8 @@ class ApiClient {
         const fetchType = fetchFn === window.fetch ? 'Browser Fetch' : 'Tauri Native Fetch';
 
         if (retryCount === 0) {
-            await tauriLog('info', `Requesting [${fetchType}]: ${options?.method || 'GET'} ${url}`);
+            // [Architect Note] Non-blocking logging to prevent IPC race conditions during shutdown
+            void tauriLog('info', `Requesting [${fetchType}]: ${options?.method || 'GET'} ${url}`);
         }
 
         try {
@@ -104,12 +105,12 @@ class ApiClient {
             // 연결 에러이고 재시도 횟수가 남았다면 (최대 2회)
             if (isConnectionError && retryCount < 2) {
                 const delay = (retryCount + 1) * 300; // 300ms, 600ms
-                await tauriLog('warn', `Fetch Retrying (${retryCount + 1}/2) in ${delay}ms: ${url}`);
+                void tauriLog('warn', `Fetch Retrying (${retryCount + 1}/2) in ${delay}ms: ${url}`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 return this.request<T>(endpoint, options, retryCount + 1);
             }
 
-            await tauriLog('error', `Fetch Fatal: ${options?.method || 'GET'} ${url} -> ${detail}`);
+            void tauriLog('error', `Fetch Fatal: ${options?.method || 'GET'} ${url} -> ${detail}`);
 
             if (isConnectionError) {
                 const guides = [

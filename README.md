@@ -41,7 +41,7 @@
 | 분류 | 기술 |
 | :--- | :--- |
 | **Frontend** | Next.js 14 (App Router), Tailwind CSS v4, Lucide React, Recharts, Framer Motion |
-| **Backend** | FastAPI (Python 3.10+), WebSockets, Loguru, Pydantic |
+| **Backend** | FastAPI (Python 3.14+), WebSockets, Loguru, Pydantic |
 | **Database** | Supabase (PostgreSQL), Row Level Security (RLS) |
 | **Infra/DevOps** | Batch Scripts (Windows), Docker (Optional), `error_monitor.py` (Zero-Cost Error Monitoring) |
 
@@ -58,8 +58,8 @@
 ## 💻 시작 가이드 (Getting Started)
 
 ### 사전 요구사항
-*   Python 3.10+
-*   Node.js 18+
+*   Python 3.14+
+*   Node.js 24+
 *   Supabase 프로젝트 (URL/Key)
 
 ### 설치 및 실행
@@ -96,5 +96,5 @@
 
 *   [CONTEXT_SNAPSHOT.md](./CONTEXT_SNAPSHOT.md): 프로젝트의 상세 개발 현황 및 히스토리 (최신)
 *   [docs/CRITICAL_LOGIC.md](./docs/CRITICAL_LOGIC.md): **시스템 핵심 운영 로직 SSOT (프로젝트 헌법)**
-*   [TROUBLESHOOTING.md](./TROUBLESHOOTING.md): 주요 이슈 및 해결 가이드
+*   [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md): 주요 이슈 및 해결 가이드
 *   [NEXT_STEPS.md](./NEXT_STEPS.md): 향후 개발 계획
