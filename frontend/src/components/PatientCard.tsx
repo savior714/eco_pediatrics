@@ -15,7 +15,7 @@ interface PatientCardProps {
     onQrClick?: (e: React.MouseEvent) => void;
 }
 
-export function PatientCard({ name, roomNumber, temperature, infusionRate, status, dob, gender, onCardClick, onQrClick }: PatientCardProps) {
+export const PatientCard = React.memo(function PatientCard({ name, roomNumber, temperature, infusionRate, status, dob, gender, onCardClick, onQrClick }: PatientCardProps) {
     const statusStyles = {
         fever: 'border-status-danger border-2 bg-red-100 shadow-sm shadow-red-200',
         warning: 'border-status-warning border-2 bg-orange-50',
@@ -70,4 +70,4 @@ export function PatientCard({ name, roomNumber, temperature, infusionRate, statu
             </div>
         </Card >
     );
-}
+});

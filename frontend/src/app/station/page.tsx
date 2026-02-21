@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { PatientCard } from '@/components/PatientCard';
+import { StationBedCard } from '@/components/StationBedCard';
 import { Card } from '@/components/Card';
 import { Bell } from 'lucide-react';
 import { PatientDetailModal } from '@/components/PatientDetailModal';
@@ -87,21 +87,10 @@ export default function Station() {
                             }
 
                             return (
-                                <PatientCard
+                                <StationBedCard
                                     key={bed.room}
-                                    name={bed.name}
-                                    roomNumber={bed.room}
-                                    temperature={bed.temp !== null ? bed.temp.toFixed(1) : '-'}
-                                    infusionRate={bed.drops ?? '-'}
-                                    status={bed.status}
-                                    onCardClick={() => actions.setSelectedRoom(bed.room)}
-                                    onQrClick={(e) => {
-                                        e.stopPropagation();
-                                        if (bed.token) actions.setQrBed(bed);
-                                        else alert('토큰 없음');
-                                    }}
-                                    dob={bed.dob}
-                                    gender={bed.gender}
+                                    bed={bed}
+                                    actions={actions}
                                 />
                             );
                         })}
