@@ -1,5 +1,10 @@
 # Context Snapshot
 
+- **Error Monitor 스킬화 및 다중 저장소 동기화 (2026-02-21)**:
+    - **통합 스킬 구축**: 산재해 있던 에러 모니터 아키텍처 및 워크플로우를 `.agent/skills/error_monitor`로 스킬화 완료.
+    - **Skill Protocol 정립**: `docs/CRITICAL_LOGIC.md`에 스킬 배포 프로토콜(SSOT: `savior714/skills`)을 명문화하여 향후 혼선 방지.
+    - **외부 저장소 동시성**: 신규 `error_monitor` 스킬을 지정된 외부 저장소(`https://github.com/savior714/skills`)에 푸시 완료.
+
 - **데스크톱(Tauri) 빌드 환경 정비 (2026-02-20)**:
     - **Rust/cargo 필수화 문서화**: Tauri 데스크톱 앱(`npm run tauri dev`) 빌드에 Rust 툴체인(cargo) 필요. `docs/DEV_ENVIRONMENT.md` §1 표에 Rust 행 추가, §4.1에 rustup/Windows 설치 절 추가.
     - **Doctor에 cargo 검사**: `scripts/doctor.py`에 `check_cargo()` 추가 — `cargo --version` 출력 및 미설치 시 rustup.rs 안내. `eco check`로 Tauri 빌드 가능 여부 확인.

@@ -31,6 +31,11 @@
 - **Hybrid Sync**: WebSocket 브로드캐스트는 '트리거' 역할만 수행하며, 실제 데이터 업데이트는 클라이언트에서의 명시적 Refetch를 통해 정합성을 확보한다.
 - **Throttling**: 중복 fetch 방지를 위해 모든 API 호출 훅에는 최소 **500ms의 `lastFetchRef` 가드**를 적용해야 한다.
 
+### 2.3 DB Update 최적화 (단일 트랜잭션)
+- **Select Chaining**: 상태 업데이트 등 DB 수정 시, `update()` 직후 `.select()`를 체이닝하여 수정된 데이터와 연관 데이터를 한 번의 왕복(Network Round-trip)으로 반환받아야 한다.
+- 예시: `await db.table("requests").update({"status": "done"}).eq("id", id).select("*, admissions(*)").single().execute()`
+- **목적**: 네트워크 지연 시간(Latency) 최소화 및 불필요한 다중 DB 호출에 따른 정합성 문제 사전 차단.
+
 ---
 
 ## 3. Environment & Configuration
@@ -81,6 +86,18 @@
 - [ ] **입원/전실/퇴원 로직 수정 시**: `audit_logs` 테이블에 활동 내역이 기록되는지 확인.
 - [ ] **API 엔드포인트 수정 시**: 해당 데이터를 참조하는 WebSocket 브로드캐스트 로직(`broadcast_to_room` 등)이 누락되지 않았는지 확인.
 - [ ] **UI 컴포넌트 수정 시**: `mask_name` 유틸리티가 적용되어 환자 성함이 노출되지 않는지 확인.
+
+---
+## 6. Skill & Agent Maintenance: 에이전트 및 스킬 관리
+에이전트의 지능형 파트너십 유지를 위한 관리 프로토콜입니다.
+
+### 6.1 스킬 배포 프로토콜 (Skill Deployment)
+- **SSOT**: 사용자 정의 스킬의 최상위 저장소는 **`https://github.com/savior714/skills`**이다.
+- **푸시 절차 (@skills push)**:
+  1. `.agent/skills/` 하위의 신규/수정 스킬 리스트업 및 사용자 제안.
+  2. 로컬 클론 저장소(`c:\develop\skills`)의 `git pull` 상태 확인 및 정합성 검증.
+  3. Conventional Commits 형식(`feat: add [name] skill`)으로 커밋 및 푸시.
+- **저장소 분리**: `antigravity-awesome-skills` 레포지토리와는 별개로 운영되며, 명시적 요청이 없는 한 `savior714/skills`를 우선 타겟으로 한다.
 
 ---
 *본 문서는 프로젝트의 헌법과 같습니다. 에이전트는 모든 Action 전 본 문서를 복귀하십시오.*
