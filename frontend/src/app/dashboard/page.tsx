@@ -91,8 +91,8 @@ function DashboardContent() {
                     }}
                 >
                     <div className="flex flex-col gap-6">
+                        {/* OPTIMIZATION: Removed key to prevent unmounting and allow React.memo to work */}
                         <TemperatureGraph
-                            key={`chart-${vitalsData.vitals.length}`}
                             data={vitalsData.vitals}
                             checkInAt={vitalsData.checkInAt}
                             className="flex-1"
