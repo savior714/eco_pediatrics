@@ -31,11 +31,22 @@
 - **Hybrid Sync**: WebSocket 브로드캐스트는 '트리거' 역할만 수행하며, 실제 데이터 업데이트는 클라이언트에서의 명시적 Refetch를 통해 정합성을 확보한다.
 - **Throttling**: 중복 fetch 방지를 위해 모든 API 호출 훅에는 최소 **500ms의 `lastFetchRef` 가드**를 적용해야 한다.
 
-### 2.3 DB Update 최적화 (supabase-py 호환)
+### 2.3 상세 모달 데이터 소스 (Patient Detail Modal SSOT)
+- **SSOT**: 환자 상세 모달(PatientDetailModal)의 데이터 소스는 자체 Hook(`useVitals`)의 상태를 최우선으로 사용한다.
+- **외부 Prop**: 부모(Station Page)로부터 주입되는 `propVitals` 등은 초기 진입 시점에만 참조하며, 모달 열린 후에는 사용하지 않는다. 이는 부모 상태 갱신 시 유입되는 Thin Object로 인한 리셋 현상을 방지하기 위함이다.
+- **상태 보존**: `useVitals.fetchDashboardData`는 API 응답에 특정 필드가 없거나 비어 있을 경우 기존 상태를 빈 배열로 덮어쓰지 않는다. 유효한 데이터가 있을 때만 상태를 업데이트한다.
+- **Force 리프레시 우선**: `fetchDashboardData({ force: true })` 호출 시에는 시퀀스 가드를 우회하여 해당 응답을 항상 상태에 반영한다. 수동 완료(예: 서류 완료 버튼) 직후 리프레시가 웹소켓/디바운스 요청에 의해 무시되지 않도록 함. 상세는 `docs/prompts/PROMPT_COMPLETED_DOCS_NOT_SHOWING.md` 근본 원인 분석 참고.
+
+### 2.4 DB Update 최적화 (supabase-py 호환)
 - **supabase-py v2+ 제약**: `UpdateRequestBuilder`/`DeleteRequestBuilder`는 `.select()` 메서드를 지원하지 않는다. `update().eq().select()` 체이닝은 **불가**.
 - **권장 패턴 (2단계 분리)**: (1) `update().eq()` 또는 `delete().eq()` 실행. (2) 브로드캐스트·응답용 데이터가 필요하면 **별도** `select().eq()` 호출.
 - 예시: `await db.table("requests").update({"status": "done"}).eq("id", id).execute()` → `await db.table("requests").select("*").eq("id", id).single().execute()`
 - **목적**: 네트워크 왕복은 2회 발생하나, 라이브러리 호환성과 에러 방지가 우선. 상세 사례는 `docs/TROUBLESHOOTING.md` §11 참고.
+
+### 2.6 Environment Maintenance (배치 파일 인코딩)
+- **제약**: `eco.bat`, `start_backend_pc.bat` 등 `.bat` 파일은 반드시 **ANSI(EUC-KR/CP949)** 인코딩을 유지해야 한다.
+- **이유**: `cmd.exe`는 UTF-16/UTF-8 BOM을 잘못 해석하여 `'cho'`(echo), `'edelayedexpansion'`(EnableDelayedExpansion) 등 구문 파편화 에러를 일으킨다.
+- **수정 시**: 배치 파일 편집 후 IDE에서 **Save with Encoding** → **Korean (EUC-KR)** 또는 **Western (Windows 1252)**로 저장한다. 에이전트는 배치 파일 수정 시 인코딩을 변경하지 않도록 주의한다.
 
 ---
 
@@ -59,11 +70,23 @@
 3. **iv_records**: id, admission_id, photo_url, infusion_rate, created_at
 4. **meals**: id, admission_id, request_type, pediatric_meal_type, guardian_meal_type, requested_pediatric_meal_type, requested_guardian_meal_type, room_note, meal_date, meal_time, status, created_at
 5. **exam_schedules**: id, admission_id, scheduled_at, name, note
-6. **document_requests**: id, admission_id, request_items, status, created_at
+6. **document_requests**: id, admission_id, request_items, status, created_at. **상태 필터 금지**: PENDING·COMPLETED 구분 없이 해당 입원의 최근 요청을 반환한다. 상세 모달의 "신청된 서류" 섹션에 완료 이력을 노출하기 위함이다.
 
 ### 3.4 Token Expiration Handling (Client-side)
 - **Status 404/403:** 토큰이 무효하거나 퇴원 처리가 완료된 것으로 간주함.
 - **Client Action:** 프론트엔드는 즉시 이후 대시보드 fetch를 중단하고(토큰 무효화 ref 설정), 사용자에게 서비스 종료 알림(Alert)을 노출한 후 세션을 종료(창 닫기 또는 리다이렉트)해야 함. WebSocket은 4003/1000 시 재연결 중단.
+
+### 3.5 Backend Dependency Layers (의존성 계층)
+- **Core(웹 서비스)**: `backend/requirements-core.txt`에 fastapi, uvicorn, pydantic 등 빌드 불필요 패키지만 포함. C++ 확장 없이 설치 가능.
+- **Full(전체 실행)**: `requirements.txt`는 supabase를 포함하며, supabase는 storage3→pyiceberg→pyroaring 경로로 C++ 빌드가 필요한 의존성을 갖는다.
+- **빌드 환경 미구성 시**: `pip install -r requirements-core.txt`로 Core만 우선 설치. 백엔드 실제 실행에는 supabase 필수이므로, Visual Studio Build Tools + **Windows SDK(UCRT, io.h 포함)** 설치 후 `vcvars64.bat`으로 INCLUDE/LIB 경로 주입하여 `pip install -r requirements.txt` 또는 pyiceberg·pyroaring 별도 설치가 필요하다.
+- **데이터 분석용 모듈**(pyiceberg, pyroaring 등)은 현재 스테이션 대시보드·환자 상세 모달 기능과 무관하나, **storage3가 런타임에 pyiceberg를 import**하므로 `--no-deps` 우회 설치로는 supabase 기동 불가. pyiceberg 빌드가 반드시 필요함.
+- **의존성 설치 예외 규정(장기)**: Windows Native 환경에서 C++ 빌드 도구·SDK 미비 시, `vcvars64.bat` 환경 주입 후 pyroaring/pyiceberg 선 설치를 시도한다. 이는 storage3→pyiceberg의 런타임 의존성으로 인해 우회 불가하기 때문이다.
+
+### 3.5.4 Build Environment Discovery (환경 변수 SSOT)
+- **문제**: `cl.exe`가 실행되더라도 Windows SDK(UCRT)의 버전별 가변 경로가 `INCLUDE`에 없으면 `io.h` 참조 실패. 세션별 `vcvars64.bat`은 휘발적이라 IDE·터미널 재시작 시 경로가 유실됨.
+- **해결**: `scripts/Refresh-BuildEnv.ps1`을 실행하여 최신 Windows SDK(UCRT, shared, um, winrt) 경로를 **사용자 환경 변수에 영구 등록**한다. 이는 일시적 세션 주입이 아닌, 시스템 수준의 **환경 변수 SSOT** 확보를 위함이다.
+- **실행**: `eco setup` 시 자동 호출되며, 수동 실행은 `powershell -ExecutionPolicy Bypass -File scripts\Refresh-BuildEnv.ps1`. 실행 후 **모든 터미널과 IDE를 재시작**해야 영구 설정이 적용됨.
 
 ---
 

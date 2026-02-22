@@ -9,7 +9,8 @@
 ## 🚀 최신 업데이트 및 주요 기능 (2026-02-22 기준)
 
 ### 1. 백엔드/DB 안정화 (2026-02-22)
-*   **Supabase update/select 2단계 패턴**: `station.py` 식단·서류 상태 변경 시 `AsyncFilterRequestBuilder` 에러(update 후 .select() 체이닝 미지원) 해결. update 실행 후 별도 select로 브로드캐스트 데이터 조회. (`docs/TROUBLESHOOTING.md` §11, `docs/CRITICAL_LOGIC.md` §2.3)
+*   **Supabase update/select 2단계 패턴**: `station.py` 식단·서류 상태 변경 시 `AsyncFilterRequestBuilder` 에러(update 후 .select() 체이닝 미지원) 해결. update 실행 후 별도 select로 브로드캐스트 데이터 조회. (`docs/TROUBLESHOOTING.md` §10, `docs/CRITICAL_LOGIC.md` §2.4)
+*   **간호 스테이션 완료 서류 미표시 수정**: useVitals 시퀀스 가드·api.ts dedup 충돌 해결. `force: true` 응답 우선 적용, 빈 응답 처리 강화. (`docs/TROUBLESHOOTING.md` §12, `docs/prompts/PROMPT_COMPLETED_DOCS_NOT_SHOWING.md`)
 *   **수액 주입 속도 소수점 지원**: `IVRecord`/`IVRecordCreate.infusion_rate`를 `float`으로 변경, DB `iv_records.infusion_rate`를 `NUMERIC` 마이그레이션으로 정밀도 충돌(22P02) 해소.
 *   **뷰/보안 컬럼 마이그레이션**: `view_station_dashboard` 재생성 시 `token_expires_at` 컬럼 부재(42703) 방지를 위해 **컬럼 추가 → 뷰 재생성** 순서를 보장하는 통합 마이그레이션 적용. (`supabase/migrations/20260222_view_token_expires_fix.sql`)
 *   **전역 Traceback 로깅**: `main.py` 예외 핸들러에 `traceback.format_exc()` 추가로 미처리 예외 발생 시 정확한 파일·라인 추적 가능.

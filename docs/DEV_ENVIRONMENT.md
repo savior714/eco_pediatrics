@@ -21,7 +21,7 @@
 
 - **numpy 2.4.2**는 Python 3.14용 wheel을 제공하므로 VS 빌드 없이 설치 가능합니다.
 - 빌드 오류 발생 시: Visual Studio Installer에서 **C++를 사용한 데스크톱 개발** 워크로드 및 **C++ 유니버설 CRT SDK** 설치여부를 확인하세요.
-- **eco setup [2번]** 실행 시 **Windows Kits 10** 최신 SDK를 자동 탐색하여 `INCLUDE`/`LIB`/`PATH`에 주입합니다. 별도 수동 설정 없이 네이티브 패키지 빌드가 가능합니다.
+- **eco setup [2번]** 실행 시 `scripts/Refresh-BuildEnv.ps1`이 최신 Windows SDK(UCRT 포함) 경로를 **사용자 환경 변수에 영구 등록**합니다. 영구 설정 적용을 위해 **터미널·IDE를 한 번 재시작**한 뒤 pip 설치를 진행하세요.
 
 ---
 
@@ -105,7 +105,7 @@ eco frontend :: Frontend만 단일 창 실행
 ### 3.3 Setup [2번] 상세
 
 1. **Prerequisite 검사**: Python 3.14.x, Node.js v24.12.x 없으면 실패 로그 후 `setup_fail`.
-2. **Backend**: `.venv` 없으면 생성 → **SDK Discovery**(`C:\Program Files (x86)\Windows Kits\10\Include\10.*` 최신 버전으로 `INCLUDE`/`LIB`/`PATH` 설정) → pip upgrade(cython 포함) → pyroaring/pyiceberg 시도 → `pip install -r requirements.txt` → `.env` 없으면 복사.
+2. **Backend**: `.venv` 없으면 생성 → **SDK Discovery** (`Refresh-BuildEnv.ps1`로 사용자 환경 변수 영구 등록 + 현재 세션에 `INCLUDE`/`LIB`/`PATH` 주입) → pip upgrade(cython 포함) → pyroaring/pyiceberg 시도 → `pip install -r requirements.txt` → `.env` 없으면 복사.
 3. **Frontend**: `npm install` → `.env.local` 없으면 복사.
 4. **검증**: `scripts\doctor.py` 실행. 실패 시 WARN 출력 후 메뉴 복귀.
 5. **로그**: 모든 실패는 `logs\eco_setup.log`에 타임스탬프와 함께 기록됨.
@@ -118,6 +118,11 @@ eco frontend :: Frontend만 단일 창 실행
 3. **레이아웃 고정**: `nt` → `split-pane -H --size 0.8` (Backend) → **`move-focus down`** → `split-pane -V --size 0.5` (Frontend) 순서로 물리적 커서를 강제 이동시켜 상/하단 분할 역전 현상을 방지합니다.
 
 자세한 트러블슈팅 내역은 `docs\TROUBLESHOOTING.md` 및 `docs\TROUBLESHOOTING_WT_LAYOUT.md`를 참고하세요.
+
+### 3.5 eco.bat 실행 시 명령어 파편화 에러
+- **증상**: `eco` 실행 시 `'cho'`, `'edelayedexpansion'` 인식 불가 등 에러 후 터미널 종료.
+- **원인**: 배치 파일이 UTF-16/UTF-8 BOM으로 저장되어 `cmd.exe`가 해석 실패.
+- **해결**: `docs\TROUBLESHOOTING.md` §8 참고. 배치 파일은 **ANSI(CP949)/ASCII** 인코딩 유지.
 
 ---
 
@@ -169,7 +174,7 @@ eco check
     ```cmd
     eco setup
     ```
-    - `backend` 가상환경 생성, **Windows Kits 10 SDK 자동 탐색·경로 주입**, pip(cython 포함) 및 requirements 설치
+    - `backend` 가상환경 생성, **Refresh-BuildEnv.ps1**로 Windows SDK 경로 영구 등록 + pip(cython 포함) 및 requirements 설치. 영구 설정 적용을 위해 **터미널 재시작 후** pip 재시도가 필요할 수 있음.
     - `frontend` npm 패키지 설치
     - `.env` 및 `.env.local` 초기화
     - 실패 시 `logs\eco_setup.log` 확인 후 재실행 또는 수동 설치

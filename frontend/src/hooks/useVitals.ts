@@ -18,7 +18,7 @@ interface UseVitalsReturn {
     isConnected: boolean;
     isRefreshing: boolean;
     refetchDashboard: () => Promise<void>;
-    fetchDashboardData: () => Promise<void>; // Alias
+    fetchDashboardData: (opts?: { force?: boolean }) => Promise<void>; // force: bypass 500ms debounce
     addOptimisticVital: (temp: number, recordedAt: string) => { tempId: string; rollback: () => void };
     addOptimisticExam: (examData: { name: string; date: string; timeOfDay: string }) => { tempId: string; rollback: () => void };
     deleteOptimisticExam: (examId: number) => { rollback: () => void };
@@ -56,31 +56,38 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
     // 404/403 시 이후 모든 fetch 차단 (폴링/재호출로 인한 무한 404 방지)
     const tokenInvalidatedRef = useRef(false);
 
-    const fetchDashboardData = useCallback(async () => {
+    const fetchDashboardData = useCallback(async (opts?: { force?: boolean }) => {
         if (!token) return;
         if (tokenInvalidatedRef.current) return;
 
         const now = Date.now();
-        if (now - lastFetchRef.current < 500) return;
+        if (!opts?.force && now - lastFetchRef.current < 500) return;
         lastFetchRef.current = now;
 
         const currentRequestId = ++requestRef.current;
         setIsRefreshing(true);
+        // [Fix] force 시 cache-busting param으로 api.ts 100ms dedup 우회. 완료 버튼 클릭 후 리프레시가 실제 요청 수행되도록 함.
+        const cacheBust = opts?.force ? `?_t=${Date.now()}` : '';
         try {
-            const data = await api.get<DashboardResponse>(`/api/v1/dashboard/${token}`, {
+            const data = await api.get<DashboardResponse>(`/api/v1/dashboard/${token}${cacheBust}`, {
                 headers: {
                     'X-Admission-Token': token
                 }
             });
 
-            // Sequence Guard: Ignore if a newer request was started
-            if (currentRequestId !== requestRef.current) return;
+            // Sequence Guard: Ignore if a newer request was started (unless force: manual refresh wins)
+            if (currentRequestId !== requestRef.current) {
+                if (!opts?.force) {
+                    console.warn(`[useVitals] Outdated request ignored: ${currentRequestId}`);
+                    return;
+                }
+            }
 
-            if (data) {
+            // [Fix] Empty body from api.ts dedup (100ms) or network: do not overwrite state; log for debugging
+            if (data && Object.keys(data).length > 0) {
                 // Admission Info
                 if (data.admission) {
                     setAdmissionId(data.admission.id);
-                    // Contract: Use display_name by default, fall back to masked name
                     setPatientName(data.admission.display_name || data.admission.patient_name_masked || '환자');
                     setRoomNumber(data.admission.room_number);
                     setCheckInAt(data.admission.check_in_at);
@@ -88,7 +95,6 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     setGender(data.admission.gender || null);
                 }
 
-                // Vitals
                 if (data.vitals && Array.isArray(data.vitals)) {
                     const formattedVitals = data.vitals.map((v: VitalDataResponse) => ({
                         time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -98,17 +104,17 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                         recorded_at: v.recorded_at
                     }));
                     setVitals(formattedVitals);
-                } else {
-                    setVitals([]);
                 }
 
-                setMeals(data.meals || []);
-                setDocumentRequests(data.document_requests || []);
-                setIvRecords(data.iv_records || []);
-                setExamSchedules(data.exam_schedules || []);
+                if (data.meals != null) setMeals(data.meals);
+                if (data.document_requests !== undefined) setDocumentRequests(data.document_requests || []);
+                if (data.iv_records != null) setIvRecords(data.iv_records);
+                if (data.exam_schedules != null) setExamSchedules(data.exam_schedules);
+            } else {
+                console.error('[useVitals] Received empty data from API');
             }
         } catch (err: any) {
-            if (currentRequestId !== requestRef.current) return;
+            if (currentRequestId !== requestRef.current && !opts?.force) return;
 
             const errorMessage = String(err?.message || '');
             if (errorMessage.includes('403') || errorMessage.includes('404')) {
