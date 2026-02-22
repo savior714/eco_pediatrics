@@ -43,7 +43,7 @@ class IVRecord(BaseModel):
     id: Optional[int] = None
     admission_id: str
     photo_url: Optional[str] = None
-    infusion_rate: Optional[int] = None
+    infusion_rate: Optional[float] = None
     created_at: Optional[datetime] = None
 
 class MealRequest(BaseModel):
@@ -94,7 +94,7 @@ class VitalSignCreate(BaseModel):
 class IVRecordCreate(BaseModel):
     admission_id: str
     photo_url: Optional[str] = None
-    infusion_rate: int  # cc/hr
+    infusion_rate: float  # cc/hr
 
 class MealRequestCreate(BaseModel):
     admission_id: str
