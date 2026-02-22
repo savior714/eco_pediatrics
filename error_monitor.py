@@ -4,7 +4,7 @@ eco_pediatrics Error Monitor (Pure-Polling / Multi-Stack)
 watchdog 없이 순수 Python 루프로 여러 서비스 로그를 동시에 감시한다.
 - 감시 대상 : WATCH_TARGETS 딕셔너리에 등록된 모든 로그 파일
 - 에러 패턴 : Python / TypeScript / Tauri(Rust) / Build 도구 공통 커버
-- 에러 감지 : prompt_for_gemini.md 를 세션 히스토리 형식으로 자동 갱신
+- 에러 감지 : docs/prompts/prompt_for_gemini.md 를 세션 히스토리 형식으로 자동 갱신
 
 사용법:
     python error_monitor.py          # 모니터 시작

@@ -55,7 +55,7 @@
 │         └────────────┬─────────────┘                     │
 │                      │ ④ 리포트 생성                       │
 │                      ▼                                   │
-│            prompt_for_gemini.md                          │
+│       docs/prompts/prompt_for_gemini.md                  │
 │     (에러 히스토리 + 전체 소스 컨텍스트 통합 패키지)          │
 │                      │ ⑤ 개발자가 LLM에 붙여넣기           │
 │                      ▼                                   │
@@ -289,7 +289,7 @@ while True:
 
 ---
 
-## 8. `prompt_for_gemini.md` 리포트 구조
+## 8. `docs/prompts/prompt_for_gemini.md` 리포트 구조
 
 에러 리포트는 LLM이 바로 이해할 수 있는 5개 섹션으로 구성됩니다.
 
@@ -368,7 +368,7 @@ python error_monitor.py --clear
 python error_monitor.py --clear &
 ```
 
-**Step 7** 에러가 발생하면 생성된 `prompt_for_gemini.md`를 Gemini / NotebookLM에 그대로 붙여넣습니다.
+**Step 7** 에러가 발생하면 생성된 `docs/prompts/prompt_for_gemini.md`를 Gemini / NotebookLM에 그대로 붙여넣습니다.
 
 ---
 

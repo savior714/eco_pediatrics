@@ -158,7 +158,7 @@ exit
 ## 9. 에러 모니터가 동작하지 않거나 프론트 에러를 감지하지 못함
 
 ### 현상
-- Error Monitor 패널은 떠 있으나 `prompt_for_gemini.md`가 갱신되지 않음.
+- Error Monitor 패널은 떠 있으나 `docs/prompts/prompt_for_gemini.md`가 갱신되지 않음.
 - Backend 에러만 잡히고 Frontend(Tauri/Next) 에러는 반영되지 않음.
 
 ### 원인
@@ -168,7 +168,7 @@ exit
 ### 해결 (적용됨)
 - **launch_wt_dev.ps1**: (1) Error Monitor 패널에서 `backend\.venv\Scripts\python.exe error_monitor.py --clear` 실행. (2) Frontend 패널에서 `npm run tauri dev` 출력을 `powershell -Command "npm run tauri dev 2>&1 | Tee-Object -FilePath 'logs\frontend.log' -Append"`로 실행해 `frontend/logs/frontend.log`에 기록.
 - **error_monitor.py**: `main()` 진입 시 `_ensure_log_directories()`로 감시 대상 로그 디렉터리(`backend/logs`, `frontend/logs`)를 선제 생성.
-- **검증**: `frontend/logs/frontend.log` 파일이 생성·갱신되는지, Backend 로그 끝에 `ERROR: Manual Test`를 넣었을 때 `prompt_for_gemini.md`가 갱신되는지 확인.
+- **검증**: `frontend/logs/frontend.log` 파일이 생성·갱신되는지, Backend 로그 끝에 `ERROR: Manual Test`를 넣었을 때 `docs/prompts/prompt_for_gemini.md`가 갱신되는지 확인.
 # Troubleshooting
 
 ## 1. Next.js 빌드 캐시 이슈

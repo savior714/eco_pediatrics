@@ -5,7 +5,7 @@ description: 에러 모니터 실행, 트러블슈팅 및 Gemini 컨텍스트 �
 
 # Error Monitor (에러 모니터) 스킬
 
-이 스킬은 **eco_pediatrics** 프로젝트의 모든 서비스(Backend, Frontend 등)에서 발생하는 에러 로그를 실시간 감시하고, 에러 상황 시 LLM/Agent에게 바로 전달 가능한 형태의 **컨텍스트 패키지(`prompt_for_gemini.md`)를 자동 생성 및 활용**하는 방법을 안내합니다.
+이 스킬은 **eco_pediatrics** 프로젝트의 모든 서비스(Backend, Frontend 등)에서 발생하는 에러 로그를 실시간 감시하고, 에러 상황 시 LLM/Agent에게 바로 전달 가능한 형태의 **컨텍스트 패키지(`docs/prompts/prompt_for_gemini.md`)를 자동 생성 및 활용**하는 방법을 안내합니다.
 
 ## 1. 아키텍처 개요
 
@@ -31,7 +31,7 @@ description: 에러 모니터 실행, 트러블슈팅 및 Gemini 컨텍스트 �
    - `python error_monitor.py --cleanup` : 모든 로그 및 리포트 데이터 삭제 후 종료
 
 3. **에러 발생 및 리포트 활용**:
-   - 에러가 감지되면 프로젝트 루트 파일인 `prompt_for_gemini.md`가 자동 갱신됩니다.
+   - 에러가 감지되면 `docs/prompts/prompt_for_gemini.md`가 자동 갱신됩니다.
    - 해당 파일 전체(`Ctrl+A` -> `Ctrl+C`)를 복사해 Gemini, NotebookLM, 또는 Antigravity 에이전트에 붙여넣어 디버깅 및 코드 수정 지시를 받습니다.
 
 ---
@@ -45,4 +45,4 @@ description: 에러 모니터 실행, 트러블슈팅 및 Gemini 컨텍스트 �
 - **`resources/prompt_for_llm.md`**
   - **용도**: `run_dev.bat` 실행 시 윈도우 터미널(`wt.exe`) 화면이 즉시 닫히는(크래시) 등 레이아웃 파싱 관련 문제가 지속될 때 다른 LLM에 디버깅을 요청하는 프롬프트입니다.
 - **`resources/prompt_for_gemini.md`**
-  - **용도**: 에러가 났을 때 Error Monitor가 동적으로 뱉어내는 템플릿의 형식을 기록한 파일입니다. (루트 디렉토리의 파일을 삭제했을 시를 대비한 원본 백업용)
+  - **용도**: 에러가 났을 때 Error Monitor가 동적으로 뱉어내는 템플릿 형식의 원본 백업입니다. (출력: `docs/prompts/prompt_for_gemini.md`)

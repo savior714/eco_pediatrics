@@ -10,15 +10,15 @@
 ## 프로젝트 및 컴포넌트
 
 - **프로젝트**: eco_pediatrics (Windows 11, PowerShell, Python 3.14, Next.js + Tauri)
-- **대상**: Error Monitor — 여러 서비스(Backend / Frontend)의 로그 파일을 감시하고, 에러가 감지되면 `prompt_for_gemini.md`를 세션 히스토리 형식으로 자동 갱신하는 **파일 기반 에러 추적 시스템**
+- **대상**: Error Monitor — 여러 서비스(Backend / Frontend)의 로그 파일을 감시하고, 에러가 감지되면 `docs/prompts/prompt_for_gemini.md`를 세션 히스토리 형식으로 자동 갱신하는 **파일 기반 에러 추적 시스템**
 
 ## 기대 동작 (정상 시)
 
 1. **실행**: 프로젝트 루트에서 `python error_monitor.py` 또는 `python error_monitor.py --clear` 실행 시, 모니터가 무한 루프로 동작하며 1.5초마다 다음 로그 파일을 감시한다.
    - `backend/logs/app.log` (Backend)
    - `frontend/logs/frontend.log` (Frontend)
-2. **에러 감지**: 로그 내용에 ERROR, Traceback, Exception, FAILED, panicked, ENOENT 등 정의된 정규식 패턴이 있으면, 해당 로그 꼬리(TAIL_LINES=100)를 세션 에러 목록에 추가하고 `prompt_for_gemini.md`를 갱신한다.
-3. **출력 파일**: `prompt_for_gemini.md`에는 [Agent-to-Agent Protocol], Session Error History, Source Code Context(고정된 SOURCE_FILES 목록), Instruction이 포함된다.
+2. **에러 감지**: 로그 내용에 ERROR, Traceback, Exception, FAILED, panicked, ENOENT 등 정의된 정규식 패턴이 있으면, 해당 로그 꼬리(TAIL_LINES=100)를 세션 에러 목록에 추가하고 `docs/prompts/prompt_for_gemini.md`를 갱신한다.
+3. **출력 파일**: `docs/prompts/prompt_for_gemini.md`에는 [Agent-to-Agent Protocol], Session Error History, Source Code Context(고정된 SOURCE_FILES 목록), Instruction이 포함된다.
 4. **실행 경로**: Dev Mode는 `eco.bat` → [1] 선택 시 `scripts/launch_wt_dev.ps1`가 Windows Terminal을 띄우고, **첫 번째 패널**에서 `cmd /k python error_monitor.py --clear`를 실행한다. (최근 수정: cmd /c → cmd /k 로 변경해 패널이 바로 닫히지 않도록 함)
 
 ## 현재 증상 (사용자 보고)
@@ -26,7 +26,7 @@
 - **"에러 모니터링 하는 기능이 다시 제대로 작동을 안 하는 것 같다"**
 - 구체적으로 다음 중 어떤 문제인지는 사용자가 명시하지 않음. 가능한 후보:
   - Error Monitor 패널이 뜨지 않거나, 뜨자마자 꺼짐
-  - Monitor는 떠 있지만 `prompt_for_gemini.md`가 갱신되지 않음
+  - Monitor는 떠 있지만 `docs/prompts/prompt_for_gemini.md`가 갱신되지 않음
   - Backend/Frontend 로그가 해당 경로에 쌓이지 않아 감지 자체가 불가
   - 에러가 났는데도 패턴 매칭이 되지 않아 리포트에 반영되지 않음
   - 프론트엔드 로그 수집이 안 됨 (Next.js/Tauri는 기본적으로 stdout만 쓰므로, Tee-Object 등으로 frontend/logs/frontend.log에 리다이렉트해야 함)
@@ -39,7 +39,7 @@
 | WT 3분할 실행 스크립트 | `scripts/launch_wt_dev.ps1` |
 | 아키텍처·로그 수집 방법 | `ERROR_MONITOR_ARCHITECTURE.md` |
 | 트러블슈팅(Setup/Doctor/WT 레이아웃) | `docs/TROUBLESHOOTING.md` |
-| 생성되는 리포트 | `prompt_for_gemini.md` |
+| 생성되는 리포트 | `docs/prompts/prompt_for_gemini.md` |
 | 감시 대상 로그 | `backend/logs/app.log`, `frontend/logs/frontend.log` |
 
 ## 요청 사항

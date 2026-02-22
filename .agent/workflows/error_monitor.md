@@ -5,7 +5,7 @@ description: 에러 모니터 실행 및 Gemini 컨텍스트 패키지 생성 �
 # eco_pediatrics Error Monitor 워크플로우
 
 > 이 워크플로우는 **Pure-Polling 방식**으로 백엔드·프론트엔드 등 모든 서비스 로그를 동시에 감시하고,
-> 에러 감지 시 Gemini 에 붙여넣을 수 있는 컨텍스트 패키지(`prompt_for_gemini.md`)를 자동 생성합니다.
+> 에러 감지 시 Gemini 에 붙여넣을 수 있는 컨텍스트 패키지(`docs/prompts/prompt_for_gemini.md`)를 자동 생성합니다.
 
 ---
 
@@ -111,7 +111,7 @@ Gemini 리포트에 자동 첨부되는 소스 파일 목록입니다.
 
 ## 결과물 활용
 
-1. 에러 감지 시 `prompt_for_gemini.md` 자동 업데이트
+1. 에러 감지 시 `docs/prompts/prompt_for_gemini.md` 자동 업데이트
 2. 파일 전체(`Ctrl+A` → `Ctrl+C`)를 Gemini / NotebookLM 에 붙여넣기
 3. Gemini 가 반환하는 `[Antigravity Task]` 블록만 복사
 4. Antigravity 대화창에 붙여넣어 즉시 실행
