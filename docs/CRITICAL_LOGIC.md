@@ -31,10 +31,11 @@
 - **Hybrid Sync**: WebSocket 브로드캐스트는 '트리거' 역할만 수행하며, 실제 데이터 업데이트는 클라이언트에서의 명시적 Refetch를 통해 정합성을 확보한다.
 - **Throttling**: 중복 fetch 방지를 위해 모든 API 호출 훅에는 최소 **500ms의 `lastFetchRef` 가드**를 적용해야 한다.
 
-### 2.3 DB Update 최적화 (단일 트랜잭션)
-- **Select Chaining**: 상태 업데이트 등 DB 수정 시, `update()` 직후 `.select()`를 체이닝하여 수정된 데이터와 연관 데이터를 한 번의 왕복(Network Round-trip)으로 반환받아야 한다.
-- 예시: `await db.table("requests").update({"status": "done"}).eq("id", id).select("*, admissions(*)").single().execute()`
-- **목적**: 네트워크 지연 시간(Latency) 최소화 및 불필요한 다중 DB 호출에 따른 정합성 문제 사전 차단.
+### 2.3 DB Update 최적화 (supabase-py 호환)
+- **supabase-py v2+ 제약**: `UpdateRequestBuilder`/`DeleteRequestBuilder`는 `.select()` 메서드를 지원하지 않는다. `update().eq().select()` 체이닝은 **불가**.
+- **권장 패턴 (2단계 분리)**: (1) `update().eq()` 또는 `delete().eq()` 실행. (2) 브로드캐스트·응답용 데이터가 필요하면 **별도** `select().eq()` 호출.
+- 예시: `await db.table("requests").update({"status": "done"}).eq("id", id).execute()` → `await db.table("requests").select("*").eq("id", id).single().execute()`
+- **목적**: 네트워크 왕복은 2회 발생하나, 라이브러리 호환성과 에러 방지가 우선. 상세 사례는 `docs/TROUBLESHOOTING.md` §11 참고.
 
 ---
 

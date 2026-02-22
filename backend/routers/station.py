@@ -113,15 +113,16 @@ async def update_document_request_status(
     db: AsyncClient = Depends(get_supabase)
 ):
     """Update document request status (e.g., PENDING -> COMPLETED)"""
-    # Optimized: Update and fetch joined data in a single round-trip
+    # UpdateRequestBuilder does not support .select(); split into update then fetch
+    await execute_with_retry_async(
+        db.table("document_requests").update({"status": status}).eq("id", request_id)
+    )
     response = await execute_with_retry_async(
         db.table("document_requests")
-        .update({"status": status})
-        .eq("id", request_id)
         .select("*, admissions(room_number, access_token)")
+        .eq("id", request_id)
         .single()
     )
-    
     if not response.data:
         raise HTTPException(status_code=404, detail="Request not found")
     
@@ -176,15 +177,16 @@ async def update_meal_request_status(
         if g_val: update_payload['guardian_meal_type'] = g_val
         # Note: Do not set requested_* to None here to avoid PGRST204 if columns are missing in DB
 
-    # 2. DB 업데이트 및 결과 조회 (Optimization: combined update + select)
+    # 2. Update first (UpdateRequestBuilder does not support .select()); then fetch for broadcast
+    await execute_with_retry_async(
+        db.table("meal_requests").update(update_payload).eq("id", request_id)
+    )
     response = await execute_with_retry_async(
         db.table("meal_requests")
-        .update(update_payload)
-        .eq("id", request_id)
         .select("*, admissions(room_number, access_token)")
+        .eq("id", request_id)
         .single()
     )
-    
     if not response.data:
          raise HTTPException(status_code=404, detail="Update failed or Request not found")
 

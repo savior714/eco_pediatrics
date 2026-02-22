@@ -188,7 +188,7 @@ def _generate_prompt(session_errors: list[dict[str, str]]) -> None:
 
 ## 3. Instruction
 
-위 에러 내역(특히 가장 최근 항목)을 분석하고 **[Antigravity Task]** 프로토콜에 맞춰 수정 계획을 제시해 주세요.
+위 에러 내역(특히 가장 최근 항목)을 분석하고 **[Antigravity Task]** 프로토콜에 맞춰 수정 계획을 제시해 주세요. (답변받는 agent가 cursor-small, cursor-small-v2 정도의 agent임을 감안하고 답변해줄 것, 나눠서 해야하는 것이면 todolist화 해서)
 """
     try:
         OUTPUT_FILE.write_text(prompt, encoding="utf-8")

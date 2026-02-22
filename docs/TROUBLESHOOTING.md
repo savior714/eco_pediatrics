@@ -150,6 +150,7 @@ exit
 | 7 | 3분할 레이아웃 역전 (상단 2분할 + 하단 1개) | `split-pane -H` 직후 **`move-focus down`** 추가 → 그 다음 `split-pane -V`로 하단만 좌우 분할 (포커스 의존 제거) |
 | 8 | Frontend `cargo ... program not found` (Tauri) | Rust 툴체인 설치: rustup (https://rustup.rs/ 또는 `winget install Rustlang.Rustup`). 설치 후 터미널 재시작. doctor에 cargo 검사 추가. |
 | 9 | 에러 모니터 미동작 / 프론트 에러 미감지 | launch_wt_dev.ps1: 모니터는 backend\\.venv\\Scripts\\python.exe 사용, Frontend는 Tee-Object로 frontend/logs/frontend.log 기록. error_monitor.py: main() 진입 시 로그 디렉터리 선제 생성. |
+| 10 | 식단/서류 상태 변경 시 AsyncFilterRequestBuilder 에러 | station.py: update/delete 후 `.select()` 체이닝 대신 2단계 분리 (update 실행 → 별도 select 조회). supabase-py v2+는 UpdateRequestBuilder에서 .select() 미지원. |
 
 위 조치 적용 후 **[2] Environment Setup** 실행 시 Doctor까지 [OK]로 통과하고, **[1] Start Dev Mode** 실행 시 런처는 닫히고 **상단 20% Error Monitor + 하단 80% Backend/Frontend 2분할** WT 창이 정상적으로 유지됩니다.
 
@@ -249,3 +250,35 @@ exit
 - **Outer Quote 제거**: 각 패널의 실행 명령(`$feCmd` 등) 앞뒤의 따옴표를 제거하여 `wt`가 실행 파일과 인자를 토큰별로 정확히 구분하게 함.
 - **Raw Delimiter**: 백슬래시 없는 순수 세미콜론(` ; `)으로 명령 단위를 분할.
 - **Pipeline Removal**: `Tee-Object` 파이프라인을 완전히 제거하여 구문 복잡도를 낮추고 실행 안정성 100% 확보.
+
+---
+
+## 11. 식단/서류 상태 변경 시 `'AsyncFilterRequestBuilder' object has no attribute 'select'` 에러
+
+### 현상
+- 식단 변경 승인(`update_meal_request_status`) 또는 서류 요청 상태 변경(`update_document_request_status`) 시 500 에러 발생.
+- Backend 로그에 `'AsyncFilterRequestBuilder' object has no attribute 'select'` 출력.
+
+### 원인
+- **supabase-py v2+**에서 `UpdateRequestBuilder`/`DeleteRequestBuilder`는 `.select()` 메서드를 지원하지 않음.
+- `update().eq().select()` 또는 `update({"status": "..."}).eq("id", id).select("*")` 형태의 체이닝이 불가능.
+
+### 해결 (적용됨, backend/routers/station.py)
+- **2단계 분리 패턴** 적용:
+  1. `update().eq()` 또는 `delete().eq()`만 실행 (`await execute_with_retry_async(...)`).
+  2. 브로드캐스트용 데이터가 필요하면 **별도** `select().eq()` 호출로 조회.
+
+```python
+# BAD (supabase-py에서 지원 안 함)
+res = await db.table("meal_requests").update(payload).eq("id", id).select("*").execute()
+
+# GOOD
+await execute_with_retry_async(db.table("meal_requests").update(payload).eq("id", request_id))
+row = await execute_with_retry_async(db.table("meal_requests").select("*").eq("id", request_id).single())
+```
+
+### 영향 범위
+- `update_document_request_status`, `update_meal_request_status` 엔드포인트.
+
+### 검증
+- `backend/search_error.py` 실행 시 `.update().select()`, `.delete().select()` 등 BAD 패턴이 남아 있으면 출력됨.

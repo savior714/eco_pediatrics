@@ -5,6 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import os
+import traceback
 from contextlib import asynccontextmanager
 
 from database import init_supabase
@@ -65,7 +66,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     if isinstance(exc, StarletteHTTPException):
         return await http_exception_handler(request, exc)
     
-    logger.critical(f"Unhandled exception: {exc}")
+    logger.critical(f"Unhandled exception: {exc}\n{traceback.format_exc()}")
     # In development/local, we want more transparency
     detail = "Internal Server Error"
     if os.getenv("ENV") in ["local", "development"]:
