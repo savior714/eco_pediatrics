@@ -74,10 +74,14 @@ export function PatientDetailModal({
 
     const { chartVitals, chartCheckIn } = useMemo(() => {
         if (!bed) return { chartVitals: [], chartCheckIn: null };
+        // [SSOT] 모달 열린 후에는 useVitals(fetchedVitals)를 최우선으로 사용. 부모 propVitals는 초기 진입 시에만 참조하여 Thin Object 유입 방지.
+        if (fetchedVitals.length > 0) {
+            return { chartVitals: fetchedVitals, chartCheckIn: fetchedCheckIn || propCheckInAt || null };
+        }
         if (propVitals && propVitals.length > 0) {
             return { chartVitals: propVitals, chartCheckIn: propCheckInAt ?? null };
         }
-        return { chartVitals: fetchedVitals, chartCheckIn: fetchedCheckIn || propCheckInAt || null };
+        return { chartVitals: [], chartCheckIn: propCheckInAt || null };
     }, [bed, propVitals, propCheckInAt, fetchedVitals, fetchedCheckIn]);
 
     const latestVital = fetchedVitals.length > 0 ? fetchedVitals[0] : null;
@@ -156,7 +160,18 @@ export function PatientDetailModal({
                                         alert('삭제 실패');
                                     });
                                 }}
-                                onCompleteRequest={(id, type) => onCompleteRequest?.(id, type, bed.id)}
+                                onCompleteRequest={(id, type) => {
+                                    // 1. 네트워크 통신은 백그라운드에서 비동기로 던져둠 (await 제거)
+                                    onCompleteRequest?.(id, type, bed.id)?.then(() => {
+                                        fetchDashboardData({ force: true });
+                                    }).catch(err => {
+                                        console.error('[PatientDetailModal] 상태 업데이트 실패:', err);
+                                    });
+                                    // 2. 통신 완료를 기다리지 않고 UI 스크롤 및 피드백 즉시 실행 (Non-blocking)
+                                    requestAnimationFrame(() => {
+                                        document.getElementById('patient-sidebar-completed-docs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    });
+                                }}
                             />
                         </div>
                     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useVitals } from './useVitals';
 import { DOC_MAP } from '@/constants/mappings';
@@ -13,16 +13,15 @@ export function useDashboardStats() {
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
 
-    const vitalsData = useVitals(token, true, () => {
+    const onDischarge = useCallback(() => {
         alert("퇴원 처리되었거나 유효하지 않은 접근입니다.");
         if (typeof window !== 'undefined') {
             window.close();
-            // Fallback for browsers that block window.close()
-            setTimeout(() => {
-                router.push('/403');
-            }, 500);
+            setTimeout(() => { router.push('/403'); }, 500);
         }
-    });
+    }, [router]);
+
+    const vitalsData = useVitals(token, true, onDischarge);
 
     const [isMealModalOpen, setIsMealModalOpen] = useState(false);
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);

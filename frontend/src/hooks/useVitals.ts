@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useWebSocket } from './useWebSocket';
-import { api } from '@/lib/api';
+import { api, appLog } from '@/lib/api';
 import { VitalData, Bed, WsMessage, IVRecord, MealRequest, DocumentRequest, ExamScheduleItem, VitalDataResponse } from '@/types/domain';
 
 interface UseVitalsReturn {
@@ -55,6 +55,8 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
     const lastFetchRef = useRef<number>(0);
     // 404/403 시 이후 모든 fetch 차단 (폴링/재호출로 인한 무한 404 방지)
     const tokenInvalidatedRef = useRef(false);
+    // 초기 fetch는 token/enabled당 1회만 실행 (부모 리렌더 시 fetchDashboardData 참조 변경으로 인한 연쇄 호출 방지)
+    const initialFetchDoneRef = useRef(false);
 
     const fetchDashboardData = useCallback(async (opts?: { force?: boolean }) => {
         if (!token) return;
@@ -66,6 +68,7 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
 
         const currentRequestId = ++requestRef.current;
         setIsRefreshing(true);
+        appLog('info', `[DEBUG] fetchDashboardData 호출됨. force: ${opts?.force}, currentRequestId: ${currentRequestId}`);
         // [Fix] force 시 cache-busting param으로 api.ts 100ms dedup 우회. 완료 버튼 클릭 후 리프레시가 실제 요청 수행되도록 함.
         const cacheBust = opts?.force ? `?_t=${Date.now()}` : '';
         try {
@@ -75,48 +78,69 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                 }
             });
 
-            // Sequence Guard: Ignore if a newer request was started (unless force: manual refresh wins)
-            if (currentRequestId !== requestRef.current) {
-                if (!opts?.force) {
-                    console.warn(`[useVitals] Outdated request ignored: ${currentRequestId}`);
-                    return;
-                }
+            // 1. 빈 응답 방어 (api.ts 100ms dedup 우회 실패 시)
+            if (!data || Object.keys(data).length === 0) {
+                appLog('error', '[useVitals DEBUG] API로부터 빈 응답({}) 수신. 기존 상태 유지.');
+                return;
             }
 
-            // [Fix] Empty body from api.ts dedup (100ms) or network: do not overwrite state; log for debugging
-            if (data && Object.keys(data).length > 0) {
-                // Admission Info
-                if (data.admission) {
-                    setAdmissionId(data.admission.id);
-                    setPatientName(data.admission.display_name || data.admission.patient_name_masked || '환자');
-                    setRoomNumber(data.admission.room_number);
-                    setCheckInAt(data.admission.check_in_at);
-                    setDob(data.admission.dob || null);
-                    setGender(data.admission.gender || null);
-                }
+            appLog('info', '[DEBUG] dashboard response document_requests:', data?.document_requests);
 
-                if (data.vitals && Array.isArray(data.vitals)) {
-                    const formattedVitals = data.vitals.map((v: VitalDataResponse) => ({
-                        time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                        temperature: v.temperature,
-                        has_medication: v.has_medication,
-                        medication_type: v.medication_type,
-                        recorded_at: v.recorded_at
-                    }));
-                    setVitals(formattedVitals);
-                }
-
-                if (data.meals != null) setMeals(data.meals);
-                if (data.document_requests !== undefined) setDocumentRequests(data.document_requests || []);
-                if (data.iv_records != null) setIvRecords(data.iv_records);
-                if (data.exam_schedules != null) setExamSchedules(data.exam_schedules);
-            } else {
-                console.error('[useVitals] Received empty data from API');
+            // 2. Force 응답 우선권 (Race condition 방어): 오래된 요청이면 force가 아닐 때만 무시
+            if (currentRequestId !== requestRef.current && !opts?.force) {
+                appLog('warn', `[useVitals DEBUG] 오래된 요청 무시됨. reqId: ${currentRequestId}, currentRef: ${requestRef.current}`);
+                return;
             }
+
+            // 3. 상태 업데이트
+            if (data.admission) {
+                setAdmissionId(data.admission.id);
+                setPatientName(data.admission.display_name || data.admission.patient_name_masked || '환자');
+                setRoomNumber(data.admission.room_number);
+                setCheckInAt(data.admission.check_in_at);
+                setDob(data.admission.dob || null);
+                setGender(data.admission.gender || null);
+            }
+
+            if (data.vitals && Array.isArray(data.vitals)) {
+                const formattedVitals = data.vitals.map((v: VitalDataResponse) => ({
+                    time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    temperature: v.temperature,
+                    has_medication: v.has_medication,
+                    medication_type: v.medication_type,
+                    recorded_at: v.recorded_at
+                }));
+                setVitals(formattedVitals);
+            }
+
+            if (data.meals != null) setMeals(data.meals);
+            if (data.document_requests !== undefined) {
+                setDocumentRequests(data.document_requests || []);
+                appLog('info', '[DEBUG] setDocumentRequests 업데이트 완료');
+            }
+            if (data.iv_records != null) setIvRecords(data.iv_records);
+            if (data.exam_schedules != null) setExamSchedules(data.exam_schedules);
         } catch (err: any) {
             if (currentRequestId !== requestRef.current && !opts?.force) return;
 
             const errorMessage = String(err?.message || '');
+
+            // 예상된 토큰 만료 에러: 로깅을 생략하고 조용히 종료하여 화면 에러/오버레이 방지
+            if (errorMessage.includes('Invalid or inactive admission token')) {
+                tokenInvalidatedRef.current = true;
+                console.warn('[useVitals] 만료된 토큰에 의한 데이터 패치 중단.');
+                if (onDischarge) {
+                    onDischarge();
+                } else {
+                    alert('이미 종료되었거나 유효하지 않은 페이지입니다. 병원으로 문의해 주세요.');
+                    if (typeof window !== 'undefined') {
+                        window.close();
+                        setTimeout(() => { window.location.href = '/403'; }, 500);
+                    }
+                }
+                return;
+            }
+
             if (errorMessage.includes('403') || errorMessage.includes('404')) {
                 tokenInvalidatedRef.current = true;
                 console.warn('Invalid token detected. Stopping further dashboard fetches.');
@@ -131,7 +155,8 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                 }
                 return;
             }
-            console.error('Dashboard Fetch Error:', err);
+
+            appLog('error', '[useVitals DEBUG] fetchDashboardData 에러:', err);
         } finally {
             if (currentRequestId === requestRef.current) {
                 setIsRefreshing(false);
@@ -141,6 +166,7 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
 
     useEffect(() => {
         tokenInvalidatedRef.current = false;
+        initialFetchDoneRef.current = false;
     }, [token]);
 
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -274,12 +300,17 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
         onMessage: handleMessage
     });
 
-    // Initial Fetch (Source of Truth)
+    // Initial Fetch (Source of Truth) — token/enabled당 1회만 실행. fetchDashboardData 의존성 제외로 부모 리렌더 시 연쇄 GET 방지.
     useEffect(() => {
-        if (token && enabled) {
-            fetchDashboardData();
+        if (!token || !enabled) {
+            initialFetchDoneRef.current = false;
+            return;
         }
-    }, [token, enabled, fetchDashboardData]);
+        if (initialFetchDoneRef.current) return;
+        initialFetchDoneRef.current = true;
+        fetchDashboardData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchDashboardData 제외 시 부모 리렌더로 인한 7연속 GET 방지
+    }, [token, enabled]);
 
     const addOptimisticVital = useCallback((temp: number, recordedAt: string) => {
         const tempId = `temp-vital-${Date.now()}`;

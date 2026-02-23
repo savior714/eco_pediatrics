@@ -75,6 +75,7 @@
 ### 3.4 Token Expiration Handling (Client-side)
 - **Status 404/403:** 토큰이 무효하거나 퇴원 처리가 완료된 것으로 간주함.
 - **Client Action:** 프론트엔드는 즉시 이후 대시보드 fetch를 중단하고(토큰 무효화 ref 설정), 사용자에게 서비스 종료 알림(Alert)을 노출한 후 세션을 종료(창 닫기 또는 리다이렉트)해야 함. WebSocket은 4003/1000 시 재연결 중단.
+- **Error Masking (Graceful Degradation):** 응답 메시지에 `Invalid or inactive admission token`이 포함된 404/403은 정상 방어로 간주하고, `console.error`·에러 오버레이를 띄우지 않고 `console.warn`만 출력한 뒤 리다이렉트를 진행한다. 상세는 `docs/SESSION_2026-02-23.md` §1 참고.
 
 ### 3.5 Backend Dependency Layers (의존성 계층)
 - **Core(웹 서비스)**: `backend/requirements-core.txt`에 fastapi, uvicorn, pydantic 등 빌드 불필요 패키지만 포함. C++ 확장 없이 설치 가능.

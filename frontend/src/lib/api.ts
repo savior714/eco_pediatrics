@@ -43,6 +43,21 @@ const tauriLog = async (level: 'info' | 'warn' | 'error' | 'debug', message: str
     }
 };
 
+/**
+ * Tauri일 때 plugin-log로 터미널(stdout)에 출력, 브라우저일 때는 console에 출력.
+ * [DEBUG] 등 프론트 로그를 Tauri 앱 실행 터미널에서 보려면 이 함수 사용.
+ */
+export function appLog(level: 'info' | 'warn' | 'error', ...args: unknown[]): void {
+    const message = args.map((a) => (typeof a === 'object' && a !== null ? JSON.stringify(a) : String(a))).join(' ');
+    if (isTauri) {
+        void tauriLog(level, message);
+    } else {
+        if (level === 'info') console.log(...args);
+        else if (level === 'warn') console.warn(...args);
+        else console.error(...args);
+    }
+}
+
 class ApiClient {
     private baseUrl: string;
 
@@ -88,8 +103,15 @@ class ApiClient {
                 const errorMsg = `API Error ${res.status}: ${errorText}`;
 
                 // 404, 403 등 명확한 에러는 재시도하지 않음
-                console.error(errorMsg);
-                await tauriLog('error', `API Failure: ${options?.method || 'GET'} ${url} -> ${errorMsg}`);
+                const isExpectedTokenError = errorMsg.includes('Invalid or inactive admission token');
+
+                if (!isExpectedTokenError) {
+                    console.error(errorMsg);
+                    await tauriLog('error', `API Failure: ${options?.method || 'GET'} ${url} -> ${errorMsg}`);
+                } else {
+                    console.warn('[API] 만료된 토큰 접근 감지. 정상 리다이렉트 대기 중...');
+                }
+
                 throw new Error(errorMsg);
             }
 
