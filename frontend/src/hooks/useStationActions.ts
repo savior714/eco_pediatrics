@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Bed, Notification } from '@/types/domain';
 import { api } from '@/lib/api';
 import { useStation } from './useStation';
@@ -103,6 +103,16 @@ export function useStationActions() {
         }
     }, [fetchAdmissions]);
 
+    const handleCardClick = useCallback((room: string) => {
+        setSelectedRoom(room);
+    }, []);
+
+    const handleQrClick = useCallback((e: React.MouseEvent, bed: Bed) => {
+        e.stopPropagation();
+        if (bed.token) setQrBed(bed);
+        else alert('토큰 없음');
+    }, []);
+
     return {
         stationData,
         state: {
@@ -121,6 +131,8 @@ export function useStationActions() {
             handleNotificationClick,
             handleDischargeAll,
             handleSeedSingle,
+            handleCardClick,
+            handleQrClick,
             setBeds
         }
     };

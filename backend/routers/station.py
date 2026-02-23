@@ -90,16 +90,18 @@ async def request_document(
     new_request = response.data[0]
     
     # Broadcast to station and the specific admission (for real-time update in sub-modal/guardian)
+    from constants.mappings import DOC_MAP
     room = adm_res.data['room_number']
+    item_names = [DOC_MAP.get(it, it) for it in request.request_items]
     message = {
         "type": "NEW_DOC_REQUEST",
         "data": {
             "id": new_request['id'],
             "room": room,
-            "admission_id": request.admission_id, # Added for context
+            "admission_id": request.admission_id,
             "request_items": request.request_items,
             "created_at": datetime.now().isoformat(),
-            "content": f"서류 신청 ({', '.join(request.request_items)})"
+            "content": f"서류 신청 ({', '.join(item_names)})"
         }
     }
     await manager.broadcast(json.dumps(message), "STATION")
@@ -113,10 +115,17 @@ async def update_document_request_status(
     db: AsyncClient = Depends(get_supabase)
 ):
     """Update document request status (e.g., PENDING -> COMPLETED)"""
-    # UpdateRequestBuilder does not support .select(); split into update then fetch
-    await execute_with_retry_async(
+    # 1. Update 실행 및 RLS 조용한 실패(Silent Failure) 엄격한 검증
+    update_res = await execute_with_retry_async(
         db.table("document_requests").update({"status": status}).eq("id", request_id)
     )
+    if not update_res.data:
+        raise HTTPException(
+            status_code=403,
+            detail="상태 업데이트 실패: RLS UPDATE 정책이 누락되었거나 권한이 없습니다.",
+        )
+
+    # 2. Select로 최신 DB 상태 조회
     response = await execute_with_retry_async(
         db.table("document_requests")
         .select("*, admissions(room_number, access_token)")
@@ -125,26 +134,23 @@ async def update_document_request_status(
     )
     if not response.data:
         raise HTTPException(status_code=404, detail="Request not found")
-    
-    updated_request = response.data
-    
-    # STATION 및 해당 환자 채널 브로드캐스트
-    admission_data = updated_request.get('admissions') or {}
-    room_number = admission_data.get('room_number')
-    admission_token = admission_data.get('access_token')
 
+    updated_request = response.data
+    admission_data = updated_request.get("admissions") or {}
+
+    # 3. STATION 및 해당 환자 채널 브로드캐스트 (DB에 기록된 팩트 데이터 전송)
     message = {
         "type": "DOC_REQUEST_UPDATED",
         "data": {
-            "id": updated_request['id'],
-            "status": status,
-            "room": room_number
-        }
+            "id": updated_request["id"],
+            "status": updated_request["status"],
+            "room": admission_data.get("room_number"),
+        },
     }
     await manager.broadcast(json.dumps(message), "STATION")
-    if admission_token:
-        await manager.broadcast(json.dumps(message), admission_token)
-    
+    if admission_data.get("access_token"):
+        await manager.broadcast(json.dumps(message), admission_data["access_token"])
+
     return updated_request
 
 @router.patch("/meals/requests/{request_id}", response_model=MealRequest)

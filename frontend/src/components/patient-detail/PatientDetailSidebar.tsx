@@ -40,6 +40,12 @@ export function PatientDetailSidebar({
         return roomNotifications;
     }, [roomNotifications]);
 
+    // 신청된 서류: 완료된 항목만 표시. 백엔드 상태값 대소문자 불일치 방지
+    const completedDocs = React.useMemo(
+        () => documentRequests.filter((r) => String(r.status ?? '').toUpperCase() === 'COMPLETED'),
+        [documentRequests]
+    );
+
     return (
         <div className="lg:col-span-5 space-y-6 flex flex-col">
             <section className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex-1">
@@ -79,20 +85,20 @@ export function PatientDetailSidebar({
                 </div>
             </section>
 
-            <section className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex-1">
+            <section id="patient-sidebar-completed-docs" className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex-1">
                 <h3 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
                     <FileText size={16} className="text-sky-500" />
                     신청된 서류
                 </h3>
                 <div className="bg-slate-50/50 rounded-xl border border-slate-200 p-4">
-                    {documentRequests.filter(r => r.status === 'COMPLETED').length > 0 ? (
+                    {completedDocs.length > 0 ? (
                         <div className="space-y-3">
-                            {documentRequests.filter(r => r.status === 'COMPLETED').map((req, idx) => (
+                            {completedDocs.map((req, idx) => (
                                 <div key={`doc-request-group-${req.id}-${idx}`} className="space-y-1">
                                     <div className="text-[10px] text-slate-400 font-bold flex items-center gap-1.5">
                                         {new Date(req.created_at).toLocaleDateString()} 신청분
-                                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold ${req.status === 'COMPLETED' ? 'bg-teal-100 text-teal-600' : 'bg-amber-100 text-amber-600'}`}>
-                                            {req.status === 'COMPLETED' ? '완료' : '대기'}
+                                        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-teal-100 text-teal-600">
+                                            완료
                                         </span>
                                     </div>
                                     <ul className="space-y-1 text-xs text-slate-600">

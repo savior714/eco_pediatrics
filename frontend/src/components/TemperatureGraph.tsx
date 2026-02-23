@@ -353,27 +353,31 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
 }
 
 function arePropsEqual(prev: TemperatureGraphProps, next: TemperatureGraphProps) {
+    // 1. 참조가 같으면(Reference Equality) 즉시 렌더링 스킵 (O(1))
     if (prev.checkInAt !== next.checkInAt) return false;
     if (prev.className !== next.className) return false;
-
-    // Most common case: Stable prop reference (e.g. parent re-render from unrelated state)
-    // In this case, standard React.memo behavior is sufficient and O(1).
     if (prev.data === next.data) return true;
 
+    // 2. 배열 길이가 다르면 추가 검사 없이 리렌더링 (O(1))
     if (prev.data.length !== next.data.length) return false;
 
-    // Fast check for common case: data appended
-    const prevFirst = prev.data[0];
-    const nextFirst = next.data[0];
-    const prevLast = prev.data[prev.data.length - 1];
-    const nextLast = next.data[next.data.length - 1];
+    // 3. 명시적 반복문을 통한 얕은 순회 비교 (O(N) - 직렬화/메모리 할당 없음)
+    for (let i = 0; i < prev.data.length; i++) {
+        const p = prev.data[i];
+        const n = next.data[i];
 
-    if (prevFirst?.recorded_at !== nextFirst?.recorded_at) return false;
-    if (prevLast?.recorded_at !== nextLast?.recorded_at) return false;
-    if (prevFirst?.temperature !== nextFirst?.temperature) return false;
+        if (
+            p.recorded_at !== n.recorded_at ||
+            p.temperature !== n.temperature ||
+            p.has_medication !== n.has_medication ||
+            p.medication_type !== n.medication_type ||
+            p.isOptimistic !== n.isOptimistic
+        ) {
+            return false; // Early exit
+        }
+    }
 
-    // Deep check for safety when reference changes but content might be same
-    return JSON.stringify(prev.data) === JSON.stringify(next.data);
+    return true;
 }
 
 export const TemperatureGraph = React.memo(TemperatureGraphBase, arePropsEqual);

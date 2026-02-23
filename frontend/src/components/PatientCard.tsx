@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Card } from './Card';
 import { Thermometer, Droplet, QrCode } from 'lucide-react';
 import { formatPatientDemographics } from '@/utils/dateUtils';
+import { Bed } from '@/types/domain';
 
 interface PatientCardProps {
     name: string;
@@ -11,11 +12,12 @@ interface PatientCardProps {
     status: 'normal' | 'fever' | 'warning';
     dob?: string;
     gender?: string;
-    onCardClick?: () => void;
-    onQrClick?: (e: React.MouseEvent) => void;
+    bed?: Bed;
+    onCardClick?: (room: string) => void;
+    onQrClick?: (e: React.MouseEvent, bed: Bed) => void;
 }
 
-export function PatientCard({ name, roomNumber, temperature, infusionRate, status, dob, gender, onCardClick, onQrClick }: PatientCardProps) {
+export const PatientCard = memo(function PatientCard({ name, roomNumber, temperature, infusionRate, status, dob, gender, bed, onCardClick, onQrClick }: PatientCardProps) {
     const statusStyles = {
         fever: 'border-status-danger border-2 bg-red-100 shadow-sm shadow-red-200',
         warning: 'border-status-warning border-2 bg-orange-50',
@@ -25,7 +27,7 @@ export function PatientCard({ name, roomNumber, temperature, infusionRate, statu
     return (
         <Card
             className={`relative transition-all duration-300 ${statusStyles[status]} ${onCardClick ? 'cursor-pointer' : ''} !p-3 pb-2 pt-4`}
-            onClick={onCardClick}
+            onClick={onCardClick ? () => onCardClick(roomNumber) : undefined}
         >
             <div className="flex justify-between items-start mb-2">
                 <div>
@@ -38,9 +40,9 @@ export function PatientCard({ name, roomNumber, temperature, infusionRate, statu
                         </span>
                     </div>
                 </div>
-                {onQrClick && (
+                {onQrClick && bed && (
                     <button
-                        onClick={onQrClick}
+                        onClick={(e) => onQrClick(e, bed)}
                         className="p-1.5 bg-white/50 hover:bg-white rounded-lg text-slate-400 hover:text-teal-600 transition-colors"
                         title="보호자용 QR 코드 보기"
                     >
@@ -70,4 +72,4 @@ export function PatientCard({ name, roomNumber, temperature, infusionRate, statu
             </div>
         </Card >
     );
-}
+});

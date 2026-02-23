@@ -23,5 +23,19 @@ USING (
   )
 );
 
+-- 4. UPDATE 정책 추가 (RLS 조용한 실패 방지: Station에서 완료 처리 시 반영되도록)
+DROP POLICY IF EXISTS "Enable update for station and active admissions" ON public.document_requests;
+CREATE POLICY "Enable update for station and active admissions"
+ON public.document_requests
+FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM admissions
+    WHERE admissions.id = document_requests.admission_id
+    AND admissions.status IN ('IN_PROGRESS', 'OBSERVATION')
+  )
+)
+WITH CHECK (true);
+
 -- 정책 반영 확인용 (PostgREST 캐시 갱신)
 NOTIFY pgrst, 'reload schema';

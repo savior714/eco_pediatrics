@@ -281,19 +281,21 @@ export function useStation(): UseStationReturn {
         onMessage: handleMessage
     });
 
-    const removeNotification = useCallback(async (id: string, type?: string, admissionId?: string) => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
-
-        // id 접두사에서 type과 rawId 추출 (예: 'meal_34' → type='meal', rawId='34')
+    const removeNotification = useCallback(async (id: string, type?: string, _admissionId?: string) => {
+        // id 접두사에서 type과 rawId 추출 (예: 'doc_34' → parsedType='doc', rawId='34')
         const match = id.match(/^(meal|doc)_(\d+)$/);
-        if (admissionId && match) {
-            try {
-                const [, parsedType, rawId] = match;
-                const endpoint = (type || parsedType) === 'doc' ? 'documents' : 'meals';
-                await api.patch(`/api/v1/${endpoint}/requests/${rawId}?status=COMPLETED`, {});
-            } catch (e) {
-                console.error('Status Update Failed', e);
-            }
+        if (!match) {
+            setNotifications(prev => prev.filter(n => n.id !== id));
+            return;
+        }
+        const [, parsedType, rawId] = match;
+        const endpoint = (type || parsedType) === 'doc' ? 'documents' : 'meals';
+        try {
+            await api.patch(`/api/v1/${endpoint}/requests/${rawId}?status=COMPLETED`, {});
+            setNotifications(prev => prev.filter(n => n.id !== id));
+        } catch (e) {
+            console.error('Status Update Failed', e);
+            alert('완료 처리에 실패했습니다. 다시 시도해 주세요.');
         }
     }, []);
 

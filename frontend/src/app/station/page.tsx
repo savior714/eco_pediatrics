@@ -89,17 +89,14 @@ export default function Station() {
                             return (
                                 <PatientCard
                                     key={bed.room}
+                                    bed={bed}
                                     name={bed.name}
                                     roomNumber={bed.room}
                                     temperature={bed.temp !== null ? bed.temp.toFixed(1) : '-'}
                                     infusionRate={bed.drops ?? '-'}
                                     status={bed.status}
-                                    onCardClick={() => actions.setSelectedRoom(bed.room)}
-                                    onQrClick={(e) => {
-                                        e.stopPropagation();
-                                        if (bed.token) actions.setQrBed(bed);
-                                        else alert('토큰 없음');
-                                    }}
+                                    onCardClick={actions.handleCardClick}
+                                    onQrClick={actions.handleQrClick}
                                     dob={bed.dob}
                                     gender={bed.gender}
                                 />

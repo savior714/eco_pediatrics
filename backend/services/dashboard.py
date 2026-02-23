@@ -46,7 +46,7 @@ async def fetch_dashboard_data(db: AsyncClient, admission_id: str):
             .eq("admission_id", admission_id)
             .order("scheduled_at")
         ),
-        # 6. Document Requests
+        # 6. Document Requests (PENDING + COMPLETED 모두 포함. 신청된 서류 섹션에 완료 이력 노출용)
         execute_with_retry_async(
             db.table("document_requests")
             .select("id,admission_id,request_items,status,created_at")

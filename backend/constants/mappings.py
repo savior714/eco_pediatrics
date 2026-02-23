@@ -7,11 +7,11 @@ MEAL_MAP = {
     'NPO': '금식'
 }
 
-# 서류 신청 아이템 매핑
+# 서류 신청 아이템 매핑 (스테이션 알림·대시보드 공통)
 DOC_MAP = {
-    'RECEIPT': '영수증',
+    'RECEIPT': '진료비 계산서(영수증)',
     'DETAIL': '세부내역서',
-    'CERT': '진단서',
-    'DIAGNOSIS': '소견서',
-    'INITIAL': '기록지'
+    'CERT': '입퇴원확인서',
+    'DIAGNOSIS': '진단서',
+    'INITIAL': '초진기록지',
 }

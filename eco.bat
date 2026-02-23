@@ -1,5 +1,4 @@
 @echo off
-chcp 65001 > nul
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 title Eco-Pediatrics Launcher
@@ -97,14 +96,15 @@ if not exist ".venv" (
     )
 )
 
-:: SDK auto-discovery (Windows Kits 10) for Python 3.14 / VS 2026 build
+:: SDK auto-discovery (Windows Kits 10) + ?? ?? for C ?? ??(io.h ?)
 echo    - Configuring Build Environment (SDK Discovery)...
-for /f "tokens=*" %%i in ('powershell -NoProfile -Command "(Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\Include\10.*' -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1).Name"') do set "SDK_VER=%%i"
+powershell -ExecutionPolicy Bypass -NoProfile -File "%~dp0scripts\Refresh-BuildEnv.ps1"
+for /f "tokens=*" %%i in ('powershell -NoProfile -Command "Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\Include' -Directory -EA 0 | Where-Object { $_.Name -match '^10\.\d' } | Sort-Object Name -Desc | Select-Object -First 1 | ForEach-Object { $_.Name }"') do set "SDK_VER=%%i"
 if defined SDK_VER (
     set "SDK_INC=C:\Program Files (x86)\Windows Kits\10\Include\%SDK_VER%"
     set "SDK_LIB=C:\Program Files (x86)\Windows Kits\10\Lib\%SDK_VER%"
     set "SDK_BIN=C:\Program Files (x86)\Windows Kits\10\bin\%SDK_VER%\x64"
-    set "INCLUDE=!SDK_INC!\ucrt;!SDK_INC!\shared;!SDK_INC!\um;!INCLUDE!"
+    set "INCLUDE=!SDK_INC!\ucrt;!SDK_INC!\shared;!SDK_INC!\um;!SDK_INC!\winrt;!INCLUDE!"
     set "LIB=!SDK_LIB!\ucrt\x64;!SDK_LIB!\um\x64;!LIB!"
     set "PATH=!SDK_BIN!;!PATH!"
 ) else (

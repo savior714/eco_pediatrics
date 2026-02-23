@@ -158,6 +158,11 @@ async def seed_all_meals(db: AsyncClient):
                 
     if meal_records:
         await execute_with_retry_async(db.rpc("upsert_meal_requests_admin", {"p_meals": meal_records}))
+        # 모든 클라이언트(Station, Guardian 등)에게 대시보드 갱신 트리거 전송
+        await manager.broadcast_all(json.dumps({
+            "type": "REFRESH_DASHBOARD",
+            "data": {"admission_id": "ALL"}
+        }))
         return {"message": f"성공: {len(admissions)}명의 환자에게 총 {len(meal_records)}개의 식단 데이터가 시딩되었습니다."}
     
     return {"message": "생성된 데이터가 없습니다."}

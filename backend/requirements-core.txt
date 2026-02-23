@@ -1,0 +1,15 @@
+# Core Web Stack - C++ 확장 빌드 없이 설치 가능한 핵심 의존성
+# pyiceberg/pyroaring 등 데이터 분석용 모듈 제외 (빌드 환경 미구성 시 우선 사용)
+#
+# 사용법: pip install -r requirements-core.txt
+# 백엔드 실행(uvicorn)에는 supabase 필수. supabase는 storage3->pyiceberg 의존으로
+# C++ 빌드(Windows SDK io.h) 필요. 전체 설치 실패 시:
+#   1) pip install supabase  별도 시도 (pyiceberg 빌드 성공 환경에서)
+#   2) 또는 Visual Studio Build Tools + Windows SDK 설치 후 pip install -r requirements.txt
+#
+fastapi>=0.128.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.0
+pydantic-settings
+python-dotenv
+httpx>=0.26.0
