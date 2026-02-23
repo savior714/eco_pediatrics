@@ -17,6 +17,37 @@ interface PatientCardProps {
     onQrClick?: (e: React.MouseEvent, bed: Bed) => void;
 }
 
+function arePropsEqual(prev: PatientCardProps, next: PatientCardProps) {
+    if (prev.name !== next.name) return false;
+    if (prev.roomNumber !== next.roomNumber) return false;
+    if (prev.temperature !== next.temperature) return false;
+    if (prev.infusionRate !== next.infusionRate) return false;
+    if (prev.status !== next.status) return false;
+    if (prev.dob !== next.dob) return false;
+    if (prev.gender !== next.gender) return false;
+    if (prev.onCardClick !== next.onCardClick) return false;
+    if (prev.onQrClick !== next.onQrClick) return false;
+
+    // Bed comparison: Check if relevant fields changed
+    const prevBed = prev.bed;
+    const nextBed = next.bed;
+
+    // If one is undefined and other is not, re-render
+    if (!prevBed !== !nextBed) return false;
+
+    // If both undefined, equal (if other props match)
+    if (!prevBed && !nextBed) return true;
+
+    // If both defined, check relevant fields
+    if (prevBed && nextBed) {
+         if (prevBed.attending_physician !== nextBed.attending_physician) return false;
+         if (prevBed.token !== nextBed.token) return false;
+         if (prevBed.id !== nextBed.id) return false;
+    }
+
+    return true;
+}
+
 export const PatientCard = memo(function PatientCard({ name, roomNumber, temperature, infusionRate, status, dob, gender, bed, onCardClick, onQrClick }: PatientCardProps) {
     const statusStyles = {
         fever: 'border-status-danger border-2 bg-red-100 shadow-sm shadow-red-200',
@@ -89,4 +120,4 @@ export const PatientCard = memo(function PatientCard({ name, roomNumber, tempera
             </div>
         </Card >
     );
-});
+}, arePropsEqual);
