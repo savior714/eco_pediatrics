@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 
 export interface CommonMealPlan {
@@ -12,12 +12,19 @@ export interface CommonMealPlan {
 export function useMeals() {
     const [plans, setPlans] = useState<CommonMealPlan[]>([]);
     const [loading, setLoading] = useState(false);
+    const requestRef = useRef(0);
 
     const fetchPlans = useCallback(async (startDate: string, endDate: string) => {
+        const currentRequestId = ++requestRef.current;
         setLoading(true);
         try {
             const data = await api.get<CommonMealPlan[]>(`/api/v1/meals/plans?start_date=${startDate}&end_date=${endDate}`);
-            setPlans(data || []);
+            if (currentRequestId !== requestRef.current) {
+                console.warn(`[fetchPlans] 오래된 응답 무시됨. reqId: ${currentRequestId}`);
+                return;
+            }
+            if (!Array.isArray(data)) return;
+            setPlans(data);
         } catch (error) {
             console.error(error);
         } finally {

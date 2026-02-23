@@ -51,12 +51,14 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const requestRef = useRef(0);
+    const isMountedRef = useRef(true);
     // [Optimization] Prevent double-fetch on mount
     const lastFetchRef = useRef<number>(0);
     // 404/403 시 이후 모든 fetch 차단 (폴링/재호출로 인한 무한 404 방지)
     const tokenInvalidatedRef = useRef(false);
     // 초기 fetch는 token/enabled당 1회만 실행 (부모 리렌더 시 fetchDashboardData 참조 변경으로 인한 연쇄 호출 방지)
     const initialFetchDoneRef = useRef(false);
+    const initialLoadDoneRef = useRef(false);
 
     const fetchDashboardData = useCallback(async (opts?: { force?: boolean }) => {
         if (!token) return;
@@ -91,6 +93,7 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                 appLog('warn', `[useVitals DEBUG] 오래된 요청 무시됨. reqId: ${currentRequestId}, currentRef: ${requestRef.current}`);
                 return;
             }
+            if (!isMountedRef.current) return;
 
             // 3. 상태 업데이트
             if (data.admission) {
@@ -120,6 +123,7 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
             }
             if (data.iv_records != null) setIvRecords(data.iv_records);
             if (data.exam_schedules != null) setExamSchedules(data.exam_schedules);
+            initialLoadDoneRef.current = true;
         } catch (err: any) {
             if (currentRequestId !== requestRef.current && !opts?.force) return;
 
@@ -158,15 +162,34 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
 
             appLog('error', '[useVitals DEBUG] fetchDashboardData 에러:', err);
         } finally {
-            if (currentRequestId === requestRef.current) {
+            if (currentRequestId === requestRef.current && isMountedRef.current) {
                 setIsRefreshing(false);
             }
         }
     }, [token, onDischarge]);
 
     useEffect(() => {
+        isMountedRef.current = true;
+        return () => { isMountedRef.current = false; };
+    }, []);
+
+    // token 변경 시 ref 초기화 + 대시보드 상태 즉시 비움 (PatientDetailModal 환자 전환 시 잔상 방지)
+    useEffect(() => {
         tokenInvalidatedRef.current = false;
         initialFetchDoneRef.current = false;
+        initialLoadDoneRef.current = false;
+        setVitals([]);
+        setCheckInAt(null);
+        setMeals([]);
+        setDocumentRequests([]);
+        setIvRecords([]);
+        setExamSchedules([]);
+        setAdmissionId(null);
+        setPatientName(null);
+        setRoomNumber(null);
+        setDob(null);
+        setGender(null);
+        setIsRefreshing(false);
     }, [token]);
 
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -274,14 +297,22 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     break;
                 case 'NEW_MEAL_REQUEST':
                     if (admissionIdRef.current && message.data.admission_id === admissionIdRef.current) {
-                        // When a new meal request (or update) arrives, we just refresh to be safe or update inline
-                        // For simplicity and consistency with current implementation:
-                        debouncedRefetch();
+                        const data = { ...(message.data as any), isOptimistic: false };
+                        setMeals(prev => {
+                            const idx = prev.findIndex(m => m.id === data.id);
+                            if (idx !== -1) return prev.map(m => m.id === data.id ? data : m);
+                            return [...prev, data];
+                        });
                     }
                     break;
-                case 'MEAL_UPDATED': // If the backend ever sends this
+                case 'MEAL_UPDATED':
                     if (admissionIdRef.current && (message.data as any).admission_id === admissionIdRef.current) {
-                        setMeals(prev => prev.map(m => m.id === (message.data as any).id ? { ...(message.data as any), isOptimistic: false } : m));
+                        const data = { ...(message.data as any), isOptimistic: false };
+                        setMeals(prev => {
+                            const idx = prev.findIndex(m => m.id === data.id);
+                            if (idx !== -1) return prev.map(m => m.id === data.id ? data : m);
+                            return [...prev, data];
+                        });
                     }
                     break;
                 case 'REFRESH_DASHBOARD':
@@ -296,7 +327,9 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
     const { isConnected } = useWebSocket({
         url: token ? `${api.getBaseUrl().replace(/^http/, 'ws')}/ws/${token}` : '',
         enabled: !!token && enabled,
-        onOpen: fetchDashboardData,
+        onOpen: () => {
+            if (initialLoadDoneRef.current) fetchDashboardData();
+        },
         onMessage: handleMessage
     });
 

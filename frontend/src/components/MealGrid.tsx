@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { api } from '@/lib/api';
 import { Bed, MealRequest } from '@/types/domain';
 
@@ -40,24 +40,29 @@ export function MealGrid({ beds }: MealGridProps) {
         return d;
     });
 
+    const requestRef = useRef(0);
+
     const fetchMatrix = useCallback(async () => {
+        const currentRequestId = ++requestRef.current;
         setLoading(true);
         try {
             const dateStr = formatDate(activeDate);
             const res = await api.get(`/api/v1/meals/matrix?target_date=${dateStr}`);
 
-            const map: Record<string, Record<string, MealRequest>> = {};
-            // Initialize map for all patients to avoid lookup errors
-            patients.forEach(p => { if (p.id) map[p.id] = {} });
-
-            if (Array.isArray(res)) {
-                res.forEach((req: MealRequest) => {
-                    if (req.admission_id && req.meal_time) {
-                        if (!map[req.admission_id]) map[req.admission_id] = {};
-                        map[req.admission_id][req.meal_time] = req;
-                    }
-                });
+            if (currentRequestId !== requestRef.current) {
+                console.warn(`[fetchMatrix] 오래된 응답 무시됨. reqId: ${currentRequestId}`);
+                return;
             }
+            if (!Array.isArray(res)) return;
+
+            const map: Record<string, Record<string, MealRequest>> = {};
+            patients.forEach(p => { if (p.id) map[p.id] = {} });
+            res.forEach((req: MealRequest) => {
+                if (req.admission_id && req.meal_time) {
+                    if (!map[req.admission_id]) map[req.admission_id] = {};
+                    map[req.admission_id][req.meal_time] = req;
+                }
+            });
             setMatrix(map);
         } catch (e) {
             console.error("Fetch Matrix Error", e);
