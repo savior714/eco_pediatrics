@@ -26,3 +26,9 @@ tsc_output.txt
 # Gemini & Debug (에러 모니터 생성 파일)
 prompt_for_gemini.md
 test_run_output.txt
+
+# AI 워크플로우용 코드베이스 덤프 (대용량, 로컬 전용)
+docs/repomix-output.md
+docs/repomix-output.xml
+docs/repomix-output.txt
+repomix-output.*
