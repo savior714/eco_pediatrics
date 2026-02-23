@@ -7,6 +7,15 @@ import Portal from './common/Portal';
 
 const PHYSICIANS = ['조요셉', '김종률', '원유종', '이승주'];
 
+/** 생년월일 입력: 숫자만 허용, 8자리 시 YYYY-MM-DD로 포맷 */
+function formatBirthdayInput(raw: string): string {
+    const digits = raw.replace(/\D/g, '').slice(0, 8);
+    if (digits.length === 8) {
+        return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+    }
+    return digits;
+}
+
 interface AdmitSubModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -87,8 +96,8 @@ export function AdmitSubModal({ isOpen, onClose, roomNumber, onAdmit }: AdmitSub
                             <input
                                 type="text"
                                 value={birthday}
-                                onChange={e => setBirthday(e.target.value)}
-                                placeholder="YYYY-MM-DD"
+                                onChange={e => setBirthday(formatBirthdayInput(e.target.value))}
+                                placeholder="YYYY-MM-DD (예: 20150630)"
                                 className="w-full p-3.5 border-2 border-slate-100 rounded-xl focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 outline-none transition-all font-medium text-slate-700"
                             />
                         </div>

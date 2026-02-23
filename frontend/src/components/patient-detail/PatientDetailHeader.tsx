@@ -18,21 +18,27 @@ export function PatientDetailHeader({ bed, onClose, onDischarge, onTransfer, onS
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                     <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{bed.name}</h2>
-                    {/* 원장님 이니셜 (미표시 시 백엔드 응답·view_station_dashboard 확인) */}
-                    {bed.attending_physician && (
-                        <div
-                            className="flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 font-bold text-base border border-indigo-100 shadow-sm pointer-events-none"
-                            title={bed.attending_physician}
-                        >
-                            {bed.attending_physician.charAt(0)}
-                        </div>
-                    )}
                     <span className="text-xl text-slate-300 font-light">/</span>
                     <p className="text-slate-500 font-bold text-base mt-1">{bed.room}호</p>
                     {bed.dob && (
                         <span className={`text-base mt-1 ml-2 font-bold ${bed.gender === 'M' ? 'text-blue-500' : bed.gender === 'F' ? 'text-rose-500' : 'text-slate-500'}`}>
                             {formatPatientDemographics(bed.dob, bed.gender)}
                         </span>
+                    )}
+                    {bed.attending_physician ? (
+                        <div
+                            className="flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 font-bold text-base border border-indigo-100 shadow-sm pointer-events-none ml-2"
+                            title={bed.attending_physician}
+                        >
+                            {bed.attending_physician.charAt(0)}
+                        </div>
+                    ) : (
+                        <div
+                            className="flex items-center justify-center w-8 h-8 rounded-xl bg-slate-50 text-slate-400 font-bold text-base border border-slate-200 shadow-sm pointer-events-none cursor-help ml-2"
+                            title="담당의 미지정"
+                        >
+                            -
+                        </div>
                     )}
                     {bed.status === 'fever' && (
                         <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-full">

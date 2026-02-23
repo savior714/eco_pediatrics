@@ -25,6 +25,65 @@ const formatDisplayDate = (d: Date) => {
     return `${d.getMonth() + 1}/${d.getDate()} (${days[d.getDay()]})`;
 };
 
+const MEAL_TIMES = ['LUNCH', 'BREAKFAST', 'DINNER'] as const;
+
+/** 비고 읽기: LUNCH 우선, 없으면 BREAKFAST/DINNER에서 첫 번째 존재하는 room_note 사용 */
+function getRoomNoteFromMatrix(
+    matrix: Record<string, Record<string, MealRequest>>,
+    admissionId: string
+): string {
+    for (const time of MEAL_TIMES) {
+        const note = matrix[admissionId]?.[time]?.room_note;
+        if (note !== undefined && note !== '') return note;
+    }
+    return '';
+}
+
+/** 비고 저장 시 사용할 meal_time: 기존 레코드가 있는 시간대 우선, 없으면 LUNCH */
+function getTargetMealTimeForNote(
+    matrix: Record<string, Record<string, MealRequest>>,
+    admissionId: string
+): string {
+    if (matrix[admissionId]?.['LUNCH']) return 'LUNCH';
+    if (matrix[admissionId]?.['BREAKFAST']) return 'BREAKFAST';
+    if (matrix[admissionId]?.['DINNER']) return 'DINNER';
+    return 'LUNCH';
+}
+
+interface RoomNoteInputProps {
+    bed: Bed;
+    matrix: Record<string, Record<string, MealRequest>>;
+    onUpdate: (bed: Bed, mealTime: string, field: keyof MealRequest, value: string) => void;
+}
+
+function RoomNoteInput({ bed, matrix, onUpdate }: RoomNoteInputProps) {
+    const existingNote = getRoomNoteFromMatrix(matrix, bed.id ?? '');
+    const [localNote, setLocalNote] = useState(existingNote);
+
+    useEffect(() => {
+        setLocalNote(existingNote);
+    }, [existingNote]);
+
+    return (
+        <td className="p-0 border border-slate-300 h-[32px]">
+            <input
+                type="text"
+                className="w-full h-full px-2 bg-transparent border-none text-xs focus:ring-inset focus:ring-1 focus:ring-blue-500"
+                placeholder="-"
+                value={localNote}
+                onChange={(e) => setLocalNote(e.target.value)}
+                onBlur={(e) => {
+                    const value = e.target.value;
+                    const targetTime = getTargetMealTimeForNote(matrix, bed.id ?? '');
+                    if (value !== (matrix[bed.id ?? '']?.[targetTime]?.room_note ?? '')) {
+                        onUpdate(bed, targetTime, 'room_note', value);
+                    }
+                }}
+            />
+        </td>
+    );
+}
+
 export function MealGrid({ beds }: MealGridProps) {
     const [activeDate, setActiveDate] = useState<Date>(new Date());
     // Map: admissionId -> { BREAKFAST: MealRequest, LUNCH: MealRequest, ... }
@@ -228,21 +287,7 @@ export function MealGrid({ beds }: MealGridProps) {
                                 {renderCell(bed, 'DINNER', 'child')}
                                 {renderCell(bed, 'DINNER', 'guardian')}
 
-                                <td className="p-0 border border-slate-300 h-[32px]">
-                                    <input
-                                        type="text"
-                                        className="w-full h-full px-2 bg-transparent border-none text-xs focus:ring-inset focus:ring-1 focus:ring-blue-500"
-                                        placeholder="-"
-                                        defaultValue={matrix[bed.id]?.['LUNCH']?.room_note || ''}
-                                        // Using LUNCH as the 'main' note carrier as decided
-                                        onBlur={(e) => {
-                                            const oldVal = matrix[bed.id]?.['LUNCH']?.room_note || '';
-                                            if (e.target.value !== oldVal) {
-                                                handleUpdate(bed, 'LUNCH', 'room_note', e.target.value);
-                                            }
-                                        }}
-                                    />
-                                </td>
+                                <RoomNoteInput bed={bed} matrix={matrix} onUpdate={handleUpdate} />
                             </tr>
                         ))}
                         {patients.length === 0 && (

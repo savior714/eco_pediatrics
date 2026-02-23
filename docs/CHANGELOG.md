@@ -1,5 +1,26 @@
 # 문서·워크플로우 변경 이력
 
+## 2026-02-23
+
+### 스테이션 대시보드·식단 비고·그리드 애니메이션
+
+- **스테이션 원장 필터 및 입원 카운터**  
+  - `frontend/src/app/station/page.tsx`: 원장 이니셜(조/김/원/이) 토글 필터, `총 입원 : {activeCount} / {beds.length}` 동적 표시, `displayBeds` 기반 그리드 필터링.
+- **식단 비고 전실 후 유실 방지**  
+  - `frontend/src/components/MealGrid.tsx`: 비고 입력을 비제어(`defaultValue`)에서 제어 컴포넌트(`RoomNoteInput`)로 변경. LUNCH/BREAKFAST/DINNER 폴백으로 비고 읽기, 저장 시 존재하는 식단 시간대에 기록(없으면 LUNCH).
+- **그리드 레이아웃 모핑 애니메이션**  
+  - `frontend/src/app/station/page.tsx`: `framer-motion` 도입, `AnimatePresence mode="popLayout"` + `motion.div`의 `layout`/`initial`/`animate`/`exit`로 필터 시 카드 등장·퇴장·슬라이딩 재배치 적용.
+
+**수정·반영된 파일**
+
+| 대상 | 내용 |
+|------|------|
+| `frontend/src/app/station/page.tsx` | `filterPhysician` 상태, `activeCount`/`displayBeds`, 원장 필터 버튼, `framer-motion`(AnimatePresence·motion.div) |
+| `frontend/src/components/MealGrid.tsx` | `RoomNoteInput` 제어 컴포넌트, `getRoomNoteFromMatrix`/`getTargetMealTimeForNote`, LUNCH/BREAKFAST/DINNER 폴백 |
+| `frontend/package.json` | `framer-motion` 의존성 추가 |
+
+---
+
 ## 2025-02-23
 
 ### repomix 출력 통합 — 한 파일만 사용

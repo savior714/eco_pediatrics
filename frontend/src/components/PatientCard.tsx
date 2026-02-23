@@ -41,13 +41,19 @@ export const PatientCard = memo(function PatientCard({ name, roomNumber, tempera
                     </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    {/* 원장님 이니셜 (데이터 있을 때만; 미표시 시 useStation 매핑·백엔드 view_station_dashboard/attending_physician 확인) */}
-                    {bed?.attending_physician && (
+                    {bed?.attending_physician ? (
                         <div
                             className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-sm border border-indigo-100 shadow-sm pointer-events-none"
                             title={bed.attending_physician}
                         >
                             {bed.attending_physician.charAt(0)}
+                        </div>
+                    ) : (
+                        <div
+                            className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-50 text-slate-400 font-bold text-sm border border-slate-200 shadow-sm pointer-events-none cursor-help"
+                            title="담당의 미지정"
+                        >
+                            -
                         </div>
                     )}
                     {onQrClick && bed && (

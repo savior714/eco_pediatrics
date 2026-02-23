@@ -5,6 +5,7 @@ from datetime import datetime
 import json
 
 from dependencies import get_supabase, get_admission_token_optional, verify_admission_token
+from logger import logger
 from utils import execute_with_retry_async
 from services.dashboard import fetch_dashboard_data
 from services.station_service import fetch_pending_requests

@@ -69,6 +69,25 @@ class AdmissionCreate(BaseModel):
     check_in_at: Optional[datetime] = None
     attending_physician: Optional[str] = None
 
+    @field_validator('dob', mode='before')
+    @classmethod
+    def preprocess_dob(cls, v):
+        if not v or isinstance(v, date):
+            return v
+        if isinstance(v, str):
+            cleaned = ''.join(filter(str.isdigit, v))
+            try:
+                if len(cleaned) == 6:
+                    y, m, d = int(cleaned[:2]), int(cleaned[2:4]), int(cleaned[4:])
+                    year = 2000 + y if y <= date.today().year % 100 else 1900 + y
+                    return date(year, m, d)
+                elif len(cleaned) == 8:
+                    y, m, d = int(cleaned[:4]), int(cleaned[4:6]), int(cleaned[6:])
+                    return date(y, m, d)
+            except ValueError:
+                raise ValueError('유효하지 않은 생년월일입니다. (형식 또는 범위 오류)')
+        return v
+
     @field_validator('dob')
     @classmethod
     def validate_dob(cls, v: Optional[date]) -> Optional[date]:
