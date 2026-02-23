@@ -1,6 +1,9 @@
 import sys
+import os
 import asyncio
 from unittest.mock import MagicMock, AsyncMock
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 1. Mock external dependencies BEFORE importing local modules
 mock_fastapi = MagicMock()

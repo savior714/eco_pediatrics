@@ -1,6 +1,14 @@
 # Context Snapshot
 
-- **Error Monitor 스킬화 및 다중 저장소 동기화 (2026-02-21)**:
+- **입원 주치의 연동 및 UI 리팩토링 (2026-02-23)**:
+    - **주치의(Attending Physician) 필드 도입**: `admissions` 테이블에 `attending_physician` 필드를 추가하고, 간호 스테이션 그리드 및 상세 모달에서 담당 원장님 정보를 표시하도록 연동 완료.
+    - **마이그레이션 마무리**: React + FastAPI 환경으로의 전면 전환 및 Tailwind CSS v4 업그레이드에 따른 잔여 문서 및 설정 정리.
+    - **Circuit Breaker 패턴 문서화**: 시스템 안정성을 위한 서킷 브레이커 도입 설계 및 적용 원칙을 `docs/ARCHITECTURE.md`에 반영.
+
+- **Sentinel 시스템 강화 및 에러 모니터링 고도화 (2026-02-22)**:
+    - **SentinelWatchdog 고도화**: `error_monitor.py`의 핵심 로직을 `SentinelWatchdog`으로 통합하여 패턴 인식률 향상 및 실시간 탐지 기능 강화.
+    - **LLM 컨텍스트 패키징**: 에러 발생 시 관련 소스 코드와 로그를 자동으로 취합하여 Gemini 등 LLM에 전달하기 위한 프롬프트 생성 자동화(`AgentPromptGenerator`).
+
     - **통합 스킬 구축**: 산재해 있던 에러 모니터 아키텍처 및 워크플로우를 `.agent/skills/error_monitor`로 스킬화 완료.
     - **Skill Protocol 정립**: `docs/CRITICAL_LOGIC.md`에 스킬 배포 프로토콜(SSOT: `savior714/skills`)을 명문화하여 향후 혼선 방지.
     - **외부 저장소 동시성**: 신규 `error_monitor` 스킬을 지정된 외부 저장소(`https://github.com/savior714/skills`)에 푸시 완료.
