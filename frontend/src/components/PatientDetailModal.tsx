@@ -26,12 +26,14 @@ interface PatientDetailModalProps {
     lastUpdated?: number;
     vitals?: VitalData[];
     checkInAt?: string | null;
+    /** 퇴원/전실 성공 시 스테이션 그리드 갱신 (reload 대체) */
+    onStationRefresh?: () => void;
 }
 
 export function PatientDetailModal({
     isOpen, onClose, bed, notifications, onCompleteRequest,
     onIVUploadSuccess, onVitalUpdate, vitals: propVitals,
-    checkInAt: propCheckInAt, lastUploadedIv, lastUpdated
+    checkInAt: propCheckInAt, lastUploadedIv, lastUpdated, onStationRefresh
 }: PatientDetailModalProps) {
 
     const {
@@ -51,7 +53,8 @@ export function PatientDetailModal({
         bed,
         onClose,
         fetchDashboardData,
-        meals: fetchedMeals
+        meals: fetchedMeals,
+        onStationRefresh
     });
 
     useEffect(() => {

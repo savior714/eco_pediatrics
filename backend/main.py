@@ -22,6 +22,14 @@ async def lifespan(app: FastAPI):
     if not hasattr(app.state, "supabase") or not app.state.supabase:
         app.state.supabase = await init_supabase()
         logger.info("Supabase AsyncClient initialized and stored in app.state")
+
+    # DB 웜업: 첫 사용자 요청 전 커넥션/스키마 캐시 활성화 (Cold Start 시 빈 그리드 방지)
+    try:
+        await app.state.supabase.table("view_station_dashboard").select("id").limit(1).execute()
+        logger.info("Database warm-up (view_station_dashboard) completed.")
+    except Exception as e:
+        logger.warning(f"Database warm-up failed (non-fatal): {e}")
+
     yield
     # Cleanup: Close connections to prevent resource leaks
     if app.state.supabase:

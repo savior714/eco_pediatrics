@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from supabase._async.client import AsyncClient
 from typing import List
 
@@ -26,7 +26,8 @@ async def create_admission(admission: AdmissionCreate, request: Request, db: Asy
     return await admission_service.create_admission(db, admission, ip_address)
 
 @router.get("", response_model=List[dict])
-async def list_admissions(db: AsyncClient = Depends(get_supabase)):
+async def list_admissions(response: Response, db: AsyncClient = Depends(get_supabase)):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return await admission_service.list_active_admissions_enriched(db)
 
 @router.get("/{admission_id}/dashboard", response_model=DashboardResponse)

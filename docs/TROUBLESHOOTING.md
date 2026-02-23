@@ -190,6 +190,7 @@ exit
 | 10 | 식단/서류 상태 변경 시 AsyncFilterRequestBuilder 에러 | station.py: update/delete 후 `.select()` 체이닝 대신 2단계 분리 (update 실행 → 별도 select 조회). supabase-py v2+는 UpdateRequestBuilder에서 .select() 미지원. |
 | 11 | eco.bat 실행 시 명령어 파편화 (`'cho'`, `'edelayedexpansion'` 인식 불가) | UTF-16/UTF-8 BOM 인코딩 → cmd.exe 해석 오류. 배치 파일을 ANSI(CP949)/ASCII로 재저장. chcp 65001 제거. CRITICAL_LOGIC §2.6 및 본 문서 §8 참고. |
 | 12 | 간호 스테이션 모달에서 완료된 서류 미표시 (보호자 대시보드는 정상) | useVitals: force 시 시퀀스 가드 우회, 빈 응답 처리 강화, document_requests 명시 업데이트. CRITICAL_LOGIC §2.3, PROMPT_COMPLETED_DOCS_NOT_SHOWING 근본 원인 분석 참고. Network 탭 검증은 다음 할 일로 남김. |
+| 13 | 스테이션 그리드 초기 로드/퇴원 후 리로드 시 빈 화면 (Race Condition) | admissions.py: Cache-Control 헤더. useStation.ts: useEffect 파괴적 리셋 제거, initialFetchDoneRef로 1회 fetch, force 시 시퀀스 가드 우회·캐시 버스팅. §12 참고. |
 
 위 조치 적용 후 **[2] Environment Setup** 실행 시 Doctor까지 [OK]로 통과하고, **[1] Start Dev Mode** 실행 시 런처는 닫히고 **상단 20% Error Monitor + 하단 80% Backend/Frontend 2분할** WT 창이 정상적으로 유지됩니다.
 
@@ -321,3 +322,29 @@ row = await execute_with_retry_async(db.table("meal_requests").select("*").eq("i
 
 ### 검증
 - `backend/search_error.py` 실행 시 `.update().select()`, `.delete().select()` 등 BAD 패턴이 남아 있으면 출력됨.
+
+---
+
+## 12. 스테이션 그리드 초기 로드 시 빈 화면 (Race Condition)
+
+### 현상
+- `/station` 최초 접속 시 DB에 환자 데이터가 있음에도 그리드가 빈 슬롯으로만 보임.
+- "DEV: 환자추가" 버튼을 누르면 그때서야 데이터가 채워짐.
+- 퇴원 후 `window.location.reload()` 시에도 나머지 환자 카드가 잠깐 사라졌다가 복구되거나, 빈 화면으로 남음.
+
+### 원인
+1. **useEffect 내 파괴적 리셋**: effect 첫 줄에서 `setBeds(ROOM_NUMBERS.map(...))`로 빈 슬롯을 덮어써, API 응답 도착 전·후로 그리드가 강제 초기화되며 데이터가 증발.
+2. **React Strict Mode 이중 호출**: 개발 모드에서 effect가 두 번 실행되며 `fetchAdmissions()`가 두 번 호출됨. 두 번째 요청의 `requestRef`가 첫 번째를 덮어쓰고, **첫 번째(실제 데이터가 담긴) 응답**이 시퀀스 가드(`currentRequestId !== requestRef.current`)에 걸려 "오래된 응답"으로 버려짐.
+3. **캐시**: 브라우저나 프록시가 빈 배열 `[]` 응답을 캐싱해, 최초 로드 시 캐시된 빈 배열이 반환될 수 있음.
+
+### 해결 (적용됨)
+
+| 구분 | 파일 | 조치 |
+|------|------|------|
+| **백엔드** | `backend/routers/admissions.py` | `list_admissions`에서 `Response` 주입 후 `Cache-Control: no-cache, no-store, must-revalidate` 헤더 설정. 빈 배열 캐싱 원천 차단. |
+| **프론트** | `frontend/src/hooks/useStation.ts` | ① 초기 상태를 `useState(emptySlotsInitial)`로 선언 시 빈 슬롯 할당. effect 내 `setBeds(ROOM_NUMBERS.map(...))` **삭제**. ② `initialFetchDoneRef`로 마운트 시 `fetchAdmissions(true)` **1회만** 실행(Strict Mode 방어). ③ `force=true`일 때 응답 처리부에서 시퀀스 가드 우회(`&& !force`). ④ `force=true`일 때 URL에 `?_t=Date.now()` 추가해 캐시 버스팅. |
+
+### 검증
+- 최초 로드: `/station` 접속 시 페이지가 뜨자마자 그리드에 환자 데이터 표시.
+- 퇴원 후 리로드: 퇴원 처리 후 새로고침 시 나머지 환자 카드가 정상 복구.
+- Network 탭: 최초 요청이 `/api/v1/admissions?_t=...` 형태로 나가고, 200 OK 응답 확인(304 아님).

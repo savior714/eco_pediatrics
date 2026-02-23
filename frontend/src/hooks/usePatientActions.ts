@@ -7,9 +7,11 @@ interface UsePatientActionsProps {
     onClose: () => void;
     fetchDashboardData: () => Promise<void>;
     meals: MealRequest[];
+    /** 퇴원/전실 성공 시 스테이션 그리드만 갱신 (reload 대체) */
+    onStationRefresh?: () => void;
 }
 
-export function usePatientActions({ bed, onClose, fetchDashboardData, meals }: UsePatientActionsProps) {
+export function usePatientActions({ bed, onClose, fetchDashboardData, meals, onStationRefresh }: UsePatientActionsProps) {
     const [addExamModalOpen, setAddExamModalOpen] = useState(false);
     const [deletingExamId, setDeletingExamId] = useState<number | null>(null);
     const [transferModalOpen, setTransferModalOpen] = useState(false);
@@ -24,7 +26,7 @@ export function usePatientActions({ bed, onClose, fetchDashboardData, meals }: U
             await api.post(`/api/v1/admissions/${bed.id}/discharge`, {});
             alert('퇴원 완료');
             onClose();
-            window.location.reload();
+            onStationRefresh?.();
         } catch (e) {
             alert('퇴원 실패');
         }
@@ -53,7 +55,7 @@ export function usePatientActions({ bed, onClose, fetchDashboardData, meals }: U
             alert('전실 완료');
             setTransferModalOpen(false);
             onClose();
-            window.location.reload();
+            onStationRefresh?.();
         } catch (e) {
             alert('전실 실패: 이미 사용 중인 병실이거나 오류가 발생했습니다.');
         }

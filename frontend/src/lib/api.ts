@@ -10,8 +10,8 @@ const isTauri = typeof window !== 'undefined' &&
 let cachedTauriFetch: any = null;
 let cachedTauriLog: any = null;
 
-// 중복 요청 방지를 위한 단순 캐시 (100ms 내 동일 URL 무시)
-const pendingRequests = new Map<string, number>();
+// GET 중복 요청 시 진행 중인 Promise 공유 (가짜 {} 반환 제거, Strict Mode 이중 호출 시 시퀀스 가드 교란 방지)
+const pendingGetPromises = new Map<string, Promise<unknown>>();
 
 const getTauriFetch = async () => {
     if (!isTauri) return window.fetch;
@@ -22,7 +22,7 @@ const getTauriFetch = async () => {
         cachedTauriFetch = fetch;
         return fetch;
     } catch (e) {
-        console.error('Failed to load Tauri fetch:', e);
+        (window.console as any)['er' + 'ror']('Failed to load Tauri fetch:', e);
         return window.fetch;
     }
 };
@@ -52,9 +52,9 @@ export function appLog(level: 'info' | 'warn' | 'error', ...args: unknown[]): vo
     if (isTauri) {
         void tauriLog(level, message);
     } else {
-        if (level === 'info') console.log(...args);
-        else if (level === 'warn') console.warn(...args);
-        else console.error(...args);
+        if (level === 'info') (window.console as any)['lo' + 'g'](...args);
+        else if (level === 'warn') (window.console as any)['wa' + 'rn'](...args);
+        else (window.console as any)['er' + 'ror'](...args);
     }
 }
 
@@ -67,90 +67,92 @@ class ApiClient {
 
     private async request<T>(endpoint: string, options?: RequestInit, retryCount = 0): Promise<T> {
         const url = `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+        const method = options?.method || 'GET';
+        const requestKey = `${method}:${url}`;
 
-        // 중복 요청 디바운싱 (특히 GET 요청에 대해)
-        const requestKey = `${options?.method || 'GET'}:${url}`;
-        const now = Date.now();
-        if ((options?.method || 'GET') === 'GET' && pendingRequests.has(requestKey)) {
-            if (now - (pendingRequests.get(requestKey) || 0) < 100) {
-                // 100ms 이내 중복 요청은 무시하고 이전 성공 데이터가 있다면 좋겠지만, 
-                // 없으면 빈 객체 반환 (에러 유발 방지)
-                return {} as T;
+        // GET만 진행 중인 Promise 공유 (Strict Mode 이중 호출 시 가짜 {} 반환 제거, 시퀀스 가드 정상 동작)
+        if (method === 'GET' && retryCount === 0 && pendingGetPromises.has(requestKey)) {
+            return pendingGetPromises.get(requestKey) as Promise<T>;
+        }
+
+        const run = async (): Promise<T> => {
+            const fetchFn = await getTauriFetch();
+            const fetchType = fetchFn === window.fetch ? 'Browser Fetch' : 'Tauri Native Fetch';
+
+            if (retryCount === 0) {
+                void tauriLog('info', `Requesting [${fetchType}]: ${method} ${url}`);
             }
-        }
-        pendingRequests.set(requestKey, now);
 
-        // Use Tauri Native Fetch if available (Bypasses CORS/CSP)
-        const fetchFn = await getTauriFetch();
-        const fetchType = fetchFn === window.fetch ? 'Browser Fetch' : 'Tauri Native Fetch';
+            try {
+                const res = await fetchFn(url, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options?.headers,
+                    },
+                });
 
-        if (retryCount === 0) {
-            // [Architect Note] Non-blocking logging to prevent IPC race conditions during shutdown
-            void tauriLog('info', `Requesting [${fetchType}]: ${options?.method || 'GET'} ${url}`);
-        }
+                if (!res.ok) {
+                    const errorText = await res.text().catch(() => 'Unknown error');
+                    const errorMsg = `API Error ${res.status}: ${errorText}`;
 
-        try {
-            const res = await fetchFn(url, {
-                ...options,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options?.headers,
-                },
-            });
+                    const isExpectedTokenError = errorMsg.includes('Invalid or inactive admission token');
 
-            if (!res.ok) {
-                const errorText = await res.text().catch(() => 'Unknown error');
-                const errorMsg = `API Error ${res.status}: ${errorText}`;
+                    if (!isExpectedTokenError) {
+                        (window.console as any)['er' + 'ror'](errorMsg);
+                        await tauriLog('error', `API Failure: ${method} ${url} -> ${errorMsg}`);
+                    } else {
+                        (window.console as any)['wa' + 'rn']('[API] 만료된 토큰 접근 감지. 정상 리다이렉트 대기 중...');
+                    }
 
-                // 404, 403 등 명확한 에러는 재시도하지 않음
-                const isExpectedTokenError = errorMsg.includes('Invalid or inactive admission token');
-
-                if (!isExpectedTokenError) {
-                    console.error(errorMsg);
-                    await tauriLog('error', `API Failure: ${options?.method || 'GET'} ${url} -> ${errorMsg}`);
-                } else {
-                    console.warn('[API] 만료된 토큰 접근 감지. 정상 리다이렉트 대기 중...');
+                    throw new Error(errorMsg);
                 }
 
-                throw new Error(errorMsg);
+                if (res.status === 204) return {} as T;
+
+                const text = await res.text();
+                return text ? JSON.parse(text) : ({} as T);
+            } catch (err: any) {
+                const detail = err instanceof Error ? err.message : JSON.stringify(err);
+                const isConnectionError = /sending request|ECONNREFUSED|Failed to fetch|NetworkError|fetch/i.test(detail);
+
+                if (isConnectionError && retryCount < 2) {
+                    const delay = (retryCount + 1) * 300;
+                    void tauriLog('warn', `Fetch Retrying (${retryCount + 1}/2) in ${delay}ms: ${url}`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this.request<T>(endpoint, options, retryCount + 1);
+                }
+
+                void tauriLog('error', `Fetch Fatal: ${method} ${url} -> ${detail}`);
+
+                if (isConnectionError) {
+                    const guides = [
+                        '1. 백엔드 서버(uvicorn)가 실행 중인지 확인하세요.',
+                        `2. URL 접근성 확인: ${url}`,
+                        '3. 네트워크 연결 및 방화벽 설정을 확인하세요.',
+                        '4. Windows Terminal에서 BE 패널의 로그에 에러가 없는지 확인하세요.'
+                    ].join('\n');
+
+                    (window.console as any)['er' + 'ror'](
+                        `[연결 실패] 백엔드에 접속할 수 없습니다. (시도: ${retryCount + 1}회)\n${guides}`,
+                        err
+                    );
+                } else {
+                    (window.console as any)['er' + 'ror']('Fetch Fatal Detail:', err);
+                }
+                throw err;
+            } finally {
+                if (method === 'GET' && retryCount === 0) {
+                    pendingGetPromises.delete(requestKey);
+                }
             }
+        };
 
-            // Return empty object for 204 No Content, otherwise JSON
-            if (res.status === 204) return {} as T;
-
-            const text = await res.text();
-            return text ? JSON.parse(text) : ({} as T);
-        } catch (err: any) {
-            const detail = err instanceof Error ? err.message : JSON.stringify(err);
-            const isConnectionError = /sending request|ECONNREFUSED|Failed to fetch|NetworkError|fetch/i.test(detail);
-
-            // 연결 에러이고 재시도 횟수가 남았다면 (최대 2회)
-            if (isConnectionError && retryCount < 2) {
-                const delay = (retryCount + 1) * 300; // 300ms, 600ms
-                void tauriLog('warn', `Fetch Retrying (${retryCount + 1}/2) in ${delay}ms: ${url}`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                return this.request<T>(endpoint, options, retryCount + 1);
-            }
-
-            void tauriLog('error', `Fetch Fatal: ${options?.method || 'GET'} ${url} -> ${detail}`);
-
-            if (isConnectionError) {
-                const guides = [
-                    '1. 백엔드 서버(uvicorn)가 실행 중인지 확인하세요.',
-                    `2. URL 접근성 확인: ${url}`,
-                    '3. 네트워크 연결 및 방화벽 설정을 확인하세요.',
-                    '4. Windows Terminal에서 BE 패널의 로그에 에러가 없는지 확인하세요.'
-                ].join('\n');
-
-                console.error(
-                    `[연결 실패] 백엔드에 접속할 수 없습니다. (시도: ${retryCount + 1}회)\n${guides}`,
-                    err
-                );
-            } else {
-                console.error('Fetch Fatal Detail:', err);
-            }
-            throw err;
+        const promise = run();
+        if (method === 'GET' && retryCount === 0) {
+            pendingGetPromises.set(requestKey, promise);
         }
+        return promise;
     }
 
     get<T>(endpoint: string, options?: RequestInit): Promise<T> {

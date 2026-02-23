@@ -4,6 +4,13 @@
 """
 import os
 import re
+import sys
+
+# backend/ 에서 실행하거나 프로젝트 루트에서 backend/search_error.py 실행 시 logger 로드
+_backend = os.path.dirname(os.path.abspath(__file__))
+if _backend not in sys.path:
+    sys.path.insert(0, _backend)
+from logger import logger
 
 # .eq() 또는 .in_(), update, delete 뒤에 .select( 가 오는 멀티라인 패턴
 # (필터/update/delete) ... (공백/줄바꿈) ... .select(
@@ -26,8 +33,7 @@ for root, dirs, files in os.walk('backend'):
                     # 라인 번호 계산
                     line_no = content[:m.start()].count('\n') + 1
                     ctx = m.group(0).replace('\n', ' ')[:120]
-                    print(f"FOUND BAD PATTERN IN: {path} (line {line_no})")
-                    print(f"  Context: ...{ctx}...")
-                    print()
+                    logger.info("FOUND BAD PATTERN IN: %s (line %s)", path, line_no)
+                    logger.info("  Context: ...%s...", ctx)
             except Exception as e:
-                print(f"Error reading {path}: {e}")
+                logger.error("Error reading %s: %s", path, e)

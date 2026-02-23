@@ -158,6 +158,7 @@ export default function Station() {
                         }
                     }}
                     lastUpdated={lastUpdated}
+                    onStationRefresh={() => stationData.fetchAdmissions(true)}
                 />
             )}
             {qrBed && (

@@ -1,6 +1,14 @@
 # CRITICAL_LOGIC (Single Source of Truth)
 
-이 문서는 `eco_pediatrics` 프로젝트의 **중심 축(Pivot)**이 되는 비즈니스 로직과 아키텍처 원칙을 정의합니다. 모든 코드 수정은 본 문서의 원칙과 충돌해서는 안 되며, 의도적인 변경 시에는 시니어 아키텍트의 승인 하에 본 문서를 먼저 업데이트해야 합니다.
+이 문서는 `eco_pediatrics` 프로젝트의 **중심 축(Pivot)**이 되는 비즈니스 로직과 아키텍처 원칙을 정의합니다. 모든 코드 수정은 본 문서의 원칙과 충돌해서는 안 되며, 의도적인 변경 시에는 시니어 아키텍트의 승인 하에 **본 문서를 먼저 업데이트**해야 합니다.
+
+**목차**
+1. [Immutable Core](#1-immutable-core-도메인-불변-원칙) — 도메인 불변 원칙 (시간대, 보안/QR)
+2. [Technical Architecture](#2-technical-architecture-기술-제약-및-패턴) — 레이어, 동기화, 모달 SSOT, DB 업데이트, 인코딩
+3. [Environment & Configuration](#3-environment--configuration) — DEV UI, 검증, 데이터 계약, 토큰 처리, 의존성, 빌드 환경
+4. [Business Workflows](#4-business-workflows-핵심-업무-프로세스) — 식단, 수액
+5. [Safety Guardrails](#5-safety-guardrails-수정-시-필수-점검-사항-checklist) — 수정 시 점검 체크리스트
+6. [Skill & Agent Maintenance](#6-skill--agent-maintenance-에이전트-및-스킬-관리) — 스킬 배포 프로토콜
 
 ---
 
@@ -43,7 +51,7 @@
 - 예시: `await db.table("requests").update({"status": "done"}).eq("id", id).execute()` → `await db.table("requests").select("*").eq("id", id).single().execute()`
 - **목적**: 네트워크 왕복은 2회 발생하나, 라이브러리 호환성과 에러 방지가 우선. 상세 사례는 `docs/TROUBLESHOOTING.md` §11 참고.
 
-### 2.6 Environment Maintenance (인코딩 원칙)
+### 2.5 Environment Maintenance (인코딩 원칙)
 - **배치 파일 (.bat, .cmd)**: 반드시 **ANSI(CP949/EUC-KR)** 인코딩을 유지한다. `cmd.exe`는 UTF-16/UTF-8 BOM을 잘못 해석하여 `'cho'`(echo), `'edelayedexpansion'`(EnableDelayedExpansion) 등 구문 파편화로 창이 즉시 닫힌다.
 - **그 외 소스 (.ps1, .js, .ts, .json 등)**: **UTF-8 (no BOM)** 사용. PowerShell·Node 등 현대 런타임 표준이며, BOM이 있으면 파서 오류가 날 수 있다.
 - **수정 시**: 배치만 IDE에서 **Save with Encoding** → **Korean (EUC-KR)** 또는 **Western (Windows 1252)**로 저장. 에이전트는 배치 파일 수정 시 인코딩을 변경하지 않는다.
@@ -84,10 +92,10 @@
 - **데이터 분석용 모듈**(pyiceberg, pyroaring 등)은 현재 스테이션 대시보드·환자 상세 모달 기능과 무관하나, **storage3가 런타임에 pyiceberg를 import**하므로 `--no-deps` 우회 설치로는 supabase 기동 불가. pyiceberg 빌드가 반드시 필요함.
 - **의존성 설치 예외 규정(장기)**: Windows Native 환경에서 C++ 빌드 도구·SDK 미비 시, `vcvars64.bat` 환경 주입 후 pyroaring/pyiceberg 선 설치를 시도한다. 이는 storage3→pyiceberg의 런타임 의존성으로 인해 우회 불가하기 때문이다.
 
-### 3.5.4 Build Environment Discovery (환경 변수 SSOT)
+### 3.6 Build Environment Discovery (환경 변수 SSOT)
 - **문제**: `cl.exe`가 실행되더라도 Windows SDK(UCRT)의 버전별 가변 경로가 `INCLUDE`에 없으면 `io.h` 참조 실패. 세션별 `vcvars64.bat`은 휘발적이라 IDE·터미널 재시작 시 경로가 유실됨.
-- **해결**: `scripts/Refresh-BuildEnv.ps1`을 실행하여 최신 Windows SDK(UCRT, shared, um, winrt) 경로를 **사용자 환경 변수에 영구 등록**한다. 이는 일시적 세션 주입이 아닌, 시스템 수준의 **환경 변수 SSOT** 확보를 위함이다.
-- **실행**: `eco setup` 시 자동 호출되며, 수동 실행은 `powershell -ExecutionPolicy Bypass -File scripts\Refresh-BuildEnv.ps1`. 실행 후 **모든 터미널과 IDE를 재시작**해야 영구 설정이 적용됨.
+- **해결**: `scripts/Refresh-BuildEnv.ps1`을 실행하여 최신 Windows SDK(UCRT, shared, um, winrt) 경로를 **사용자 환경 변수에 영구 등록**한다. 일시적 세션 주입이 아닌, 시스템 수준의 **환경 변수 SSOT** 확보가 목적이다.
+- **실행**: `eco setup` 시 자동 호출. 수동 실행: `powershell -ExecutionPolicy Bypass -File scripts\Refresh-BuildEnv.ps1`. 실행 후 **모든 터미널과 IDE를 재시작**해야 영구 설정이 적용된다.
 
 ---
 
@@ -113,6 +121,7 @@
 - [ ] **UI 컴포넌트 수정 시**: `mask_name` 유틸리티가 적용되어 환자 성함이 노출되지 않는지 확인.
 
 ---
+
 ## 6. Skill & Agent Maintenance: 에이전트 및 스킬 관리
 에이전트의 지능형 파트너십 유지를 위한 관리 프로토콜입니다.
 
@@ -125,4 +134,5 @@
 - **저장소 분리**: `antigravity-awesome-skills` 레포지토리와는 별개로 운영되며, 명시적 요청이 없는 한 `savior714/skills`를 우선 타겟으로 한다.
 
 ---
-*본 문서는 프로젝트의 헌법과 같습니다. 에이전트는 모든 Action 전 본 문서를 복귀하십시오.*
+
+*본 문서는 프로젝트의 헌법과 같습니다. 에이전트는 모든 Action 전 본 문서를 참조하십시오.*

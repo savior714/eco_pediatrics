@@ -107,10 +107,17 @@ async def create_admission(db: AsyncClient, admission: AdmissionCreate, ip_addre
 async def list_active_admissions_enriched(db: AsyncClient):
     # Use SQL View to fetch pre-calculated dashboard state (No N+1)
     # Order is now handled by the SQL View (ORDER BY check_in_at DESC)
-    res = await execute_with_retry_async(db.table("view_station_dashboard").select("*"))
-    data = res.data or []
-    
-    # Process for specific structure if needed (mapping flat view to nested object if UI expects it)
+    try:
+        res = await execute_with_retry_async(db.table("view_station_dashboard").select("*"))
+        data = res.data or []
+        # [검증용] 첫 요청 시 빈 배열 원인 추적 (Cold Start / 스키마 캐시 등)
+        logger.info(f"[view_station_dashboard] rows={len(data)}")
+        if getattr(res, "error", None):
+            logger.error(f"[view_station_dashboard] res.error={res.error}")
+    except Exception as e:
+        logger.error(f"[view_station_dashboard] fetch failed: {e}", exc_info=True)
+        raise
+
     enriched = []
     for item in data:
         row = {

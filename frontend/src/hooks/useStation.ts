@@ -16,16 +16,35 @@ interface UseStationReturn {
     fetchAdmissions: (force?: boolean) => void;
 }
 
+/**
+ * 빈 칸(빈 슬롯) 상태를 ROOM_NUMBERS 기준으로 한 번만 생성.
+ * useState 초기값으로 사용해, useEffect 내 파괴적 리셋 없이 선언 시점에 그리드 골격을 확정.
+ */
+const emptySlotsInitial = (): Bed[] =>
+    ROOM_NUMBERS.map((room, i) => ({
+        id: '',
+        room,
+        name: `환자${i + 1}`,
+        temp: null,
+        drops: null,
+        status: 'normal' as const,
+        token: ''
+    }));
+
 export function useStation(): UseStationReturn {
-    const [beds, setBeds] = useState<Bed[]>([]);
+    const [beds, setBeds] = useState<Bed[]>(emptySlotsInitial);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [lastUploadedIv, setLastUploadedIv] = useState<LastUploadedIv | null>(null);
     const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
 
-    // [Optimization] Prevent double-fetch on mount (useEffect + WS onOpen)
+    /** 스로틀: 500ms 내 중복 fetch 방지 (force=true 시에는 스킵). */
     const lastFetchRef = useRef<number>(0);
+    /** 시퀀스 가드: 오래된 요청의 응답이 최신 요청을 덮어쓰지 않도록 requestId 비교. force=true일 때는 우회하여 반드시 반영. */
     const requestRef = useRef(0);
+    /** WS onOpen 등에서 "이미 초기 로드가 끝났으면" 재연결 시에만 fetch 하기 위한 플래그. */
     const initialLoadDoneRef = useRef(false);
+    /** Strict Mode 이중 호출 방어: 마운트 시 fetchAdmissions(true)가 정확히 1회만 실행되도록 보장. */
+    const initialFetchDoneRef = useRef(false);
 
     const fetchPendingRequests = useCallback(async () => {
         const currentRequestId = ++requestRef.current;
@@ -46,17 +65,29 @@ export function useStation(): UseStationReturn {
         }
     }, []);
 
+    /**
+     * 입원 목록(스테이션 그리드)을 API에서 가져와 beds 상태를 갱신.
+     *
+     * Race Condition 방어 로직:
+     * 1. requestRef: 동시에 여러 요청이 나갈 때, "가장 마지막 요청의 응답"만 반영하고 이전 응답은 버린다(시퀀스 가드).
+     * 2. force=true(초기 로드): 초기 로드 시에는 첫 번째 정상 응답을 반드시 반영해야 하므로, 시퀀스 가드를 우회한다.
+     *    (Strict Mode에서 effect가 두 번 돌면 요청도 두 번 나가고, 두 번째 요청의 ID가 requestRef를 덮어써
+     *     첫 번째 응답이 "오래된 응답"으로 버려져 그리드가 비는 버그를 방지)
+     * 3. force=true일 때 URL에 ?_t=Date.now()를 붙여 브라우저/프록시 캐시를 무효화하고, 빈 배열이 캐싱되어
+     *    그리드가 비는 현상을 원천 차단한다.
+     *
+     * @param force - true면 스로틀 무시, 캐시 버스팅 적용, 응답 수신 시 시퀀스 가드 우회(반드시 setBeds 반영)
+     */
     const fetchAdmissions = useCallback((force = false) => {
         const now = Date.now();
-        // Throttle: skip if within 500ms (except initial load with force=true).
-        // ID is assigned only after throttle pass so the response is not discarded by sequence guard.
         if (!force && now - lastFetchRef.current < 500) return;
         lastFetchRef.current = now;
 
         const currentRequestId = ++requestRef.current;
-        api.get<AdmissionSummary[]>('/api/v1/admissions')
+        const url = force ? `/api/v1/admissions?_t=${Date.now()}` : '/api/v1/admissions';
+        api.get<AdmissionSummary[]>(url)
             .then(admissions => {
-                if (currentRequestId !== requestRef.current) {
+                if (currentRequestId !== requestRef.current && !force) {
                     console.warn(`[fetchAdmissions] 오래된 응답 무시됨. reqId: ${currentRequestId}`);
                     return;
                 }
@@ -99,19 +130,18 @@ export function useStation(): UseStationReturn {
             .catch(console.error);
     }, []);
 
-    // Initial Load
+    /**
+     * 초기 로드: 마운트 시 입원 목록을 1회만 가져온다.
+     *
+     * - initialFetchDoneRef: React Strict Mode에서 useEffect가 두 번 실행되더라도, fetchAdmissions(true)는
+     *   한 번만 호출되도록 보장. 두 번째 effect 실행 시 바로 return하여 중복 요청 및 "첫 응답이 시퀀스 가드에
+     *   걸려 버려지는" 문제를 방지.
+     * - 파괴적 리셋 제거: 과거에는 여기서 setBeds(ROOM_NUMBERS.map(...))로 빈 슬롯을 덮어써, API 응답이
+     *   도착하기 전/후로 그리드를 강제 초기화해 데이터가 사라지는 버그가 있었음. 초기 상태는 useState(emptySlotsInitial)로만 설정하고, effect 내에서는 리셋하지 않음.
+     */
     useEffect(() => {
-        // 1. Initialize empty beds
-        setBeds(ROOM_NUMBERS.map((room, i) => ({
-            id: '',
-            room: room,
-            name: `환자${i + 1}`,
-            temp: null,
-            drops: null,
-            status: 'normal' as const,
-            token: ''
-        })));
-
+        if (initialFetchDoneRef.current) return;
+        initialFetchDoneRef.current = true;
         fetchAdmissions(true);
         fetchPendingRequests();
     }, [fetchAdmissions, fetchPendingRequests]);
