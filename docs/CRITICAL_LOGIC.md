@@ -43,10 +43,10 @@
 - 예시: `await db.table("requests").update({"status": "done"}).eq("id", id).execute()` → `await db.table("requests").select("*").eq("id", id).single().execute()`
 - **목적**: 네트워크 왕복은 2회 발생하나, 라이브러리 호환성과 에러 방지가 우선. 상세 사례는 `docs/TROUBLESHOOTING.md` §11 참고.
 
-### 2.6 Environment Maintenance (배치 파일 인코딩)
-- **제약**: `eco.bat`, `start_backend_pc.bat` 등 `.bat` 파일은 반드시 **ANSI(EUC-KR/CP949)** 인코딩을 유지해야 한다.
-- **이유**: `cmd.exe`는 UTF-16/UTF-8 BOM을 잘못 해석하여 `'cho'`(echo), `'edelayedexpansion'`(EnableDelayedExpansion) 등 구문 파편화 에러를 일으킨다.
-- **수정 시**: 배치 파일 편집 후 IDE에서 **Save with Encoding** → **Korean (EUC-KR)** 또는 **Western (Windows 1252)**로 저장한다. 에이전트는 배치 파일 수정 시 인코딩을 변경하지 않도록 주의한다.
+### 2.6 Environment Maintenance (인코딩 원칙)
+- **배치 파일 (.bat, .cmd)**: 반드시 **ANSI(CP949/EUC-KR)** 인코딩을 유지한다. `cmd.exe`는 UTF-16/UTF-8 BOM을 잘못 해석하여 `'cho'`(echo), `'edelayedexpansion'`(EnableDelayedExpansion) 등 구문 파편화로 창이 즉시 닫힌다.
+- **그 외 소스 (.ps1, .js, .ts, .json 등)**: **UTF-8 (no BOM)** 사용. PowerShell·Node 등 현대 런타임 표준이며, BOM이 있으면 파서 오류가 날 수 있다.
+- **수정 시**: 배치만 IDE에서 **Save with Encoding** → **Korean (EUC-KR)** 또는 **Western (Windows 1252)**로 저장. 에이전트는 배치 파일 수정 시 인코딩을 변경하지 않는다.
 
 ---
 
