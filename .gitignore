@@ -32,3 +32,8 @@ docs/repomix-output.md
 docs/repomix-output.xml
 docs/repomix-output.txt
 repomix-output.*
+# repomix 보조 덤프 (로컬 캐시만, REFACTOR_DOCS_PLAN §4.3)
+docs/repomix-backend.md
+docs/repomix-frontend.md
+docs/repomix-diet2-*.md
+docs/repomix-*-skeleton.md

@@ -109,7 +109,8 @@ export function useStation(): UseStationReturn {
                             latest_meal: adm.latest_meal ?? undefined,
                             last_vital_at: adm.last_vital_at ?? undefined,
                             dob: adm.dob,
-                            gender: adm.gender
+                            gender: adm.gender,
+                            attending_physician: adm.attending_physician ?? undefined
                         } as Bed;
                     }
                     // Empty Slot

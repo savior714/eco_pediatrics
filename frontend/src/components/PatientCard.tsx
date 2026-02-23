@@ -40,15 +40,26 @@ export const PatientCard = memo(function PatientCard({ name, roomNumber, tempera
                         </span>
                     </div>
                 </div>
-                {onQrClick && bed && (
-                    <button
-                        onClick={(e) => onQrClick(e, bed)}
-                        className="p-1.5 bg-white/50 hover:bg-white rounded-lg text-slate-400 hover:text-teal-600 transition-colors"
-                        title="보호자용 QR 코드 보기"
-                    >
-                        <QrCode size={16} />
-                    </button>
-                )}
+                <div className="flex items-center gap-1.5">
+                    {/* 원장님 이니셜 (데이터 있을 때만; 미표시 시 useStation 매핑·백엔드 view_station_dashboard/attending_physician 확인) */}
+                    {bed?.attending_physician && (
+                        <div
+                            className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-sm border border-indigo-100 shadow-sm pointer-events-none"
+                            title={bed.attending_physician}
+                        >
+                            {bed.attending_physician.charAt(0)}
+                        </div>
+                    )}
+                    {onQrClick && bed && (
+                        <button
+                            onClick={(e) => onQrClick(e, bed)}
+                            className="p-1.5 bg-white/50 hover:bg-white rounded-lg text-slate-400 hover:text-teal-600 transition-colors"
+                            title="보호자용 QR 코드 보기"
+                        >
+                            <QrCode size={16} />
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="grid grid-cols-2 gap-1.5 mt-2.5">

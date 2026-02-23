@@ -11,6 +11,7 @@ CONTRACT = {
     "admission": [
         "id", "patient_name_masked", "room_number", "status", "discharged_at",
         "access_token", "dob", "gender", "check_in_at", "display_name",
+        "attending_physician",
     ],
     "vitals": ["id", "admission_id", "temperature", "has_medication", "medication_type", "recorded_at"],
     "iv_records": ["id", "admission_id", "photo_url", "infusion_rate", "created_at"],

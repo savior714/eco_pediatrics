@@ -67,6 +67,7 @@ class AdmissionCreate(BaseModel):
     dob: Optional[date] = None
     gender: Optional[GenderEnum] = None
     check_in_at: Optional[datetime] = None
+    attending_physician: Optional[str] = None
 
     @field_validator('dob')
     @classmethod

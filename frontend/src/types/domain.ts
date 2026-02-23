@@ -19,6 +19,7 @@ export interface Bed {
     last_vital_at?: string;
     dob?: string;
     gender?: string;
+    attending_physician?: string;
 }
 
 export interface Notification {
@@ -72,6 +73,7 @@ export interface AdmissionSummary {
     last_vital_at?: string;
     dob?: string;
     gender?: string;
+    attending_physician?: string;
 }
 
 export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'DOC_REQUEST_UPDATED' | 'IV_PHOTO_UPLOADED' | 'NEW_IV' | 'NEW_VITAL' | 'NEW_EXAM_SCHEDULE' | 'DELETE_EXAM_SCHEDULE' | 'ADMISSION_TRANSFERRED' | 'ADMISSION_DISCHARGED' | 'MEAL_UPDATED' | 'REFRESH_DASHBOARD';

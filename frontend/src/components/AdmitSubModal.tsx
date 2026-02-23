@@ -5,17 +5,20 @@ import { X, UserPlus } from 'lucide-react';
 
 import Portal from './common/Portal';
 
+const PHYSICIANS = ['조요셉', '김종률', '원유종', '이승주'];
+
 interface AdmitSubModalProps {
     isOpen: boolean;
     onClose: () => void;
     roomNumber: string;
-    onAdmit: (name: string, birthday: string, gender: string) => Promise<void>;
+    onAdmit: (name: string, birthday: string, gender: string, attendingPhysician: string) => Promise<void>;
 }
 
 export function AdmitSubModal({ isOpen, onClose, roomNumber, onAdmit }: AdmitSubModalProps) {
     const [name, setName] = useState('');
     const [birthday, setBirthday] = useState(''); // YYYY-MM-DD
     const [gender, setGender] = useState<'M' | 'F' | ''>('M'); // Default to M
+    const [attendingPhysician, setAttendingPhysician] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     if (!isOpen) return null;
@@ -26,12 +29,17 @@ export function AdmitSubModal({ isOpen, onClose, roomNumber, onAdmit }: AdmitSub
             alert('이름과 생년월일을 입력해주세요.');
             return;
         }
+        if (!attendingPhysician) {
+            alert('원장님을 지정해주세요.');
+            return;
+        }
         setIsLoading(true);
         try {
-            await onAdmit(name, birthday, gender);
+            await onAdmit(name, birthday, gender, attendingPhysician);
             onClose();
             setName('');
             setBirthday('');
+            setAttendingPhysician('');
         } catch (error) {
             console.error(error);
             alert('입원 처리 중 오류가 발생했습니다.');
@@ -103,6 +111,20 @@ export function AdmitSubModal({ isOpen, onClose, roomNumber, onAdmit }: AdmitSub
                                     여아 (F)
                                 </button>
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="block text-xs font-bold text-slate-500 ml-1">담당 원장님</label>
+                            <select
+                                value={attendingPhysician}
+                                onChange={e => setAttendingPhysician(e.target.value)}
+                                className="w-full p-3.5 border-2 border-slate-100 rounded-xl focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 outline-none transition-all font-medium text-slate-700"
+                            >
+                                <option value="">선택</option>
+                                {PHYSICIANS.map(p => (
+                                    <option key={p} value={p}>{p}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <div className="pt-2">

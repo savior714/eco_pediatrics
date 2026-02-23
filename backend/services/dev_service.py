@@ -206,7 +206,8 @@ async def seed_single_patient(db: AsyncClient):
         "p_gender": random.choice(["M", "F"]),
         "p_check_in_at": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(),
         "p_actor_type": "SYSTEM",
-        "p_ip_address": "127.0.0.1"
+        "p_ip_address": "127.0.0.1",
+        "p_attending_physician": random.choice(["조요셉", "김종률", "원유종", "이승주"])
     }).execute()
     
     data = normalize_rpc_result(adm_res)

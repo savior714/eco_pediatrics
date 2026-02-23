@@ -1,0 +1,97 @@
+-- 입원 환자별 원장님 파트 지정: admissions 컬럼 추가, view 및 RPC 갱신
+-- 실행: Supabase SQL Editor에서 본 파일 내용 실행 또는 `supabase db push`
+
+-- 1. admissions 테이블에 attending_physician 컬럼 추가
+ALTER TABLE admissions ADD COLUMN IF NOT EXISTS attending_physician TEXT;
+
+-- 2. view_station_dashboard 뷰 재생성 (SELECT에 attending_physician 포함)
+CREATE OR REPLACE VIEW view_station_dashboard AS
+WITH latest_vitals AS (
+    SELECT DISTINCT ON (admission_id) *
+    FROM vital_signs
+    WHERE recorded_at > (NOW() - INTERVAL '5 days')
+    ORDER BY admission_id, recorded_at DESC
+),
+latest_iv AS (
+    SELECT DISTINCT ON (admission_id) *
+    FROM iv_records
+    WHERE created_at > (NOW() - INTERVAL '7 days')
+    ORDER BY admission_id, created_at DESC
+),
+latest_meal AS (
+    SELECT DISTINCT ON (admission_id) *
+    FROM meal_requests
+    WHERE created_at > (NOW() - INTERVAL '3 days')
+    ORDER BY admission_id, created_at DESC
+)
+SELECT
+    a.id AS id,
+    a.room_number,
+    a.patient_name_masked AS display_name,
+    a.access_token,
+    a.dob,
+    a.gender,
+    a.check_in_at,
+    a.attending_physician,
+    v.temperature AS latest_temp,
+    v.recorded_at AS last_vital_at,
+    CASE
+        WHEN v.temperature >= 38.0
+             AND v.recorded_at >= (NOW() - INTERVAL '6 hours') THEN true
+        ELSE false
+    END AS had_fever_in_6h,
+    i.infusion_rate AS iv_rate,
+    i.photo_url AS iv_photo,
+    m.request_type AS meal_type,
+    m.pediatric_meal_type,
+    m.guardian_meal_type,
+    m.created_at AS meal_requested_at
+FROM admissions a
+LEFT JOIN latest_vitals v ON a.id = v.admission_id
+LEFT JOIN latest_iv i ON a.id = i.admission_id
+LEFT JOIN latest_meal m ON a.id = m.admission_id
+WHERE a.status IN ('IN_PROGRESS', 'OBSERVATION')
+ORDER BY a.check_in_at DESC;
+
+-- 3. create_admission_transaction RPC: 파라미터 및 INSERT에 attending_physician 추가
+CREATE OR REPLACE FUNCTION create_admission_transaction(
+    p_patient_name_masked TEXT,
+    p_room_number TEXT,
+    p_dob DATE,
+    p_gender TEXT,
+    p_check_in_at TIMESTAMPTZ,
+    p_actor_type TEXT,
+    p_ip_address TEXT,
+    p_attending_physician TEXT DEFAULT NULL
+) RETURNS JSON AS $$
+DECLARE
+    v_admission_id UUID;
+    v_token UUID;
+BEGIN
+    INSERT INTO admissions (
+        patient_name_masked,
+        room_number,
+        status,
+        dob,
+        gender,
+        check_in_at,
+        attending_physician
+    ) VALUES (
+        p_patient_name_masked,
+        p_room_number,
+        'IN_PROGRESS',
+        p_dob,
+        p_gender,
+        COALESCE(p_check_in_at, NOW()),
+        p_attending_physician
+    ) RETURNING id, access_token INTO v_admission_id, v_token;
+
+    INSERT INTO audit_logs (actor_type, action, target_id, ip_address)
+    VALUES (p_actor_type, 'CREATE', v_admission_id, p_ip_address);
+
+    RETURN json_build_object(
+        'id', v_admission_id,
+        'access_token', v_token
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

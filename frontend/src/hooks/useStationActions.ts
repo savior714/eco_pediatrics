@@ -17,7 +17,7 @@ export function useStationActions() {
         return beds.find(b => String(b.room) === selectedRoom) || null;
     }, [beds, selectedRoom]);
 
-    const handleAdmit = useCallback(async (name: string, birthday: string, gender: string) => {
+    const handleAdmit = useCallback(async (name: string, birthday: string, gender: string, attendingPhysician: string) => {
         if (!admitRoom) return;
 
         let formattedBirthday = birthday.trim();
@@ -49,7 +49,8 @@ export function useStationActions() {
                 patient_name: name,
                 room_number: admitRoom,
                 dob: formattedBirthday,
-                gender: gender
+                gender: gender,
+                attending_physician: attendingPhysician
             });
 
             alert('입원 수속이 완료되었습니다.');

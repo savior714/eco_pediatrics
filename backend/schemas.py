@@ -48,6 +48,7 @@ class AdmissionResponse(BaseModel):
     check_in_at: Optional[datetime] = None
     dob: Optional[date] = None
     gender: Optional[GenderEnum] = None
+    attending_physician: Optional[str] = None
 
 class DashboardResponse(BaseModel):
     admission: AdmissionResponse

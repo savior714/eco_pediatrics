@@ -72,7 +72,8 @@ async def create_admission(db: AsyncClient, admission: AdmissionCreate, ip_addre
             "p_gender": admission.gender,
             "p_check_in_at": admission.check_in_at.isoformat() if admission.check_in_at else None,
             "p_actor_type": "NURSE",
-            "p_ip_address": ip_address
+            "p_ip_address": ip_address,
+            "p_attending_physician": admission.attending_physician or None
         }).execute()
         
         # Use centralized utility for normalized result handling
@@ -128,6 +129,7 @@ async def list_active_admissions_enriched(db: AsyncClient):
             "dob": item['dob'],
             "gender": item['gender'],
             "check_in_at": item['check_in_at'],
+            "attending_physician": item.get('attending_physician'),
             "latest_temp": item['latest_temp'],
             "last_vital_at": item['last_vital_at'],
             "had_fever_in_6h": item['had_fever_in_6h'],

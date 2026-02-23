@@ -12,7 +12,7 @@ async def fetch_dashboard_data(db: AsyncClient, admission_id: str):
         # 1. Admission Info
         execute_with_retry_async(
             db.table("admissions")
-            .select("id,patient_name_masked,room_number,status,discharged_at,access_token,dob,gender,check_in_at")
+            .select("id,patient_name_masked,room_number,status,discharged_at,access_token,dob,gender,check_in_at,attending_physician")
             .eq("id", admission_id)
         ),
         # 2. Vitals
