@@ -2,10 +2,10 @@ param([string]$Root)
 $backendDir = "$Root\backend"
 $frontendDir = "$Root\frontend"
 
-# [Architect Note] 쉘 파이프라인(|)을 제거하여 파싱 안정성 100% 확보
+# [Architect Note] Frontend stdout/stderr를 로그 파일로 남겨 Error Monitor가 감시할 수 있게 함
 $psExe = "pwsh.exe"
-# 내부 인코딩 명령에서도 파이프라인 제거하여 Tauri 서버 감지 지연 방지
-$psRawCmd = "npm run tauri dev"
+# Tee-Object: 터미널 출력과 동시에 frontend/logs/frontend.log 기록 (PowerShell 기본 UTF-16, error_monitor는 _tail에서 처리)
+$psRawCmd = "npm run tauri dev 2>&1 | Tee-Object -FilePath logs\frontend.log"
 $encodedCmd = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($psRawCmd))
 $feCmd = "$psExe -NoExit -EncodedCommand $encodedCmd"
 

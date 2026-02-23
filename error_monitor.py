@@ -65,6 +65,7 @@ SOURCE_FILES: Final[list[Path]] = [
     PROJECT_ROOT / "frontend" / "src" / "lib" / "api.ts",
     PROJECT_ROOT / "frontend" / "src" / "hooks" / "useStation.ts",
     PROJECT_ROOT / "frontend" / "src" / "hooks" / "useWebSocket.ts",
+    PROJECT_ROOT / "frontend" / "src" / "hooks" / "useVitals.ts",
     PROJECT_ROOT / "frontend" / "src" / "hooks" / "useDashboardStats.ts",
     PROJECT_ROOT / "frontend" / "src" / "types" / "domain.ts",
 ]

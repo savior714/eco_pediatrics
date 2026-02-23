@@ -13,7 +13,7 @@ interface UseStationReturn {
     lastUpdated: number;
     isConnected: boolean;
     removeNotification: (id: string, type?: string, admissionId?: string) => void;
-    fetchAdmissions: () => void;
+    fetchAdmissions: (force?: boolean) => void;
 }
 
 export function useStation(): UseStationReturn {
@@ -24,10 +24,17 @@ export function useStation(): UseStationReturn {
 
     // [Optimization] Prevent double-fetch on mount (useEffect + WS onOpen)
     const lastFetchRef = useRef<number>(0);
+    const requestRef = useRef(0);
+    const initialLoadDoneRef = useRef(false);
 
     const fetchPendingRequests = useCallback(async () => {
+        const currentRequestId = ++requestRef.current;
         try {
             const pending = await api.get<Notification[]>('/api/v1/station/pending-requests');
+            if (currentRequestId !== requestRef.current) {
+                console.warn(`[fetchPendingRequests] 오래된 응답 무시됨. reqId: ${currentRequestId}`);
+                return;
+            }
             if (Array.isArray(pending)) {
                 setNotifications(pending.map(n => ({
                     ...n,
@@ -39,15 +46,20 @@ export function useStation(): UseStationReturn {
         }
     }, []);
 
-    const fetchAdmissions = useCallback(() => {
+    const fetchAdmissions = useCallback((force = false) => {
         const now = Date.now();
-        // Throttle: If fetched less than 500ms ago, skip. 
-        // This handles the race between useEffect and WS onOpen.
-        if (now - lastFetchRef.current < 500) return;
+        // Throttle: skip if within 500ms (except initial load with force=true).
+        // ID is assigned only after throttle pass so the response is not discarded by sequence guard.
+        if (!force && now - lastFetchRef.current < 500) return;
         lastFetchRef.current = now;
 
+        const currentRequestId = ++requestRef.current;
         api.get<AdmissionSummary[]>('/api/v1/admissions')
             .then(admissions => {
+                if (currentRequestId !== requestRef.current) {
+                    console.warn(`[fetchAdmissions] 오래된 응답 무시됨. reqId: ${currentRequestId}`);
+                    return;
+                }
                 if (!Array.isArray(admissions)) return;
 
                 // Reconstruct state from scratch to prevent ghost data
@@ -82,6 +94,7 @@ export function useStation(): UseStationReturn {
                 });
 
                 setBeds(newBeds);
+                initialLoadDoneRef.current = true;
             })
             .catch(console.error);
     }, []);
@@ -99,7 +112,7 @@ export function useStation(): UseStationReturn {
             token: ''
         })));
 
-        fetchAdmissions();
+        fetchAdmissions(true);
         fetchPendingRequests();
     }, [fetchAdmissions, fetchPendingRequests]);
 
@@ -275,9 +288,9 @@ export function useStation(): UseStationReturn {
         url: `${api.getBaseUrl().replace(/^http/, 'ws')}/ws/${wsToken}`,
         enabled: true,
         onOpen: () => {
-            fetchAdmissions();
+            if (initialLoadDoneRef.current) fetchAdmissions();
             fetchPendingRequests();
-        }, // Resync on connect/reconnect
+        }, // Resync on reconnect; skip first connect to avoid race with effect (api 100ms dedup + sequence guard)
         onMessage: handleMessage
     });
 
