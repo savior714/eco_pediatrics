@@ -352,20 +352,19 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
     );
 }
 
-function arePropsEqual(prev: TemperatureGraphProps, next: TemperatureGraphProps) {
-    // 1. 참조가 같으면(Reference Equality) 즉시 렌더링 스킵 (O(1))
+function arePropsEqual(prev: TemperatureGraphProps, next: TemperatureGraphProps): boolean {
     if (prev.checkInAt !== next.checkInAt) return false;
     if (prev.className !== next.className) return false;
     if (prev.data === next.data) return true;
 
-    // 2. 배열 길이가 다르면 추가 검사 없이 리렌더링 (O(1))
-    if (prev.data.length !== next.data.length) return false;
+    const prevData = prev.data;
+    const nextData = next.data;
+    if (prevData.length !== nextData.length) return false;
 
-    // 3. 명시적 반복문을 통한 얕은 순회 비교 (O(N) - 직렬화/메모리 할당 없음)
-    for (let i = 0; i < prev.data.length; i++) {
-        const p = prev.data[i];
-        const n = next.data[i];
-
+    // 역순 순회: 최신(배열 끝)부터 과거(앞)로 검사. 최신 추가/사후 수정이 빈번하므로 Early Return 유도.
+    for (let i = prevData.length - 1; i >= 0; i--) {
+        const p = prevData[i];
+        const n = nextData[i];
         if (
             p.recorded_at !== n.recorded_at ||
             p.temperature !== n.temperature ||
@@ -373,10 +372,9 @@ function arePropsEqual(prev: TemperatureGraphProps, next: TemperatureGraphProps)
             p.medication_type !== n.medication_type ||
             p.isOptimistic !== n.isOptimistic
         ) {
-            return false; // Early exit
+            return false;
         }
     }
-
     return true;
 }
 

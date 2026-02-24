@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PatientCard } from '@/components/PatientCard';
-import { Card } from '@/components/Card';
 import { Bell } from 'lucide-react';
 import { PatientDetailModal } from '@/components/PatientDetailModal';
 import Image from 'next/image';
@@ -12,6 +11,7 @@ import { AdmitSubModal } from '@/components/AdmitSubModal';
 import { Bed, Notification } from '@/types/domain';
 import { useStationActions } from '@/hooks/useStationActions';
 import { MealGrid } from '@/components/MealGrid';
+import { NotificationItem } from '@/components/NotificationItem';
 
 const PHYSICIAN_INITIALS = ['조', '김', '원', '이'] as const;
 
@@ -165,18 +165,12 @@ export default function Station() {
                     <span>Recent Requests</span>
                 </div>
                 <div className="flex flex-col gap-3 overflow-y-auto pr-1 flex-1">
-                    {notifications.map((notif: Notification) => (
-                        <Card
+                    {notifications.map((notif) => (
+                        <NotificationItem
                             key={notif.id}
-                            className={`border-l-4 cursor-pointer hover:bg-slate-50 transition-colors ${notif.type === 'meal' ? 'border-l-orange-500' : 'border-l-blue-500'}`}
-                            onClick={() => actions.handleNotificationClick(notif)}
-                        >
-                            <div className="flex justify-between items-start">
-                                <span className="font-bold text-slate-700">{notif.room}호</span>
-                                <span className="text-xs text-slate-400">{notif.time}</span>
-                            </div>
-                            <p className="text-sm text-slate-600 mt-1">{notif.content}</p>
-                        </Card>
+                            notification={notif}
+                            onClick={actions.handleNotificationClick}
+                        />
                     ))}
                 </div>
             </aside>

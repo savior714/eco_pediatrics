@@ -5,6 +5,7 @@
 - **[AI]** `WORKFLOW_30MIN_AI_CODING.md` — AI 협업 가이드
 - **[History]** `TROUBLESHOOTING.md` — 과거 해결된 주요 장애 이력
 - **[Changelog]** `CHANGELOG.md` — 문서·워크플로우 및 기능 변경 이력
+- **[Perf]** `FRONTEND_RENDER_OPTIMIZATION.md` — 스테이션 페이지 렌더 최적화(TemperatureGraph, MealGrid, NotificationItem) 및 관련 타입 수정
 - **[Session]** `SESSION_2026-02-23.md` — 2026-02-23 세션 요약(에러 마스킹, 스테이션 필터/카운터, 식단 비고, 그리드 애니메이션 등)
 
 추가: `ARCHITECTURAL_PLAN.md`, `DEVELOPMENT_STANDARDS.md`, `ERROR_MONITOR_ARCHITECTURE.md`, `prompts/WORKFLOW_30MIN_PROMPTS.md` 등은 필요 시 참조.

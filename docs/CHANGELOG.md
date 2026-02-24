@@ -1,5 +1,33 @@
 # 문서·워크플로우 변경 이력
 
+## 2026-02-24
+
+### 스테이션 렌더링 최적화 및 PatientDetailModal 타입 수정
+
+- **TemperatureGraph**  
+  - `frontend/src/components/TemperatureGraph.tsx`: 커스텀 비교 함수에서 `data` 배열을 **역순(최신→과거)** 으로 순회해 동일 여부 판별. `memo(TemperatureGraphBase, arePropsEqual)` 유지.
+- **MealGrid**  
+  - `frontend/src/components/MealGrid.tsx`: `areMealGridPropsEqual` 추가 — `beds.length` 및 각 bed의 `id`, `token`만 비교. `memo(MealGridBase, areMealGridPropsEqual)`. `RoomNoteInput`의 `value={localNote ?? ''}` 로 제어 컴포넌트 경고 제거.
+- **NotificationItem 분리**  
+  - `frontend/src/components/NotificationItem.tsx` 신규: 알림 항목을 개별 컴포넌트로 분리하고 `memo` 적용. 새 알림 추가 시 기존 항목 리렌더 방지.
+  - `frontend/src/app/station/page.tsx`: 알림 리스트를 `NotificationItem` 사용으로 교체.
+- **PatientDetailModal**  
+  - `onCompleteRequest` 타입을 `(...) => void | Promise<void>` 로 변경해 `removeNotification` 반환 Promise에 `.then()` 사용 가능하도록 수정.
+
+**상세:** `docs/FRONTEND_RENDER_OPTIMIZATION.md` 참조.
+
+**수정·반영된 파일**
+
+| 대상 | 내용 |
+|------|------|
+| `frontend/src/components/TemperatureGraph.tsx` | 역순 순회 비교 유지, memo+arePropsEqual |
+| `frontend/src/components/MealGrid.tsx` | areMealGridPropsEqual, memo(MealGridBase), RoomNoteInput value 폴백 |
+| `frontend/src/components/NotificationItem.tsx` | 신규 — memo(NotificationItem) |
+| `frontend/src/app/station/page.tsx` | NotificationItem 사용으로 알림 map 교체 |
+| `frontend/src/components/PatientDetailModal.tsx` | onCompleteRequest 반환 타입 void \| Promise<void> |
+
+---
+
 ## 2026-02-23
 
 ### 스테이션 대시보드·식단 비고·그리드 애니메이션

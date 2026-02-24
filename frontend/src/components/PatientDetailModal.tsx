@@ -19,7 +19,7 @@ interface PatientDetailModalProps {
     onClose: () => void;
     bed: Bed;
     notifications: Notification[];
-    onCompleteRequest?: (id: string, type: string, admissionId: string) => void;
+    onCompleteRequest?: (id: string, type?: string, admissionId?: string) => void | Promise<void>;
     lastUploadedIv?: LastUploadedIv | null;
     onIVUploadSuccess?: (rate?: number) => void;
     onVitalUpdate?: (temp: number) => void;

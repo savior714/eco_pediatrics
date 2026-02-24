@@ -1,11 +1,23 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import { api } from '@/lib/api';
 import { Bed, MealRequest } from '@/types/domain';
 
 interface MealGridProps {
     beds: Bed[];
+}
+
+/** 병상 구조적 변경(입/퇴원·전실)만 감지. 체온·수액 등 변경 시에는 리렌더/API 재호출 하지 않음. */
+function areMealGridPropsEqual(prev: MealGridProps, next: MealGridProps): boolean {
+    if (prev.beds.length !== next.beds.length) return false;
+    for (let i = 0; i < prev.beds.length; i++) {
+        const prevBed = prev.beds[i];
+        const nextBed = next.beds[i];
+        if (prevBed.id !== nextBed.id) return false;
+        if (prevBed.token !== nextBed.token) return false;
+    }
+    return true;
 }
 
 const PEDIATRIC_OPTIONS = ['일반식', '죽1', '죽2', '죽3', '선택 안함'];
@@ -70,7 +82,7 @@ function RoomNoteInput({ bed, matrix, onUpdate }: RoomNoteInputProps) {
                 type="text"
                 className="w-full h-full px-2 bg-transparent border-none text-xs focus:ring-inset focus:ring-1 focus:ring-blue-500"
                 placeholder="-"
-                value={localNote}
+                value={localNote ?? ''}
                 onChange={(e) => setLocalNote(e.target.value)}
                 onBlur={(e) => {
                     const value = e.target.value;
@@ -84,7 +96,7 @@ function RoomNoteInput({ bed, matrix, onUpdate }: RoomNoteInputProps) {
     );
 }
 
-export function MealGrid({ beds }: MealGridProps) {
+function MealGridBase({ beds }: MealGridProps) {
     const [activeDate, setActiveDate] = useState<Date>(new Date());
     // Map: admissionId -> { BREAKFAST: MealRequest, LUNCH: MealRequest, ... }
     const [matrix, setMatrix] = useState<Record<string, Record<string, MealRequest>>>({});
@@ -303,3 +315,5 @@ export function MealGrid({ beds }: MealGridProps) {
         </div>
     );
 }
+
+export const MealGrid = memo(MealGridBase, areMealGridPropsEqual);
