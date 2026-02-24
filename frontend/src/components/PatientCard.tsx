@@ -89,4 +89,32 @@ export const PatientCard = memo(function PatientCard({ name, roomNumber, tempera
             </div>
         </Card >
     );
+}, (prev, next) => {
+    // Custom comparator to prevent re-renders when 'bed' object reference changes
+    // but relevant data remains the same (e.g. after API polling).
+
+    const prevKeys = Object.keys(prev) as (keyof PatientCardProps)[];
+    const nextKeys = Object.keys(next);
+
+    if (prevKeys.length !== nextKeys.length) return false;
+
+    // 1. Check all props for shallow equality except 'bed'
+    for (const key of prevKeys) {
+        if (key === 'bed') continue;
+        if (prev[key] !== next[key]) return false;
+    }
+
+    // 2. Bed object comparison
+    if (prev.bed === next.bed) return true;
+    if (!prev.bed || !next.bed) return false;
+
+    // Deep compare relevant fields
+    // Only 'attending_physician' is visually rendered.
+    // 'id' and 'token' are used in callbacks (e.g. QR code).
+    // Other fields in 'bed' (like notes, history) do not affect this component's rendering.
+    return (
+        prev.bed.id === next.bed.id &&
+        prev.bed.token === next.bed.token &&
+        prev.bed.attending_physician === next.bed.attending_physician
+    );
 });
