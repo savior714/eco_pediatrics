@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 :: ============================================================
 :: PC-only: fixed absolute paths (not portable)
 :: Python: C:\Users\neo24\AppData\Local\Programs\Python\Python314\python.exe

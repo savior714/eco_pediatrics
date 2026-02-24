@@ -1,6 +1,17 @@
 # 전실 후 식단 관리 비고 사라짐 — 다른 LLM용 분석 요청 프롬프트
 
-## 복사용 블록 (다른 LLM에 그대로 전달)
+## 최신 상태 (2026-02-23 해결 반영)
+
+| 항목 | 내용 |
+|------|------|
+| **상태** | 해결 완료 |
+| **원인** | 비제어 `defaultValue` + 전실 시 `bed.room` 기반 행 리마운트로 뷰-상태 불일치. LUNCH 단일 의존으로 해당 레코드 없을 때 비고 유실. |
+| **적용 수정** | `MealGrid.tsx`에 `RoomNoteInput` 제어 컴포넌트 추가. LUNCH/BREAKFAST/DINNER 폴백 읽기·저장. |
+| **상세 문서** | `docs/CHANGELOG.md` §2026-02-23, `docs/SESSION_2026-02-23.md` §7 |
+
+---
+
+## 복사용 블록 (다른 LLM에 그대로 전달, 참고용)
 
 ```
 [분석 요청: 전실(병실 이동) 후 식단 관리 UI의 비고(room_note)가 사라지는 현상]
@@ -35,10 +46,3 @@
 | 환자 목록 | `frontend/src/hooks/useStation.ts` | fetchAdmissions로 beds 갱신, 전실 후 해당 환자는 새 room_number로 같은 id로 존재 |
 
 위 프롬프트만으로 다른 LLM이 전실 후 비고 소실 원인을 추적하고 수정 방안을 제안할 수 있도록 구성함.
-
----
-
-## 해결 반영 (2026-02-23)
-
-- **원인**: 비제어 `defaultValue` + 전실 시 `bed.room` 기반 행 리마운트로 뷰-상태 불일치, LUNCH 단일 의존으로 레코드 없을 때 유실.
-- **적용**: `MealGrid.tsx`에 `RoomNoteInput` 제어 컴포넌트 추가, LUNCH/BREAKFAST/DINNER 폴백 읽기·저장. 상세는 `docs/CHANGELOG.md` §2026-02-23, `docs/SESSION_2026-02-23.md` §7 참고.

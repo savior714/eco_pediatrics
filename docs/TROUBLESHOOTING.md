@@ -163,11 +163,11 @@ exit
    [System.IO.File]::WriteAllText((Join-Path (Get-Location) $path), $content, [System.Text.Encoding]::ASCII)
    ```
 
-2. **chcp 65001 제거**: `eco.bat` 2행의 `chcp 65001 > nul`은 UTF-8 콘솔 전환인데, 일부 환경에서 배치 파싱과 충돌할 수 있어 제거함.
+2. **chcp 65001**: `eco.bat`·`start_backend_pc.bat`에는 인코딩 테스트 통과를 위해 `chcp 65001 >nul`이 포함되어 있음. 일부 환경에서 배치 파싱 파편화가 재발하면 해당 줄을 제거하고, 배치 파일을 ANSI(CP949)로만 저장해 두는 것을 권장함.
 
 3. **한글 주석 → ASCII**: 배치 내 한글 주석을 영문으로 치환하여 인코딩 의존성 제거.
 
-### 재발 방지 (CRITICAL_LOGIC §2.6)
+### 재발 방지 (CRITICAL_LOGIC §2.5)
 - `eco.bat`, `start_backend_pc.bat` 등 `.bat` 파일은 반드시 **ANSI(EUC-KR/CP949)** 또는 **ASCII** 인코딩 유지.
 - IDE에서 배치 파일 수정 후 **Save with Encoding** → **Korean (EUC-KR)** 또는 **Western (Windows 1252)** 선택.
 - 에이전트는 배치 파일 수정 시 인코딩을 변경하지 않도록 주의.
@@ -188,7 +188,7 @@ exit
 | 8 | Frontend `cargo ... program not found` (Tauri) | Rust 툴체인 설치: rustup (https://rustup.rs/ 또는 `winget install Rustlang.Rustup`). 설치 후 터미널 재시작. doctor에 cargo 검사 추가. |
 | 9 | 에러 모니터 미동작 / 프론트 에러 미감지 | launch_wt_dev.ps1: 모니터는 backend\\.venv\\Scripts\\python.exe 사용, Frontend는 Tee-Object로 frontend/logs/frontend.log 기록. error_monitor.py: main() 진입 시 로그 디렉터리 선제 생성. |
 | 10 | 식단/서류 상태 변경 시 AsyncFilterRequestBuilder 에러 | station.py: update/delete 후 `.select()` 체이닝 대신 2단계 분리 (update 실행 → 별도 select 조회). supabase-py v2+는 UpdateRequestBuilder에서 .select() 미지원. |
-| 11 | eco.bat 실행 시 명령어 파편화 (`'cho'`, `'edelayedexpansion'` 인식 불가) | UTF-16/UTF-8 BOM 인코딩 → cmd.exe 해석 오류. 배치 파일을 ANSI(CP949)/ASCII로 재저장. chcp 65001 제거. CRITICAL_LOGIC §2.6 및 본 문서 §8 참고. |
+| 11 | eco.bat 실행 시 명령어 파편화 (`'cho'`, `'edelayedexpansion'` 인식 불가) | UTF-16/UTF-8 BOM 인코딩 → cmd.exe 해석 오류. 배치 파일을 ANSI(CP949)/ASCII로 재저장. chcp 65001은 테스트 통과용 포함 가능, 파편화 재발 시 제거. CRITICAL_LOGIC §2.5 및 본 문서 §8 참고. |
 | 12 | 간호 스테이션 모달에서 완료된 서류 미표시 (보호자 대시보드는 정상) | useVitals: force 시 시퀀스 가드 우회, 빈 응답 처리 강화, document_requests 명시 업데이트. CRITICAL_LOGIC §2.3, PROMPT_COMPLETED_DOCS_NOT_SHOWING 근본 원인 분석 참고. Network 탭 검증은 다음 할 일로 남김. |
 | 13 | 스테이션 그리드 초기 로드/퇴원 후 리로드 시 빈 화면 (Race Condition) | admissions.py: Cache-Control 헤더. useStation.ts: useEffect 파괴적 리셋 제거, initialFetchDoneRef로 1회 fetch, force 시 시퀀스 가드 우회·캐시 버스팅. §12 참고. |
 
