@@ -4,6 +4,10 @@ node_modules/
 *.pyc
 __pycache__/
 
+# Build-time generated (동일 입력/환경이면 결과 동일 — 버전 관리 제외)
+frontend/next-env.d.ts
+*.tsbuildinfo
+
 # Environment (작업 환경마다 다름 - 커밋 제외)
 .env
 .env*
@@ -21,7 +25,6 @@ node_modules/.cache/
 frontend/out/
 *.log
 tsc_output.txt
-*.tsbuildinfo
 
 # Gemini & Debug (에러 모니터 생성 파일)
 prompt_for_gemini.md
