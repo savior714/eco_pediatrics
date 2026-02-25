@@ -1,5 +1,9 @@
 # Context Snapshot
 
+- **30분 AI 코딩 워크플로우 문서 정리 (2026-02-25)**:
+    - **프롬프트 문서 eco_pediatrics 전용화**: `docs/prompts/WORKFLOW_30MIN_PROMPTS.md`를 본 프로젝트 기준으로 전면 수정. 프로젝트 개요(FastAPI·Supabase·Next.js, CRITICAL_LOGIC, supabase-py 2단계·logger·api.ts), Phase 1~3 복붙용 프롬프트, 통합 마스터 프롬프트(Mega-Context용)를 eco_pediatrics 규칙에 맞게 통일.
+    - **워크플로우 문서 참조 방식**: `docs/WORKFLOW_30MIN_AI_CODING.md`는 실제 프롬프트 문구 대신 `docs/prompts/WORKFLOW_30MIN_PROMPTS.md` 참조로 정리. 복붙용 문구는 프롬프트 문서 한 곳에서만 유지.
+
 - **입원 주치의 연동 및 UI 리팩토링 (2026-02-23)**:
     - **주치의(Attending Physician) 필드 도입**: `admissions` 테이블에 `attending_physician` 필드를 추가하고, 간호 스테이션 그리드 및 상세 모달에서 담당 원장님 정보를 표시하도록 연동 완료.
     - **마이그레이션 마무리**: React + FastAPI 환경으로의 전면 전환 및 Tailwind CSS v4 업그레이드에 따른 잔여 문서 및 설정 정리.

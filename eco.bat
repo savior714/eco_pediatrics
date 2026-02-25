@@ -1,4 +1,5 @@
 @echo off
+REM If window closes at once: save as ANSI(CP949). See docs\TROUBLESHOOTING.md section 8.
 chcp 65001 >nul
 setlocal enabledelayedexpansion
 cd /d "%~dp0"

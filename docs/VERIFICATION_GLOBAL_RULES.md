@@ -1,6 +1,6 @@
 # 글로벌 룰 검증 보고서 (Antigravity + CRITICAL_LOGIC)
 
-검증 일시: 2026-02-24  
+검증 일시: 2026-02-25  
 기준: 사용자 규칙(Antigravity IDE Agent Global Rules), `docs/CRITICAL_LOGIC.md` (SSOT)
 
 ---
@@ -81,9 +81,9 @@ python -m pytest tests/test_verify_scripts_encoding.py -v
 
 ---
 
-## 4. docs 폴더 검증 (2026-02-24)
+## 4. docs 폴더 검증 (2026-02-25)
 
-`docs/` 및 `docs/prompts/` 하위 문서를 글로벌 룰(한국어, 이모지 금지, CRITICAL_LOGIC 일치) 기준으로 점검함.
+`docs/` 및 `docs/prompts/` 하위 문서를 글로벌 룰(한국어, 이모지 금지, CRITICAL_LOGIC 일치) 기준으로 점검함. 30분 AI 코딩 워크플로우는 `WORKFLOW_30MIN_AI_CODING.md`(절차)·`prompts/WORKFLOW_30MIN_PROMPTS.md`(eco_pediatrics 전용 복붙 프롬프트) 분리 유지.
 
 ### 4.1 점검한 문서 목록
 
@@ -96,9 +96,11 @@ python -m pytest tests/test_verify_scripts_encoding.py -v
 | CHANGELOG.md | 한국어·이모지 | 통과 |
 | DEVELOPMENT_STANDARDS.md | 내용 일치 | 통과 (일부 영문 패턴 유지) |
 | SESSION_2026-02-23.md | 한국어·이모지 | 통과 |
+| FRONTEND_RENDER_OPTIMIZATION.md | 스테이션 렌더 최적화(TemperatureGraph, MealGrid, NotificationItem) | 통과 |
 | SECURITY_REVIEW.md | 한국어·CRITICAL_LOGIC 참조 | 통과 |
 | REFACTOR_DOCS_PLAN.md | 한국어·이모지 | 통과 |
-| WORKFLOW_30MIN_AI_CODING.md | 한국어·이모지 | 통과 |
+| WORKFLOW_30MIN_AI_CODING.md | 한국어·이모지·프롬프트 문서 참조 방식 | 통과 |
+| prompts/WORKFLOW_30MIN_PROMPTS.md | eco_pediatrics 전용·Phase 1~3·통합 마스터 프롬프트 | 통과 |
 | CODE_REVIEW_LATEST.md | 한국어·이모지 | 통과 |
 | ERROR_MONITOR_ARCHITECTURE.md | 한국어·이모지 | 수정함 (이모지 제거) |
 | ARCHITECTURAL_PLAN.md | 기술 내용 | 통과 (전문 용어·영문 유지) |
@@ -106,7 +108,7 @@ python -m pytest tests/test_verify_scripts_encoding.py -v
 | prompts/PROMPT_OTHER_LLM_*.md | 한국어·구조 | 통과 |
 | prompts/prompt_for_gemini.md, VERIFICATION_PROMPT_FOR_GEMINI.md | 참조용 | 미상세 점검 |
 | prompts/archive/*.md | 과거 이슈 보관 | 샘플만 확인, 이모지 없음 |
-| repomix-*.md, repomix-output.md | 스크립트 생성·덤프 | 용도상 점검 생략 |
+| repomix-*.md, repomix-output.md | 스크립트 생성·덤프(워크플로우는 repomix-output.md 한 파일만 사용) | 용도상 점검 생략 |
 
 ### 4.2 적용한 수정
 
@@ -119,7 +121,11 @@ python -m pytest tests/test_verify_scripts_encoding.py -v
 3. **TROUBLESHOOTING.md** §8  
    - "chcp 65001 제거"를 "chcp 65001은 테스트 통과용으로 포함되어 있음. 파편화 재발 시 제거·ANSI 저장 권장"으로 정리해 현재 배치 상태와 일치시킴.
 
-### 4.3 권장 사항 (선택)
+### 4.3 repomix 출력과 민감정보
+
+- **Invoke-Repomix.ps1**: `$fullInclude`에 `.env` 경로가 없고, `$fullIgnore`에 `**/.env`, `**/.env.*`, `**/.env.local`, `**/*.pem`, `**/service-account*.json`, `**/*.key`를 명시하여 덤프에 민감파일이 들어가지 않도록 함. repomix는 기본적으로 .gitignore도 적용하므로 이중 차단.
+
+### 4.4 권장 사항 (선택)
 
 - **DEVELOPMENT_STANDARDS.md**, **ARCHITECTURAL_PLAN.md**, **TROUBLESHOOTING_WT_LAYOUT.md**: 설명·헤딩이 영문 비중이 큼. 글로벌 룰 "설명에는 한국어"를 엄격히 적용할 경우 한국어 보강 검토.
 - **prompts/archive**: 완료된 이슈용 프롬프트만 보관. 신규 작업 시 `docs/CRITICAL_LOGIC.md`·`VERIFICATION_GLOBAL_RULES.md` 우선 참조.
@@ -130,5 +136,5 @@ python -m pytest tests/test_verify_scripts_encoding.py -v
 
 - **CRITICAL_LOGIC** 및 **글로벌 룰**의 핵심 항목(SSOT, 레이어, KST, 마스킹, audit_logs, 500ms 가드, DB 2단계, 데이터 계약)은 현재 코드·문서와 **일치**함.
 - **배치 파일**: `chcp 65001` 추가로 테스트 1단계 충족. 파일 자체는 ANSI 인코딩 유지 권장(IDE 저장 시).
-- **docs 폴더**: 이모지 3건 제거, TROUBLESHOOTING §8 문구 정리 반영. 나머지 문서는 한국어·CRITICAL_LOGIC과 충돌 없음.
+- **docs 폴더**: 이모지 3건 제거, TROUBLESHOOTING §8 문구 정리 반영. 30분 워크플로우 문서는 eco_pediatrics 전용으로 정리되어 절차(WORKFLOW_30MIN_AI_CODING.md)와 복붙 프롬프트(prompts/WORKFLOW_30MIN_PROMPTS.md) 참조 방식 유지.
 - **선택 보완**: mission/context/checklist 메모리 파일, useMeals 스로틀, 일부 문서 한국어 확대는 필요 시 추가.

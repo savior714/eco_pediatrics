@@ -1,5 +1,22 @@
 # 문서·워크플로우 변경 이력
 
+## 2026-02-25
+
+### 30분 AI 코딩 워크플로우 문서 eco_pediatrics 전용 정리
+
+- **변경 요약**: `docs/prompts/WORKFLOW_30MIN_PROMPTS.md`를 **eco_pediatrics 전용**으로 전면 수정. 이전에 다른 프로젝트(cheonggu) 기준으로 되어 있던 프로젝트 개요·통합 마스터 프롬프트를 제거하고, 본 프로젝트 스택·SSOT·규칙에 맞게 재작성.
+- **프롬프트 문서**: 프로젝트 개요(FastAPI·Supabase·Next.js, CRITICAL_LOGIC, supabase-py 2단계·logger·api.ts 규칙), repomix 덤프 생성, Phase 1~3 복붙용 프롬프트, 통합 마스터 프롬프트(Mega-Context LLM용)를 eco_pediatrics 기준으로 통일.
+- **워크플로우 문서**: `docs/WORKFLOW_30MIN_AI_CODING.md`에서 Phase 1~3 실제 문구를 제거하고 **`docs/prompts/WORKFLOW_30MIN_PROMPTS.md`** 참조 방식으로 정리. 주의사항에 SSOT·2단계·logger 명시, 최근 변경에 2026-02-25 항목 추가.
+
+**수정·반영된 파일**
+
+| 대상 | 내용 |
+|------|------|
+| `docs/prompts/WORKFLOW_30MIN_PROMPTS.md` | eco_pediatrics 개요·Phase 1~3·통합 마스터 프롬프트 전면 수정 |
+| `docs/WORKFLOW_30MIN_AI_CODING.md` | 프롬프트 문서 참조 방식으로 정리, 주의사항·최근 변경 갱신 |
+
+---
+
 ## 2026-02-24
 
 ### 스테이션 렌더링 최적화 및 PatientDetailModal 타입 수정

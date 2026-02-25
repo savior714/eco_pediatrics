@@ -106,5 +106,6 @@
 *   [CONTEXT_SNAPSHOT.md](./CONTEXT_SNAPSHOT.md): 프로젝트의 상세 개발 현황 및 히스토리 (최신)
 *   [docs/CRITICAL_LOGIC.md](./docs/CRITICAL_LOGIC.md): **시스템 핵심 운영 로직 SSOT (프로젝트 헌법)**
 *   [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md): 주요 이슈 및 해결 가이드 (설정, Doctor, WT 레이아웃, Supabase 쿼리 패턴 등)
-*   [docs/prompts/](./docs/prompts/): 에러 모니터 출력(`prompt_for_gemini.md`) 및 LLM 디버깅용 프롬프트 (예: 식단 서브모달 동기화 이슈)
+*   [docs/prompts/](./docs/prompts/): 에러 모니터 출력(`prompt_for_gemini.md`), LLM 디버깅용 프롬프트, **30분 AI 코딩** 복붙용(`WORKFLOW_30MIN_PROMPTS.md` — eco_pediatrics 전용)
+*   [docs/WORKFLOW_30MIN_AI_CODING.md](./docs/WORKFLOW_30MIN_AI_CODING.md): 30분 AI 코딩 워크플로우(복붙 절차). 복붙용 프롬프트는 [docs/prompts/WORKFLOW_30MIN_PROMPTS.md](./docs/prompts/WORKFLOW_30MIN_PROMPTS.md)(eco_pediatrics 전용).
 *   [NEXT_STEPS.md](./NEXT_STEPS.md): 향후 개발 계획

@@ -1,6 +1,7 @@
 # docs/ 리팩토링 계획서
 
-오래되거나 중복·불필요해진 문서를 정리하기 위한 계획. **실행 전 팀/담당자 확인 권장.**
+오래되거나 중복·불필요해진 문서를 정리하기 위한 계획. **실행 전 팀/담당자 확인 권장.**  
+(최종 갱신: 2026-02-25 — 워크플로우·repomix 정책 반영)
 
 ---
 
@@ -8,12 +9,12 @@
 
 | 구분 | 경로/패턴 | 용도 |
 |------|-----------|------|
-| **핵심 SSOT** | `CRITICAL_LOGIC.md` | 비즈니스·기술 원칙 (절대 수정 시 본 문서 선행 갱신) |
-| **워크플로우** | `WORKFLOW_30MIN_AI_CODING.md`, `prompts/WORKFLOW_30MIN_PROMPTS.md` | 30분 AI 코딩 흐름·복붙 프롬프트 |
+| **핵심 SSOT** | `CRITICAL_LOGIC.md` | 비즈니스·기술 원칙 (수정 시 본 문서 선행 갱신) |
+| **워크플로우** | `WORKFLOW_30MIN_AI_CODING.md`, `prompts/WORKFLOW_30MIN_PROMPTS.md` | 30분 AI 코딩: 절차는 전자, **복붙용 프롬프트는 후자(eco_pediatrics 전용)**. Phase 1~3·통합 마스터 프롬프트 포함. |
 | **운영·이력** | `TROUBLESHOOTING.md`, `CHANGELOG.md`, `SESSION_2026-02-*.md` | 트러블슈팅·변경 이력·세션 요약 |
 | **환경·아키텍처** | `DEV_ENVIRONMENT.md`, `ARCHITECTURAL_PLAN.md`, `DEVELOPMENT_STANDARDS.md`, `SECURITY_REVIEW.md` | 개발 환경·설계·표준·보안 |
 | **에러 모니터** | `ERROR_MONITOR_ARCHITECTURE.md`, `prompts/ERROR_MONITOR_DEBUG_PROMPT.md` | 에러 모니터 설명·디버깅 프롬프트 |
-| **repomix 덤프** | `repomix-output.md` (스크립트 생성), `repomix-backend.md`, `repomix-frontend.md`, `repomix-diet2-station.md`, `repomix-*-skeleton.md` | 코드베이스 덤프 (일부는 로컬 전용·gitignore) |
+| **repomix 덤프** | `repomix-output.md` (스크립트 생성, **워크플로우 Phase 1용 단일 파일**), `repomix-backend.md`, `repomix-frontend.md`, `repomix-*-skeleton.md` 등 | 공식 워크플로우는 **repomix-output.md 한 파일만** 사용. 나머지는 .gitignore·로컬 캐시. |
 | **일회성 프롬프트** | `prompts/DIAGNOSIS_*.md`, `prompts/PROMPT_*.md`, `prompts/prompt_for_*.md` | 과거 이슈 진단·다른 LLM용 복붙 프롬프트 |
 | **루트 중복** | `docs/PROMPT_*.md`, `docs/ERROR_MONITOR_DEBUG_PROMPT.md` | `prompts/`와 내용 중복 가능성 |
 
@@ -26,7 +27,7 @@ DDD 관점에서 문서 성격을 분리해 **인지 부하와 LLM 컨텍스트 
 | 계층 (Layer) | 포함 문서 예시 | 관리 정책 |
 |--------------|----------------|-----------|
 | **Domain/Core** | `CRITICAL_LOGIC.md`, `ARCHITECTURAL_PLAN.md` | **불변성 유지**. 수정 시 반드시 리뷰 필요. |
-| **Workflow** | `WORKFLOW_30MIN_*.md`, `DEVELOPMENT_STANDARDS.md` | **최신화 필수**. 도구/환경 변경 시 즉시 갱신. |
+| **Workflow** | `WORKFLOW_30MIN_AI_CODING.md`, `prompts/WORKFLOW_30MIN_PROMPTS.md`, `DEVELOPMENT_STANDARDS.md` | **최신화 필수**. 도구/환경·프로젝트 규칙(CRITICAL_LOGIC, eco_pediatrics) 변경 시 즉시 갱신. |
 | **Operations** | `TROUBLESHOOTING.md`, `ERROR_MONITOR_*.md`, `CHANGELOG.md`, `SESSION_*.md` | **누적형**. 이슈·세션 발생 시마다 추가. |
 | **Archive** | `prompts/archive/*.md`, repomix 보조 파일(선택) | **읽기 전용**. 검색/일상 작업에서 제외. |
 
@@ -37,7 +38,7 @@ DDD 관점에서 문서 성격을 분리해 **인지 부하와 LLM 컨텍스트 
 - **중복 제거**: 동일·유사 문서는 한 곳만 유지하고 참조 통일.
 - **역할 명확화**: 유지할 문서는 "왜 있는지" 한 줄로 설명 가능하도록.
 - **아카이브 정책**: 완료된 이슈용 프롬프트는 삭제하지 않고 `prompts/archive/`로 이동해 필요 시 참조 가능하게 함.
-- **repomix**: 공식 워크플로우는 `repomix-output.md` 한 파일만 사용. 나머지 repomix-*는 **.gitignore 등록**하여 로컬 캐시로만 활용·레포 순수성 유지 (특정 모듈 디버깅 시에만 수동 생성, 작업 종료 후 삭제 또는 ignore).
+- **repomix**: 공식 워크플로우는 **`repomix-output.md` 한 파일만** 사용 (`scripts/Invoke-Repomix.ps1` 생성). Phase 1에서 같은 덤프를 붙여넣고 Step 1(백엔드)·Step 2(프론트) 지시서를 따로 받는 흐름. 나머지 repomix-*는 **.gitignore 등록**하여 로컬 캐시로만 활용.
 - **Broken Links 방지**: 이동·삭제 후 상대 경로 링크 단절을 검증하는 절차 포함 (§5.1).
 
 ---
@@ -74,23 +75,24 @@ DDD 관점에서 문서 성격을 분리해 **인지 부하와 LLM 컨텍스트 
 - `PROMPT_REFACTOR_LOGIC_ONLY_PROTOCOL.md`, `PROMPT_REFACTOR_AREAS_AND_CHECKLIST.md`, `PROMPT_LOGIC_ONLY_REFACTOR_BATCH.md`
 
 **유지 (자주 참조·재사용)**  
-- `WORKFLOW_30MIN_PROMPTS.md`, `REFACTOR_AUDITOR_GUIDE.md`, `ERROR_MONITOR_DEBUG_PROMPT.md`  
+- `prompts/WORKFLOW_30MIN_PROMPTS.md` — eco_pediatrics 전용 복붙 프롬프트(Phase 1~3·통합 마스터). 절차는 `WORKFLOW_30MIN_AI_CODING.md` 참조.
+- `REFACTOR_AUDITOR_GUIDE.md`, `prompts/ERROR_MONITOR_DEBUG_PROMPT.md`
 - 필요 시 `PROMPT_COMPLETED_DOCS_NOT_SHOWING.md`는 TROUBLESHOOTING/세션 문서에서 참조하므로 archive 후에도 링크만 갱신.
 
 ### 4.3 repomix 보조 파일 및 .gitignore
 
 | 파일 | 용도 | 권장 |
 |------|------|------|
-| `repomix-output.md` | 스크립트 생성, 워크플로우 Phase 1용 | 유지 (현재 이미 gitignore) |
-| `repomix-backend.md`, `repomix-frontend.md` | 백엔드/프론트 전용 덤프 | **.gitignore 추가**. 로컬에서만 수동 생성·캐시 활용. |
+| `repomix-output.md` | `Invoke-Repomix.ps1` 생성, **워크플로우 Phase 1 단일 덤프** | 유지 (이미 .gitignore 대상, 로컬 전용) |
+| `repomix-backend.md`, `repomix-frontend.md` | 백엔드/프론트 분리 덤프 | **.gitignore 추가**. 로컬에서만 수동 생성·캐시. |
 | `repomix-diet2-station.md`, `repomix-*-skeleton.md` | 기능별·스켈레톤 덤프 | **.gitignore 추가** 또는 archive. 레포에 올리지 않음. |
 
-- **원칙**: 공식 워크플로우는 `repomix-output.md` 한 파일만 사용. 보조 파일은 필요 시 수동 생성 후 작업 종료 시 삭제하거나 ignore로 레포 순수성 유지.
+- **원칙**: 공식 워크플로우는 **`repomix-output.md` 한 파일만** 사용. 복붙용 문구는 `prompts/WORKFLOW_30MIN_PROMPTS.md`(eco_pediatrics 전용). 보조 덤프는 필요 시 수동 생성 후 삭제 또는 ignore.
 
 ### 4.4 문서 간 참조 점검
 
 - `TROUBLESHOOTING.md`, `SESSION_*.md`, `CHANGELOG.md`에서 `docs/` 또는 `docs/prompts/` 링크가 깨지지 않도록 아카이브/삭제 후 경로 수정.
-- `WORKFLOW_30MIN_AI_CODING.md`·`WORKFLOW_30MIN_PROMPTS.md`는 repomix-output.md만 참조하도록 유지 (이미 반영됨).
+- **30분 워크플로우**: `WORKFLOW_30MIN_AI_CODING.md`는 절차·Phase 1~4 안내만 두고, 실제 복붙 문구는 `prompts/WORKFLOW_30MIN_PROMPTS.md` 참조 (이미 반영). repomix는 `repomix-output.md` 한 파일만 사용.
 
 ### 4.5 인덱스 (docs/README.md)
 
@@ -100,7 +102,7 @@ DDD 관점에서 문서 성격을 분리해 **인지 부하와 LLM 컨텍스트 
 
 ## 5. 실행 시 주의사항 및 검증
 
-- **CRITICAL_LOGIC.md**, **WORKFLOW_30MIN_*.md** 는 수정하지 않음 (내용 변경 없이 참조 경로만 필요 시 수정).
+- **CRITICAL_LOGIC.md**: 수정 시 팀/아키텍트 확인. **WORKFLOW_30MIN_AI_CODING.md**, **prompts/WORKFLOW_30MIN_PROMPTS.md**: 도구·환경·프로젝트 규칙(eco_pediatrics, CRITICAL_LOGIC) 변경 시 내용 갱신. 참조 경로만 바꿀 때는 최소 수정.
 - **삭제 전**: 해당 경로를 참조하는 다른 파일이 있는지 grep 등으로 확인.
 - **아카이브**: `docs/prompts/archive/` 로 통일.
 - **git**: 리팩토링 커밋은 "docs: 중복 제거 및 아카이브" 등으로 분리하면 이력 추적에 유리함.
@@ -115,12 +117,13 @@ DDD 관점에서 문서 성격을 분리해 **인지 부하와 LLM 컨텍스트 
 ### 5.2 권장 실행 순서 (로컬 터미널에서 직접 실행)
 
 1. **리팩토링 실행** (아카이브 이동 + 루트 중복 삭제):  
-   `pwsh -NoProfile -File ./scripts/Invoke-DocsRefactor.ps1`
+   프로젝트 루트에서 `pwsh -ExecutionPolicy Bypass -File scripts/Invoke-DocsRefactor.ps1`  
+   (스크립트가 루트를 자동 판별하므로 다른 경로에서 실행해도 동작함.)
 2. **드라이 런 검증** (수정 가능/Broken 목록만 출력):  
-   `./scripts/Verify-DocsLinks.ps1`  
+   프로젝트 루트에서 `pwsh -File scripts/Verify-DocsLinks.ps1`  
    출력된 목록을 확인한 뒤 진행.
 3. **링크 자동 수정 적용**:  
-   `./scripts/Verify-DocsLinks.ps1 -Fix`
+   `pwsh -File scripts/Verify-DocsLinks.ps1 -Fix`
 4. **최종 확인**: `git diff`로 TROUBLESHOOTING.md 등에서 `prompts/archive/` 경로 반영 여부 확인.
 
 ---
@@ -134,11 +137,12 @@ AI·개발자가 문서를 가장 먼저 파악할 수 있도록 아래 구조�
 
 - **[Core]** `CRITICAL_LOGIC.md` — 비즈니스 핵심 로직 및 기술 원칙
 - **[Dev]** `DEV_ENVIRONMENT.md` — 환경 설정 및 PowerShell 워크플로우
-- **[AI]** `WORKFLOW_30MIN_AI_CODING.md` — AI 협업 가이드
+- **[AI]** `WORKFLOW_30MIN_AI_CODING.md` — 30분 AI 코딩 워크플로우(절차). 복붙용 프롬프트는 `prompts/WORKFLOW_30MIN_PROMPTS.md`(eco_pediatrics 전용) 참조.
 - **[History]** `TROUBLESHOOTING.md` — 과거 해결된 주요 장애 이력
+- **[Changelog]** `CHANGELOG.md` — 문서·워크플로우·기능 변경 이력
 ```
 
-필요 시 ARCHITECTURAL_PLAN, DEVELOPMENT_STANDARDS, ERROR_MONITOR_ARCHITECTURE, prompts/WORKFLOW_30MIN_PROMPTS 등 한 줄씩 추가.
+필요 시 ARCHITECTURAL_PLAN, DEVELOPMENT_STANDARDS, ERROR_MONITOR_ARCHITECTURE, FRONTEND_RENDER_OPTIMIZATION, SESSION_2026-02-*.md 등 한 줄씩 추가.
 
 ---
 
@@ -147,6 +151,7 @@ AI·개발자가 문서를 가장 먼저 파악할 수 있도록 아래 구조�
 - [ ] **TROUBLESHOOTING.md**에서 이동 대상 파일을 링크하고 있는지 grep/VS Code Search로 확인했는가?
 - [ ] **repomix-output.md 외** 보조 덤프(`repomix-backend.md`, `repomix-frontend.md`, `repomix-diet2-*`, `repomix-*-skeleton.md`)를 **.gitignore에 추가**하는 것에 동의하는가?
 - [ ] 위 두 항목 확인 후, `scripts/Invoke-DocsRefactor.ps1` 실행 또는 타 LLM용 프롬프트(`prompts/PROMPT_OTHER_LLM_DOCS_REFACTOR.md`)로 단계 실행.
+- [ ] 리팩토링 후 `docs/VERIFICATION_GLOBAL_RULES.md` §4 검증 표를 현재 문서 목록에 맞게 갱신할 것.
 
 ---
 
