@@ -88,7 +88,7 @@
 ### 3.5 Backend Dependency Layers (의존성 계층)
 - **Core(웹 서비스)**: `backend/requirements-core.txt`에 fastapi, uvicorn, pydantic 등 빌드 불필요 패키지만 포함. C++ 확장 없이 설치 가능.
 - **Full(전체 실행)**: `requirements.txt`는 supabase를 포함하며, supabase는 storage3→pyiceberg→pyroaring 경로로 C++ 빌드가 필요한 의존성을 갖는다.
-- **빌드 환경 미구성 시**: `pip install -r requirements-core.txt`로 Core만 우선 설치. 백엔드 실제 실행에는 supabase 필수이므로, Visual Studio Build Tools + **Windows SDK(UCRT, io.h 포함)** 설치 후 `vcvars64.bat`으로 INCLUDE/LIB 경로 주입하여 `pip install -r requirements.txt` 또는 pyiceberg·pyroaring 별도 설치가 필요하다.
+- **빌드 환경 미구성 시**: `uv pip install -r requirements-core.txt`로 Core만 우선 설치. 백엔드 실제 실행에는 supabase 필수이므로, Visual Studio Build Tools + **Windows SDK(UCRT, io.h 포함)** 설치 후 `vcvars64.bat`으로 INCLUDE/LIB 경로 주입하여 `uv pip install -r requirements.txt` 또는 pyiceberg·pyroaring 별도 설치가 필요하다.
 - **데이터 분석용 모듈**(pyiceberg, pyroaring 등)은 현재 스테이션 대시보드·환자 상세 모달 기능과 무관하나, **storage3가 런타임에 pyiceberg를 import**하므로 `--no-deps` 우회 설치로는 supabase 기동 불가. pyiceberg 빌드가 반드시 필요함.
 - **의존성 설치 예외 규정(장기)**: Windows Native 환경에서 C++ 빌드 도구·SDK 미비 시, `vcvars64.bat` 환경 주입 후 pyroaring/pyiceberg 선 설치를 시도한다. 이는 storage3→pyiceberg의 런타임 의존성으로 인해 우회 불가하기 때문이다.
 

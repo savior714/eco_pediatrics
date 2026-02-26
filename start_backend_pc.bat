@@ -38,19 +38,28 @@ if not exist "%PROJECT_DIR%\backend" (
 cd /d "%PROJECT_DIR%\backend"
 
 if not exist ".venv" (
-    echo Creating virtual environment...
-    "%PY_EXE%" -m venv .venv
+    echo Creating virtual environment with uv...
+    "%PY_EXE%" -m uv venv .venv --python 3.14
     if errorlevel 1 (
-        echo Failed to create venv.
+        echo Failed to create venv. Install uv: pip install uv
         pause
         exit /b 1
     )
 )
 
-call .venv\Scripts\activate.bat
-
 echo Installing dependencies...
-pip install -r requirements.txt -q
+if exist "uv.lock" (
+    "%PY_EXE%" -m uv sync
+) else (
+    "%PY_EXE%" -m uv pip install --python .venv\Scripts\python.exe -r requirements.txt -q
+)
+if errorlevel 1 (
+    echo Failed to install dependencies. Check pyproject.toml / requirements.txt
+    pause
+    exit /b 1
+)
+
+call .venv\Scripts\activate.bat
 if errorlevel 1 (
     echo Failed to install dependencies. Check requirements.txt
     pause

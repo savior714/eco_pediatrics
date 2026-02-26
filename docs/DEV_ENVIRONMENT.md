@@ -16,6 +16,23 @@
 | **Git** | **2.52.0.windows.1** | |
 | **Visual Studio** | 2022/2025 | C++ 데스크톱 개발 워크로드 필수 |
 | **Rust (cargo)** | rustup 설치 권장 | Tauri 데스크톱 앱 빌드/실행에 필요 |
+| **uv** | 최신 안정판 | Python 가상환경·의존성 관리 (필수) |
+
+### uv 설치 (필수)
+
+가상환경은 **uv**로만 생성·관리합니다. 미설치 시 아래 중 하나로 설치 후 터미널을 다시 열어주세요.
+
+```powershell
+# PowerShell (권장)
+irm https://astral.sh/uv/install.ps1 | iex
+```
+
+```cmd
+# 또는 pip로 설치 (가상환경 밖에서)
+pip install uv
+```
+
+설치 확인: `uv --version`
 
 ### [주의] Python 3.14 사용 시 (MSVC 빌드 환경)
 
@@ -27,14 +44,16 @@
 
 ## 2. Python 환경 설정
 
-### 2.1 가상환경 구성 (Standard)
+### 2.1 가상환경 구성 (Standard, uv 사용)
+
 ```cmd
 cd backend
-py -3.14 -m venv .venv
+uv venv .venv
 .venv\Scripts\activate
-pip install --upgrade pip setuptools wheel
-pip install -r requirements.txt
+uv sync
 ```
+
+`backend/uv.lock`이 있으면 `uv sync`로 lock 기준 설치. 없으면 `uv pip install -r requirements.txt`. 기존 `.venv`가 있으면 재생성하지 말고 위 설치만 실행하면 됩니다.
 
 ### 2.2 MSVC 컴파일러 환경 강제 로드 (PowerShell)
 
@@ -105,7 +124,7 @@ eco frontend :: Frontend만 단일 창 실행
 ### 3.3 Setup [2번] 상세
 
 1. **Prerequisite 검사**: Python 3.14.x, Node.js v24.12.x 없으면 실패 로그 후 `setup_fail`.
-2. **Backend**: `.venv` 없으면 생성 → **SDK Discovery** (`Refresh-BuildEnv.ps1`로 사용자 환경 변수 영구 등록 + 현재 세션에 `INCLUDE`/`LIB`/`PATH` 주입) → pip upgrade(cython 포함) → pyroaring/pyiceberg 시도 → `pip install -r requirements.txt` → `.env` 없으면 복사.
+2. **Backend**: `.venv` 없으면 **uv venv .venv**로 생성 → **SDK Discovery** (`Refresh-BuildEnv.ps1`로 사용자 환경 변수 영구 등록 + 현재 세션에 `INCLUDE`/`LIB`/`PATH` 주입) → uv pip upgrade(cython 포함) → pyroaring/pyiceberg 시도 → `uv pip install -r requirements.txt` → `.env` 없으면 복사.
 3. **Frontend**: `npm install` → `.env.local` 없으면 복사.
 4. **검증**: `scripts\doctor.py` 실행. 실패 시 WARN 출력 후 메뉴 복귀.
 5. **로그**: 모든 실패는 `logs\eco_setup.log`에 타임스탬프와 함께 기록됨.

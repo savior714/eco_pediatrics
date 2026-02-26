@@ -56,6 +56,27 @@ def check_git():
         print_status("Git Installation", False, "Git not found in PATH")
         return False
 
+
+def check_uv():
+    """uv 필수: 가상환경·의존성 관리(글로벌 룰). PATH 또는 python -m uv 둘 다 허용."""
+    for cmd in (["uv", "--version"], [sys.executable, "-m", "uv", "--version"]):
+        try:
+            output = subprocess.check_output(
+                cmd, text=True, stderr=subprocess.DEVNULL
+            ).strip()
+            ver = output.split()[0] if output else "Found"
+            print_status("uv (package manager)", True, ver)
+            return True
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            continue
+    print_status(
+        "uv (package manager)",
+        False,
+        "Not found. Install: pip install uv",
+    )
+    return False
+
+
 def check_msvc():
     cl_path = shutil.which(REQUIRED_MSVC_CHECK_CMD)
     is_env_set = "INCLUDE" in os.environ and "ucrt" in os.environ.get("INCLUDE", "").lower()
@@ -134,6 +155,7 @@ def main():
         check_python(),
         check_node(),
         check_git(),
+        check_uv(),
         check_msvc(),
         check_cargo(),
         check_project_structure(),

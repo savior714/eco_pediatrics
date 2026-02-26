@@ -15,7 +15,7 @@
 - 실패 시 사용자 대기(`pause`) 없이 흐름이 끝나며 창 종료.
 
 ### 해결 (적용됨)
-- **단계별 실패 처리**: Backend venv 생성, `pip install -r requirements.txt`, `npm install`, `doctor.py` 각각 실행 후 `errorlevel` 검사.
+- **단계별 실패 처리**: Backend .venv 생성(uv), `uv pip install -r requirements.txt`, `npm install`, `doctor.py` 각각 실행 후 `errorlevel` 검사.
 - **실패 시**: `logs\eco_setup.log`에 타임스탬프와 실패 구간(FAIL/WARN) 기록, `[ECO] Setup FAILED. See errors above. Log: ...` 출력 후 **pause**로 창 유지, **goto menu**로 메뉴 복귀.
 - **성공 시에만** "Setup Complete" 후 메뉴 복귀.
 

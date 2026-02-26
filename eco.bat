@@ -82,17 +82,29 @@ if %errorlevel% neq 0 (
     echo [%date% %time%] FAIL: Node.js not found >> "%SETUP_LOG%"
     goto setup_fail
 )
+uv --version >nul 2>&1
+if %errorlevel% neq 0 (
+    py -3.14 -m uv --version >nul 2>&1
+    if !errorlevel! neq 0 (
+        echo [ERROR] uv not found. Install: pip install uv  or  irm https://astral.sh/uv/install.ps1 ^| iex
+        echo [%date% %time%] FAIL: uv not found >> "%SETUP_LOG%"
+        goto setup_fail
+    )
+    set "UV=py -3.14 -m uv"
+) else (
+    set "UV=uv"
+)
 
 :: 2. Backend Setup
 echo.
 echo [1/4] Setting up Backend...
 cd /d "%~dp0backend"
 if not exist ".venv" (
-    echo    - Creating virtual environment...
-    call py -3.14 -m venv .venv
+    echo    - Creating virtual environment with uv...
+    !UV! venv .venv --python 3.14
     if !errorlevel! neq 0 (
-        echo [ERROR] Failed to create backend .venv.
-        echo [%date% %time%] FAIL: py -3.14 -m venv .venv >> "%SETUP_LOG%"
+        echo [ERROR] Failed to create backend .venv (uv venv).
+        echo [%date% %time%] FAIL: uv venv .venv >> "%SETUP_LOG%"
         cd /d "%~dp0"
         goto setup_fail
     )
@@ -113,14 +125,18 @@ if defined SDK_VER (
     echo    - Windows SDK not found; build may fail for native deps.
 )
 
-echo    - Upgrading pip ^& installing dependencies...
+echo    - Installing dependencies with uv...
 call .venv\Scripts\activate
-python -m pip install --upgrade pip setuptools wheel cython
-python -m pip install pyroaring pyiceberg --no-cache-dir 2>nul
-call pip install -r requirements.txt
+if exist "uv.lock" (
+    !UV! sync
+) else (
+    !UV! pip install --upgrade pip setuptools wheel cython
+    !UV! pip install pyroaring pyiceberg --no-cache-dir 2>nul
+    !UV! pip install -r requirements.txt
+)
 if !errorlevel! neq 0 (
-    echo [ERROR] pip install -r requirements.txt failed.
-    echo [%date% %time%] FAIL: pip install -r requirements.txt >> "%SETUP_LOG%"
+    echo [ERROR] uv sync / uv pip install failed.
+    echo [%date% %time%] FAIL: uv sync or pip install >> "%SETUP_LOG%"
     call deactivate
     cd /d "%~dp0"
     goto setup_fail
