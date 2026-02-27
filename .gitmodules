@@ -1,0 +1,3 @@
+[submodule ".agents/tech-stack-organizer"]
+	path = .agents/tech-stack-organizer
+	url = https://github.com/savior714/tech-stack-organizer.git
