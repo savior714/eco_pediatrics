@@ -116,25 +116,20 @@ async def update_document_request_status(
     db: AsyncClient = Depends(get_supabase)
 ):
     """Update document request status (e.g., PENDING -> COMPLETED)"""
-    # 1. Update 실행 및 RLS 조용한 실패(Silent Failure) 엄격한 검증
-    update_res = await execute_with_retry_async(
-        db.table("document_requests").update({"status": status}).eq("id", request_id)
-    )
-    if not update_res.data:
-        raise HTTPException(
-            status_code=403,
-            detail="상태 업데이트 실패: RLS UPDATE 정책이 누락되었거나 권한이 없습니다.",
-        )
-
-    # 2. Select로 최신 DB 상태 조회
+    # 1. Update 실행 및 최신 DB 상태 조회 (Single Round-Trip Optimization)
     response = await execute_with_retry_async(
         db.table("document_requests")
-        .select("*, admissions(room_number, access_token)")
+        .update({"status": status})
         .eq("id", request_id)
+        .select("*, admissions(room_number, access_token)")
         .single()
     )
+
     if not response.data:
-        raise HTTPException(status_code=404, detail="Request not found")
+        raise HTTPException(
+            status_code=403,
+            detail="상태 업데이트 실패: 요청을 찾을 수 없거나 권한이 없습니다.",
+        )
 
     updated_request = response.data
     admission_data = updated_request.get("admissions") or {}
@@ -184,14 +179,12 @@ async def update_meal_request_status(
         if g_val: update_payload['guardian_meal_type'] = g_val
         # Note: Do not set requested_* to None here to avoid PGRST204 if columns are missing in DB
 
-    # 2. Update first (UpdateRequestBuilder does not support .select()); then fetch for broadcast
-    await execute_with_retry_async(
-        db.table("meal_requests").update(update_payload).eq("id", request_id)
-    )
+    # 2. Update and Fetch (Single Round-Trip Optimization)
     response = await execute_with_retry_async(
         db.table("meal_requests")
-        .select("*, admissions(room_number, access_token)")
+        .update(update_payload)
         .eq("id", request_id)
+        .select("*, admissions(room_number, access_token)")
         .single()
     )
     if not response.data:
