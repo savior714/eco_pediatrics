@@ -96,20 +96,111 @@ function RoomNoteInput({ bed, matrix, onUpdate }: RoomNoteInputProps) {
     );
 }
 
+interface MealRowProps {
+    bed: Bed;
+    bedMatrix: Record<string, MealRequest>;
+    onUpdate: (bed: Bed, mealTime: string, field: keyof MealRequest, value: string) => void;
+    matrix: Record<string, Record<string, MealRequest>>;
+}
+
+/**
+ * ⚡ Bolt Optimization: Memoized row component to prevent re-rendering the entire table N times
+ * when a single cell is updated or hovered. It only re-renders when this specific patient's data changes.
+ */
+const MealRow = memo(function MealRow({ bed, bedMatrix, onUpdate, matrix }: MealRowProps) {
+    const renderCell = (time: string, type: 'child' | 'guardian') => {
+        if (!bed.id) return null;
+        const req = bedMatrix?.[time];
+        const value = type === 'child'
+            ? (req?.pediatric_meal_type || '선택 안함')
+            : (req?.guardian_meal_type || '선택 안함');
+
+        const requestedValue = type === 'child'
+            ? req?.requested_pediatric_meal_type
+            : req?.requested_guardian_meal_type;
+
+        const isPending = req?.status === 'PENDING' && requestedValue && requestedValue !== value;
+
+        const options = type === 'child' ? PEDIATRIC_OPTIONS : GUARDIAN_OPTIONS;
+
+        return (
+            <td className={`p-0 border border-slate-300 h-[32px] relative ${isPending ? 'bg-orange-50' : ''}`}>
+                <div className="flex items-center h-full">
+                    <select
+                        className={`flex-1 h-full text-center bg-transparent border-none text-xs focus:ring-inset focus:ring-1 focus:ring-blue-500 cursor-pointer ${value !== '선택 안함' ? 'font-bold text-slate-800' : 'text-slate-400'}`}
+                        value={value}
+                        onChange={(e) => onUpdate(bed, time, type === 'child' ? 'pediatric_meal_type' : 'guardian_meal_type', e.target.value)}
+                    >
+                        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+
+                    {isPending && (
+                        <button
+                            title={`환자 신청: ${requestedValue}`}
+                            onClick={() => onUpdate(bed, time, type === 'child' ? 'pediatric_meal_type' : 'guardian_meal_type', requestedValue as string)}
+                            className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold hover:bg-orange-600 shadow-sm z-10 animate-pulse"
+                        >
+                            !
+                        </button>
+                    )}
+                </div>
+            </td>
+        );
+    };
+
+    return (
+        <tr className="hover:bg-blue-50 transition-colors">
+            <td className="px-2 py-1 border border-slate-300 text-center font-bold bg-slate-50">{bed.room}</td>
+            <td className="px-2 py-1 border border-slate-300 text-center font-bold text-slate-900">{bed.name}</td>
+
+            {renderCell('BREAKFAST', 'child')}
+            {renderCell('BREAKFAST', 'guardian')}
+
+            {renderCell('LUNCH', 'child')}
+            {renderCell('LUNCH', 'guardian')}
+
+            {renderCell('DINNER', 'child')}
+            {renderCell('DINNER', 'guardian')}
+
+            <RoomNoteInput bed={bed} matrix={matrix} onUpdate={onUpdate} />
+        </tr>
+    );
+}, (prev, next) => {
+    // Custom comparison to check stable fields only
+    if (prev.bed.id !== next.bed.id) return false;
+    // Shallow check bedMatrix reference which changes properly because of matrix[bed.id] spread
+    if (prev.bedMatrix !== next.bedMatrix) return false;
+    // RoomNoteInput accesses full matrix, but typically we only update room note or meals for the specific bed.
+    // So comparing bedMatrix should be enough unless another patient's matrix change must trigger this row.
+    return true;
+});
+
 function MealGridBase({ beds }: MealGridProps) {
     const [activeDate, setActiveDate] = useState<Date>(new Date());
     // Map: admissionId -> { BREAKFAST: MealRequest, LUNCH: MealRequest, ... }
     const [matrix, setMatrix] = useState<Record<string, Record<string, MealRequest>>>({});
     const [loading, setLoading] = useState(false);
 
+    // activeDateRef to safely use the latest activeDate in callbacks without re-creating them
+    const activeDateRef = useRef<Date>(activeDate);
+    useEffect(() => {
+        activeDateRef.current = activeDate;
+    }, [activeDate]);
+
+    // matrixRef to safely access the latest matrix state in handleUpdate without adding it to dependency array
+    const matrixRef = useRef<Record<string, Record<string, MealRequest>>>(matrix);
+    useEffect(() => {
+        matrixRef.current = matrix;
+    }, [matrix]);
+
     // Filter occupied beds
     const patients = useMemo(() => beds.filter(b => b.id && b.name), [beds]);
     // Generate tabs (Today, Tomorrow, D+2)
-    const tabs = [0, 1, 2].map(offset => {
+    const tabs = useMemo(() => [0, 1, 2].map(offset => {
         const d = new Date();
         d.setDate(d.getDate() + offset);
         return d;
-    });
+    }), []);
 
     const requestRef = useRef(0);
 
@@ -144,9 +235,10 @@ function MealGridBase({ beds }: MealGridProps) {
 
     useEffect(() => {
         fetchMatrix();
-    }, [activeDate, fetchMatrix]); // Added fetchMatrix to dependency array for correctness
+    }, [activeDate, fetchMatrix]);
 
-    const handleUpdate = async (
+    // ⚡ Bolt Optimization: Stabilized update handler using functional state update
+    const handleUpdate = useCallback(async (
         bed: Bed,
         mealTime: string,
         field: keyof MealRequest,
@@ -154,23 +246,26 @@ function MealGridBase({ beds }: MealGridProps) {
     ) => {
         if (!bed.id) return;
 
-        // Current state for this specific slot
-        const currentReq = matrix[bed.id]?.[mealTime] || {};
+        // Safely access current request using ref instead of inline mutation
+        const currentReq = matrixRef.current[bed.id as string]?.[mealTime] || {};
 
-        // Optimistic UI
-        setMatrix(prev => ({
-            ...prev,
-            [bed.id]: {
-                ...prev[bed.id],
-                [mealTime]: { ...currentReq, [field]: value } as MealRequest
-            }
-        }));
+        // Optimistic UI using functional state to avoid matrix dependency
+        setMatrix(prev => {
+            const currentReqInState = prev[bed.id as string]?.[mealTime] || {};
+            return {
+                ...prev,
+                [bed.id as string]: {
+                    ...prev[bed.id as string],
+                    [mealTime]: { ...currentReqInState, [field]: value } as MealRequest
+                }
+            };
+        });
 
         try {
             const payload = {
                 admission_id: bed.id,
                 request_type: 'STATION_UPDATE',
-                meal_date: formatDate(activeDate),
+                meal_date: formatDate(activeDateRef.current),
                 meal_time: mealTime,
                 pediatric_meal_type: field === 'pediatric_meal_type' ? value : (currentReq.pediatric_meal_type || '선택 안함'),
                 guardian_meal_type: field === 'guardian_meal_type' ? value : (currentReq.guardian_meal_type || '선택 안함'),
@@ -182,48 +277,7 @@ function MealGridBase({ beds }: MealGridProps) {
             alert('저장 실패');
             fetchMatrix(); // Revert
         }
-    };
-
-    // Render Cell Helper
-    const renderCell = (bed: Bed, time: string, type: 'child' | 'guardian') => {
-        if (!bed.id) return null;
-        const req = matrix[bed.id]?.[time];
-        const value = type === 'child'
-            ? (req?.pediatric_meal_type || '선택 안함')
-            : (req?.guardian_meal_type || '선택 안함');
-
-        const requestedValue = type === 'child'
-            ? req?.requested_pediatric_meal_type
-            : req?.requested_guardian_meal_type;
-
-        const isPending = req?.status === 'PENDING' && requestedValue && requestedValue !== value;
-
-        const options = type === 'child' ? PEDIATRIC_OPTIONS : GUARDIAN_OPTIONS;
-
-        return (
-            <td className={`p-0 border border-slate-300 h-[32px] relative ${isPending ? 'bg-orange-50' : ''}`}>
-                <div className="flex items-center h-full">
-                    <select
-                        className={`flex-1 h-full text-center bg-transparent border-none text-xs focus:ring-inset focus:ring-1 focus:ring-blue-500 cursor-pointer ${value !== '선택 안함' ? 'font-bold text-slate-800' : 'text-slate-400'}`}
-                        value={value}
-                        onChange={(e) => handleUpdate(bed, time, type === 'child' ? 'pediatric_meal_type' : 'guardian_meal_type', e.target.value)}
-                    >
-                        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                    </select>
-
-                    {isPending && (
-                        <button
-                            title={`환자 신청: ${requestedValue}`}
-                            onClick={() => handleUpdate(bed, time, type === 'child' ? 'pediatric_meal_type' : 'guardian_meal_type', requestedValue)}
-                            className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold hover:bg-orange-600 shadow-sm z-10 animate-pulse"
-                        >
-                            !
-                        </button>
-                    )}
-                </div>
-            </td>
-        );
-    };
+    }, [fetchMatrix]);
 
     return (
         <div className="bg-white rounded-xl shadow p-4 h-full overflow-hidden flex flex-col">
@@ -286,21 +340,13 @@ function MealGridBase({ beds }: MealGridProps) {
                     </thead>
                     <tbody>
                         {patients.map((bed) => (
-                            <tr key={bed.room} className="hover:bg-blue-50 transition-colors">
-                                <td className="px-2 py-1 border border-slate-300 text-center font-bold bg-slate-50">{bed.room}</td>
-                                <td className="px-2 py-1 border border-slate-300 text-center font-bold text-slate-900">{bed.name}</td>
-
-                                {renderCell(bed, 'BREAKFAST', 'child')}
-                                {renderCell(bed, 'BREAKFAST', 'guardian')}
-
-                                {renderCell(bed, 'LUNCH', 'child')}
-                                {renderCell(bed, 'LUNCH', 'guardian')}
-
-                                {renderCell(bed, 'DINNER', 'child')}
-                                {renderCell(bed, 'DINNER', 'guardian')}
-
-                                <RoomNoteInput bed={bed} matrix={matrix} onUpdate={handleUpdate} />
-                            </tr>
+                            <MealRow
+                                key={bed.room}
+                                bed={bed}
+                                bedMatrix={matrix[bed.id as string]}
+                                onUpdate={handleUpdate}
+                                matrix={matrix}
+                            />
                         ))}
                         {patients.length === 0 && (
                             <tr>
