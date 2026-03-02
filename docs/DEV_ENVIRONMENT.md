@@ -33,7 +33,7 @@ irm https://astral.sh/uv/install.ps1 | iex
 
 - **uv**는 Python 3.14 인터프리터를 자동으로 설치하고 관리할 수 있습니다.
 - 빌드 오류 발생 시: Visual Studio Installer에서 **C++를 사용한 데스크톱 개발** 워크로드 및 **C++ 유니버설 CRT SDK** 설치여부를 확인하세요.
-- **eco setup [2번]** 실행 시 `scripts/Refresh-BuildEnv.ps1`이 최신 Windows SDK(UCRT 포함) 경로를 **사용자 환경 변수에 영구 등록**합니다.
+- **eco setup [2번]** 실행 시 `scripts/Setup-Environment.ps1`이 내부에서 `Refresh-BuildEnv.ps1`·`Get-SdkVersion.ps1`을 호출하며, 최신 Windows SDK(UCRT 포함) 경로를 **사용자 환경 변수에 영구 등록**하고 현재 세션에 INCLUDE/LIB/PATH를 주입합니다.
 
 ---
 
@@ -81,9 +81,11 @@ cl   # 확인: 컴파일러 정보 출력
 | 선택 | 동작 |
 |------|------|
 | **[1] Start Dev Mode** | Windows Terminal 3분할 실행 후 런처 종료. (uv run + npm run dev) |
-| **[2] Environment Setup** | **uv venv** 생성, **SDK 자동 탐색**, uv pip install, npm install, doctor 검증. |
+| **[2] Environment Setup** | **PowerShell** `scripts/Setup-Environment.ps1` 호출. uv venv 생성, SDK 탐색(Refresh-BuildEnv, Get-SdkVersion), uv pip install, npm install, doctor 검증. 로그: `logs/eco_setup.log`. |
 | **[3] Run Security & Health Check** | `doctor.py` + `security_check.py` 실행. |
 | **[Q] Quit** | 종료. |
+
+**[2] Setup** 은 cmd 배치 대신 PowerShell에서 전부 실행되어, npm/uv 래퍼 호출 및 괄호 파싱 크래시를 회피합니다.
 
 ### 3.2 CLI 모드
 
@@ -128,4 +130,5 @@ eco check
     ```cmd
     eco setup
     ```
-    - `uv`를 통해 가상환경과 의존성을 일괄 동기화하며, Windows SDK 경로를 영구 등록합니다.
+    - PowerShell `Setup-Environment.ps1`이 uv 가상환경·의존성·npm·doctor를 일괄 수행하고, Windows SDK 경로를 영구 등록합니다.
+3. **배치 인코딩**: eco.bat 실행 시 창이 바로 닫히면 `pwsh -File scripts\Fix-BatEncoding.ps1`로 eco.bat·start_backend_pc.bat을 ANSI(CP949)로 재저장한 뒤 다시 실행하세요.

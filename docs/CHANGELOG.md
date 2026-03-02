@@ -1,5 +1,16 @@
 # 문서·워크플로우 변경 이력
 
+## 2026-03-02
+
+### eco.bat [2] Setup PowerShell 위임 및 문서 정리
+
+- **Setup(2번) 이관**: [2] Environment Setup 로직을 cmd 배치에서 **PowerShell** `scripts/Setup-Environment.ps1`로 전부 이관. npm/uv 래퍼 호출 및 if 블록 내 괄호 파싱으로 인한 터미널 크래시 회피.
+- **eco.bat**: `:setup` 구간을 `pwsh -File Setup-Environment.ps1 -ProjectRoot` 호출만 하도록 단순화. ProjectRoot 인자 끝 `\` 제거해 경로 파싱 오류 방지.
+- **스크립트**: `Setup-Environment.ps1`(신규), `Get-SdkVersion.ps1`(파일 출력), `Fix-BatEncoding.ps1`(eco.bat·start_backend_pc.bat CP949 재저장) 정리.
+- **문서**: README, DEV_ENVIRONMENT, TROUBLESHOOTING에 Setup PowerShell 위임·Fix-BatEncoding 안내 반영. CHANGELOG 본 항목 추가.
+
+---
+
 ## 2026-02-25
 
 ### 30분 AI 코딩 워크플로우 문서 eco_pediatrics 전용 정리

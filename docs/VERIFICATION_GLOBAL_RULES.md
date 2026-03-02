@@ -57,10 +57,10 @@
 - **조치**: `eco.bat`, `start_backend_pc.bat` 상단에 `chcp 65001 >nul` 추가 (콘솔 코드페이지 설정만 추가, 파일 인코딩은 유지).
 - **참고**: 테스트 2단계(실행 출력 디코딩)는 cmd.exe 환경에 따라 실패할 수 있음. 한글/특수문자 출력 시 로컬에서 ANSI 저장 여부 확인 권장.
 
-### 2.2 3대 메모리 파일 (권장)
-- **규칙**: 사용자 규칙 §5 — 계획 승인 직후 `mission.md`, `context.md`, `checklist.md` 생성/업데이트.
-- **현황**: 프로젝트 루트에 미존재.
-- **권장**: 대형 트랙/계획 진행 시 해당 문서 생성해 맥락 유지.
+### 2.2 작업 맥락·미션·체크리스트 (memory.md 통합)
+- **규칙**: 작업 맥락·현재 미션·점검 목록은 `docs/memory.md` 단일 소스로 유지. (과거 `mission.md`, `context.md`, `checklist.md`는 memory.md로 통합되어 해당 파일들은 제거됨.)
+- **참조**: memory.md 내 "통합된 Mission·Checklist·Context" 섹션 및 Executive Summary·Logs.
+- **권장**: 대형 트랙/계획 진행 시 memory.md Logs에 [Context]/[Action] 형식으로 추가 기록.
 
 ### 2.3 useMeals 500ms 스로틀 (선택)
 - **규칙**: CRITICAL_LOGIC §2.2 — 모든 API 호출 훅에 최소 500ms lastFetchRef 가드.

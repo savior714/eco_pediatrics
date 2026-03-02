@@ -220,3 +220,84 @@
 ### [2026-02-24 KST] - 성능 최적화 (Legacy Archive)
 - `TemperatureGraph`, `MealGrid`, `NotificationItem` React.memo 최적화.
 - `PatientCard` 커스텀 `arePropsEqual` 적용 (context.md/mission.md 작업분).
+
+### [2026-03-02 KST] - eco.bat 2번(Setup) 선택 시 터미널 크래시 수정
+[Context]
+- eco.bat 실행 후 메뉴에서 [2] Environment Setup 선택 시 터미널이 크래시하는 현상 분석 요청.
+[Action]
+- 원인: setup 구간의 `for /f` 줄에서 SDK 경로 `C:\Program Files (x86)\...`의 **(x86)** 괄호가 cmd.exe에서 서브쉘/그룹으로 해석되어 구문 오류 또는 크래시 유발.
+- 조치: 경로를 배치 소스에 직접 넣지 않고, `set "SDK_INC_BASE=%ProgramFiles(x86)%\..."`로 설정한 뒤 `for /f` 내부에서는 `$env:SDK_INC_BASE`만 사용하도록 변경. PowerShell에는 `-LiteralPath $env:SDK_INC_BASE`로 전달.
+[Status]
+- 수정 완료. 사용자 검증 대기.
+[Technical Note]
+- cmd에서 `in ('... (x86) ...')` 형태의 괄호는 파싱 시 특수문자로 처리되므로, 경로는 환경 변수로 빼서 괄호를 배치 소스에서 제거함.
+
+---
+
+## 통합된 Mission·Checklist·Context (참조용)
+
+아래는 과거 `mission.md`, `checklist.md`, `context.md` 내용을 memory.md로 일원화한 요약입니다. 신규 작업 시 이 섹션과 Executive Summary를 참고하면 됩니다.
+
+- **현재 미션**: uv 가상환경 리팩토링 및 pyproject.toml/uv.lock 도입 완료. (추가 미션은 상단 Executive Summary·Logs 참고.)
+- **UV 운영 맥락**: `backend/.venv`는 uv로만 생성 (`uv venv .venv --python 3.14`). 의존성은 `pyproject.toml`+`uv.lock` 사용. Setup 시 `uv.lock` 있으면 `uv sync`, 없으면 `uv pip install -r requirements.txt`. uv는 PATH 또는 `python -m uv`/`py -3.14 -m uv`로 사용 가능해야 하며, doctor.py에서 둘 다 검사.
+- **UV 점검 체크리스트 (완료)**: DEV_ENVIRONMENT.md 문서화, eco.bat/start_backend_pc.bat uv 적용, doctor.py uv 검사, backend pyproject.toml·uv.lock·uv sync 검증 — 모두 완료.
+
+### [2026-03-02 KST] - mission/checklist/context 문서 memory.md 통합
+[Context]
+- `mission.md`, `checklist.md`, `context.md`가 memory.md와 기능적으로 중복되어 문서 파편화 발생.
+[Action]
+- 세 문서 핵심 내용을 memory.md 내 "통합된 Mission·Checklist·Context" 섹션으로 통합. VERIFICATION_GLOBAL_RULES.md §2.2를 memory.md 기준으로 수정. 기존 mission.md, checklist.md, context.md 삭제.
+[Status]
+- 완료.
+[Technical Note]
+- 작업 맥락·미션·점검 목록은 memory.md 단일 소스로 유지. 대형 트랙 시 Logs에 [Context]/[Action]으로 추가 기록.
+
+### [2026-03-02 KST] - eco.bat 2번(Setup) 크래시 재조치: Get-SdkVersion.ps1 분리
+[Context]
+- 이전 수정(경로를 env로 넘기는 방식) 후에도 2번 선택 시 터미널 크래시가 미해결로 보고됨.
+[Action]
+- SDK 버전 조회를 배치 인라인에서 제거하고, `scripts/Get-SdkVersion.ps1` 전용 스크립트 추가. eco.bat의 for /f는 해당 스크립트 호출만 하도록 변경. 배치 소스에 괄호·인라인 PowerShell -Command 제거.
+[Status]
+- 완료.
+[Technical Note]
+- for /f "..." in ('powershell -File "%~dp0scripts\Get-SdkVersion.ps1"') 형태로 단순화. (x86) 경로는 .ps1 내부에서만 사용되어 cmd 파싱 이슈 제거.
+
+### [2026-03-02 KST] - eco.bat 실행 즉시 터미널 종료(인코딩) 대응
+[Context]
+- eco.bat 실행 시 메뉴 없이 터미널이 바로 종료되는 현상. TROUBLESHOOTING §8: 배치가 UTF-8로 저장되면 cmd가 잘못 해석함.
+[Action]
+- eco.bat 내 한글 주석을 ASCII로 교체. scripts/Fix-BatEncoding.ps1 추가: eco.bat·start_backend_pc.bat을 UTF-8/UTF-16에서 읽어 CP949로 재저장. 해당 스크립트 실행으로 두 배치 파일 CP949 변환 완료.
+[Status]
+- 완료.
+[Technical Note]
+- 배치 수정 후 창이 바로 닫히면 `pwsh -File scripts/Fix-BatEncoding.ps1` 실행 후 eco.bat 재실행. CRITICAL_LOGIC §2.5: .bat은 ANSI(CP949) 유지.
+
+### [2026-03-02 KST] - eco.bat 2번 선택 시 튕김: for /f 제거, 파일 기반 SDK 버전 읽기
+[Context]
+- eco.bat 실행은 되나 [2] Setup 선택 시 터미널 크래시 지속.
+[Action]
+- `for /f ... in ('powershell -File Get-SdkVersion.ps1')` 제거. Get-SdkVersion.ps1에 -OutFile 인자 추가, 버전을 logs\sdk_ver.txt에 기록. 배치에서는 set /p SDK_VER=<logs\sdk_ver.txt 로 읽기만 수행.
+[Status]
+- 완료.
+[Technical Note]
+- for /f 서브프로세스 캡처가 일부 환경에서 cmd 크래시를 유발하므로, PowerShell이 파일에 쓰고 배치는 파일에서만 읽도록 변경.
+
+### [2026-03-02 KST] - eco.bat 2번 크래시: if 블록 내 (x86) 괄호 파싱 오류
+[Context]
+- 파일 기반 SDK 버전 읽기 적용 후에도 [2] Setup 선택 시 크래시 지속.
+[Action]
+- 원인: `if defined SDK_VER (` 블록 안의 `set "SDK_INC=C:\Program Files (x86)\..."` 등에서 **(x86)** 의 `)` 가 cmd에 의해 if의 닫는 괄호로 해석되어 블록 파싱 오류 발생. 블록 전에 `set "PF86=%ProgramFiles(x86)%"` 로 경로베이스 설정 후, 블록 내부에서는 `%PF86%\...` 만 사용하도록 수정.
+[Status]
+- 완료.
+[Technical Note]
+- if ( ... ) 블록 안에는 리터럴 괄호를 두지 않고, 블록 밖에서 변수로 치환해 사용.
+
+### [2026-03-02 KST] - Setup(2번) 전체를 PowerShell로 위임
+[Context]
+- 다른 LLM 분석: cmd에서 npm/uv 등 .cmd 래퍼를 call 없이 호출하면 제어권 이전으로 즉시 종료될 수 있음. if 블록 내 괄호 파싱도 불안정.
+[Action]
+- :setup 구간 전체를 제거하고, pwsh -File "%~dp0scripts\Setup-Environment.ps1" -ProjectRoot "%~dp0" 호출만 남김. scripts/Setup-Environment.ps1 신규 생성: 선행 조건 검사, backend(.venv, Refresh-BuildEnv, Get-SdkVersion, INCLUDE/LIB/PATH 주입, uv pip), frontend(npm install), doctor.py, SETUP_LOG 기록.
+[Status]
+- 완료.
+[Technical Note]
+- eco.bat은 수정 후 Fix-BatEncoding.ps1로 ANSI(CP949) 저장 필요. Setup-Environment.ps1은 UTF-8 (no BOM).

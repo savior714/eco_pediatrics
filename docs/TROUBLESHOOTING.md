@@ -15,9 +15,9 @@
 - 실패 시 사용자 대기(`pause`) 없이 흐름이 끝나며 창 종료.
 
 ### 해결 (적용됨)
-- **단계별 실패 처리**: Backend .venv 생성(uv), `uv pip install -r requirements.txt`, `npm install`, `doctor.py` 각각 실행 후 `errorlevel` 검사.
-- **실패 시**: `logs\eco_setup.log`에 타임스탬프와 실패 구간(FAIL/WARN) 기록, `[ECO] Setup FAILED. See errors above. Log: ...` 출력 후 **pause**로 창 유지, **goto menu**로 메뉴 복귀.
-- **성공 시에만** "Setup Complete" 후 메뉴 복귀.
+- **[2] Setup** 은 **PowerShell** `scripts/Setup-Environment.ps1`에서 전부 실행됨. Backend(.venv, uv pip), Frontend(npm install), doctor 검증을 한 세션에서 수행.
+- **실패 시**: `logs\eco_setup.log`에 타임스탬프·FAIL/WARN 기록, `[ECO] Setup FAILED. See errors above. Log: ...` 출력 후 **pause** → 메뉴 복귀.
+- **성공 시** "Setup Complete" 후 메뉴 복귀. 배치 인코딩 문제로 창이 바로 닫히면 `pwsh -File scripts\Fix-BatEncoding.ps1` 실행 후 eco.bat 재실행.
 
 ---
 
@@ -48,11 +48,10 @@
 - `pip`/빌드 도구가 Windows Kits 10 경로를 자동으로 못 찾는 경우.
 - 사용자가 수동으로 `INCLUDE`/`LIB`/`PATH`를 설정하지 않으면 빌드 실패.
 
-### 해결 (적용됨, eco.bat Setup)
-- **SDK 자동 탐색**: Setup [2번] Backend 단계에서 PowerShell로 `C:\Program Files (x86)\Windows Kits\10\Include\10.*` 아래 **최신 버전** 폴더명을 조회.
-- **경로 주입**: 해당 버전으로 `SDK_INC`(Include), `SDK_LIB`(Lib), `SDK_BIN`(bin\x64)를 구성하고, `INCLUDE`, `LIB`, `PATH`에 **해당 배치 세션 한정**으로 추가.
+### 해결 (적용됨, Setup-Environment.ps1)
+- **SDK 자동 탐색**: [2] Setup 시 `scripts/Setup-Environment.ps1`이 `Refresh-BuildEnv.ps1`(영구 등록)과 `Get-SdkVersion.ps1`(버전을 `logs/sdk_ver.txt`에 기록)을 호출. 해당 버전으로 **현재 PowerShell 세션**에 `INCLUDE`, `LIB`, `PATH` 주입.
 - SDK 폴더가 없으면 "Windows SDK not found; build may fail for native deps."만 출력하고 나머지 Setup은 계속 진행.
-- pip 업그레이드에 **cython** 포함, **pyroaring / pyiceberg**를 `--no-cache-dir`로 선 설치 시도 후 `requirements.txt` 설치.
+- uv pip 업그레이드에 **cython** 포함, **pyroaring / pyiceberg** 등은 `requirements.txt` 설치로 처리.
 
 ---
 
@@ -151,19 +150,14 @@ exit
 
 ### 해결 (적용됨)
 
-1. **배치 파일을 ASCII/ANSI(CP949)로 재저장**
+1. **스크립트로 일괄 재저장 (권장)**  
+   프로젝트 루트에서 실행하면 `eco.bat`, `start_backend_pc.bat`을 **ANSI(CP949)** 로 다시 씁니다.
    ```powershell
-   # PowerShell에서 실행 (프로젝트 루트)
-   $path = "eco.bat"
-   $bytes = [System.IO.File]::ReadAllBytes($path)
-   $enc = if ($bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) { [System.Text.Encoding]::Unicode }
-          elseif ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) { [System.Text.Encoding]::UTF8 }
-          else { [System.Text.Encoding]::UTF8 }
-   $content = $enc.GetString($bytes)
-   [System.IO.File]::WriteAllText((Join-Path (Get-Location) $path), $content, [System.Text.Encoding]::ASCII)
+   pwsh -NoProfile -ExecutionPolicy Bypass -File scripts\Fix-BatEncoding.ps1
    ```
+   실행 후 eco.bat을 다시 실행하세요.
 
-2. **chcp 65001**: `eco.bat`·`start_backend_pc.bat`에는 인코딩 테스트 통과를 위해 `chcp 65001 >nul`이 포함되어 있음. 일부 환경에서 배치 파싱 파편화가 재발하면 해당 줄을 제거하고, 배치 파일을 ANSI(CP949)로만 저장해 두는 것을 권장함.
+2. **chcp 65001**: `eco.bat`·`start_backend_pc.bat`에는 `chcp 65001 >nul`이 포함되어 있음. 재발 시 배치를 ANSI(CP949)로만 유지.
 
 3. **한글 주석 → ASCII**: 배치 내 한글 주석을 영문으로 치환하여 인코딩 의존성 제거.
 
@@ -188,9 +182,10 @@ exit
 | 8 | Frontend `cargo ... program not found` (Tauri) | Rust 툴체인 설치: rustup (https://rustup.rs/ 또는 `winget install Rustlang.Rustup`). 설치 후 터미널 재시작. doctor에 cargo 검사 추가. |
 | 9 | 에러 모니터 미동작 / 프론트 에러 미감지 | launch_wt_dev.ps1: 모니터는 backend\\.venv\\Scripts\\python.exe 사용, Frontend는 Tee-Object로 frontend/logs/frontend.log 기록. error_monitor.py: main() 진입 시 로그 디렉터리 선제 생성. |
 | 10 | 식단/서류 상태 변경 시 AsyncFilterRequestBuilder 에러 | station.py: update/delete 후 `.select()` 체이닝 대신 2단계 분리 (update 실행 → 별도 select 조회). supabase-py v2+는 UpdateRequestBuilder에서 .select() 미지원. |
-| 11 | eco.bat 실행 시 명령어 파편화 (`'cho'`, `'edelayedexpansion'` 인식 불가) | UTF-16/UTF-8 BOM 인코딩 → cmd.exe 해석 오류. 배치 파일을 ANSI(CP949)/ASCII로 재저장. chcp 65001은 테스트 통과용 포함 가능, 파편화 재발 시 제거. CRITICAL_LOGIC §2.5 및 본 문서 §8 참고. |
-| 12 | 간호 스테이션 모달에서 완료된 서류 미표시 (보호자 대시보드는 정상) | useVitals: force 시 시퀀스 가드 우회, 빈 응답 처리 강화, document_requests 명시 업데이트. CRITICAL_LOGIC §2.3, PROMPT_COMPLETED_DOCS_NOT_SHOWING 근본 원인 분석 참고. Network 탭 검증은 다음 할 일로 남김. |
-| 13 | 스테이션 그리드 초기 로드/퇴원 후 리로드 시 빈 화면 (Race Condition) | admissions.py: Cache-Control 헤더. useStation.ts: useEffect 파괴적 리셋 제거, initialFetchDoneRef로 1회 fetch, force 시 시퀀스 가드 우회·캐시 버스팅. §12 참고. |
+| 11 | eco.bat [2] 선택 시 터미널 크래시 | Setup 전체를 **PowerShell** `scripts/Setup-Environment.ps1`로 이관. eco.bat은 해당 스크립트만 호출. ProjectRoot 인자 끝 `\` 제거해 경로 파싱 오류 방지. 인코딩 문제 시 `Fix-BatEncoding.ps1` 실행. |
+| 12 | eco.bat 실행 시 명령어 파편화 (`'cho'`, `'edelayedexpansion'` 인식 불가) | UTF-16/UTF-8 BOM 인코딩 → cmd.exe 해석 오류. 배치 파일을 ANSI(CP949)/ASCII로 재저장. `Fix-BatEncoding.ps1` 또는 CRITICAL_LOGIC §2.5 및 본 문서 §8 참고. |
+| 13 | 간호 스테이션 모달에서 완료된 서류 미표시 (보호자 대시보드는 정상) | useVitals: force 시 시퀀스 가드 우회, 빈 응답 처리 강화, document_requests 명시 업데이트. CRITICAL_LOGIC §2.3, PROMPT_COMPLETED_DOCS_NOT_SHOWING 근본 원인 분석 참고. Network 탭 검증은 다음 할 일로 남김. |
+| 14 | 스테이션 그리드 초기 로드/퇴원 후 리로드 시 빈 화면 (Race Condition) | admissions.py: Cache-Control 헤더. useStation.ts: useEffect 파괴적 리셋 제거, initialFetchDoneRef로 1회 fetch, force 시 시퀀스 가드 우회·캐시 버스팅. §13 참고. |
 
 위 조치 적용 후 **[2] Environment Setup** 실행 시 Doctor까지 [OK]로 통과하고, **[1] Start Dev Mode** 실행 시 런처는 닫히고 **상단 20% Error Monitor + 하단 80% Backend/Frontend 2분할** WT 창이 정상적으로 유지됩니다.
 

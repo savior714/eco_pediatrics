@@ -16,6 +16,7 @@
 ### 2. UV Native 백엔드 환경 구축
 *   **UV 기반 의존성 제어**: `pip/venv` 혼용을 중단하고 `uv`를 활용한 결정론적 빌드 및 초고속 패키지 설치 환경 구현.
 *   **통합 런처 고도화**: `eco.bat` 및 `start_backend_pc.bat`을 `uv run` 기반으로 리팩토링하여 활성화 과정 없는 즉각적인 실행 보장.
+*   **Setup(2번) PowerShell 위임**: [2] Environment Setup은 `scripts/Setup-Environment.ps1`에서 전부 수행. cmd 배치의 괄호·래퍼 호출 이슈를 피하고 안정적으로 npm/uv 실행. 배치 인코딩 문제 시 `pwsh -File scripts\Fix-BatEncoding.ps1`로 eco.bat을 CP949로 재저장.
 
 ... (중략: 기존 업데이트 내역은 docs/CHANGELOG.md 참고)
 
@@ -35,8 +36,9 @@
 1.  **환경 세팅**:
     ```bash
     eco setup
-    # uv venv 생성, SDK 탐색, backend/frontend 의존성 일괄 설치 수행
+    # 또는 eco.bat 실행 후 [2] 선택. PowerShell(Setup-Environment.ps1)이 uv venv, SDK 탐색, backend/frontend 의존성 일괄 설치 수행
     ```
+    *   창이 바로 닫히면: `pwsh -File scripts\Fix-BatEncoding.ps1` 실행 후 eco.bat 재실행.
 
 2.  **통합 실행**:
     ```bash

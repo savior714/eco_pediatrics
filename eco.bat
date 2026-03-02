@@ -63,112 +63,20 @@ goto end
 
 :setup
 echo.
-echo [ECO] Running Setup...
-set "SETUP_LOG=%~dp0logs\eco_setup.log"
-if not exist "%~dp0logs" mkdir "%~dp0logs"
-echo [%date% %time%] --- Setup started --- >> "%SETUP_LOG%"
-
-:: 1. Check Prerequisites
-python --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [ERROR] Python not found. Please install Python 3.14.x.
-    echo [%date% %time%] FAIL: Python not found >> "%SETUP_LOG%"
-    goto setup_fail
-)
-node -v >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [ERROR] Node.js not found. Please install Node.js v24.12.x.
-    echo [%date% %time%] FAIL: Node.js not found >> "%SETUP_LOG%"
-    goto setup_fail
-)
-uv --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [ERROR] uv not found. Please install uv (pip install uv).
-    echo [%date% %time%] FAIL: uv not found >> "%SETUP_LOG%"
-    goto setup_fail
-)
-
-:: 2. Backend Setup
-echo.
-echo [1/4] Setting up Backend...
-cd /d "%~dp0backend"
-if not exist ".venv" (
-    echo    - Creating virtual environment (uv)...
-    uv venv .venv --python 3.14
-    if !errorlevel! neq 0 (
-        echo [ERROR] Failed to create backend .venv with uv.
-        echo [%date% %time%] FAIL: uv venv .venv --python 3.14 >> "%SETUP_LOG%"
-        cd /d "%~dp0"
-        goto setup_fail
-    )
-)
-
-:: SDK auto-discovery (Windows Kits 10) + UCRT Path
-echo    - Configuring Build Environment (SDK Discovery)...
-powershell -ExecutionPolicy Bypass -NoProfile -File "%~dp0scripts\Refresh-BuildEnv.ps1"
-for /f "tokens=*" %%i in ('powershell -NoProfile -Command "Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\Include' -Directory -EA 0 | Where-Object { $_.Name -match '^10\.\d' } | Sort-Object Name -Desc | Select-Object -First 1 | ForEach-Object { $_.Name }"') do set "SDK_VER=%%i"
-if defined SDK_VER (
-    set "SDK_INC=C:\Program Files (x86)\Windows Kits\10\Include\%SDK_VER%"
-    set "SDK_LIB=C:\Program Files (x86)\Windows Kits\10\Lib\%SDK_VER%"
-    set "SDK_BIN=C:\Program Files (x86)\Windows Kits\10\bin\%SDK_VER%\x64"
-    set "INCLUDE=!SDK_INC!\ucrt;!SDK_INC!\shared;!SDK_INC!\um;!SDK_INC!\winrt;!INCLUDE!"
-    set "LIB=!SDK_LIB!\ucrt\x64;!SDK_LIB!\um\x64;!LIB!"
-    set "PATH=!SDK_BIN!;!PATH!"
-) else (
-    echo    - Windows SDK not found. Build effort may fail for native deps (pyiceberg).
-)
-
-echo    - Installing dependencies (uv pip)...
-uv pip install --upgrade pip setuptools wheel cython
-uv pip install -r requirements.txt
-if !errorlevel! neq 0 (
-    echo [ERROR] uv pip install failed.
-    echo [%date% %time%] FAIL: uv pip install >> "%SETUP_LOG%"
-    cd /d "%~dp0"
-    goto setup_fail
-)
-if not exist ".env" (
-    echo    - Creating .env from template...
-    copy .env.example .env >nul
-)
-cd /d "%~dp0"
-
-:: 3. Frontend Setup
-echo.
-echo [2/4] Setting up Frontend...
-cd /d "%~dp0frontend"
-echo    - Installing npm packages...
-call npm install
-if !errorlevel! neq 0 (
-    echo [ERROR] npm install failed.
-    echo [%date% %time%] FAIL: npm install >> "%SETUP_LOG%"
-    cd /d "%~dp0"
-    goto setup_fail
-)
-if not exist ".env.local" (
-    echo    - Creating .env.local from template...
-    copy .env.example .env.local >nul
-)
-cd /d "%~dp0"
-
-:: 4. Verification
-echo.
-echo [3/4] Running Environment Doctor...
-python scripts/doctor.py
-if !errorlevel! neq 0 (
+echo [ECO] Running Setup (PowerShell)...
+set "SETUP_ROOT=%~dp0"
+if "%SETUP_ROOT:~-1%"=="\" set "SETUP_ROOT=%SETUP_ROOT:~0,-1%"
+pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\Setup-Environment.ps1" -ProjectRoot "%SETUP_ROOT%"
+if %ERRORLEVEL% neq 0 (
     echo.
-    echo [WARN] Doctor reported issues. Check above. Log: %SETUP_LOG%
-    echo [%date% %time%] WARN: doctor.py reported failures >> "%SETUP_LOG%"
+    echo [ECO] Setup FAILED. See errors above. Log: %~dp0logs\eco_setup.log
     echo.
-    echo Press any key to return to menu...
-    pause >nul
+    pause
     goto menu
 )
-
-echo [%date% %time%] OK: Setup complete >> "%SETUP_LOG%"
 echo.
 echo [ECO] Setup Complete. Press any key to return to menu...
-pause >nul
+pause
 goto menu
 
 :setup_fail
