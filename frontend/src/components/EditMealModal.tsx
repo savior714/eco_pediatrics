@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Check } from 'lucide-react';
-import Portal from './common/Portal';
+import { Modal } from './ui/Modal';
+import { Check } from 'lucide-react';
+import { toaster } from './ui/Toast';
 
 interface EditMealModalProps {
     isOpen: boolean;
@@ -34,106 +35,102 @@ export function EditMealModal({
     const [guardian, setGuardian] = useState(currentGuardian);
     const [submitting, setSubmitting] = useState(false);
 
-    if (!isOpen) return null;
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setSubmitting(true);
 
         const { rollback } = onSave(mealId, pediatric, guardian);
-
         onClose();
 
         try {
             await onApiSave(pediatric, guardian);
+            toaster.create({
+                title: '성공',
+                description: `${label} 식사가 수정되었습니다.`,
+                type: 'success'
+            });
         } catch (error) {
             console.error(error);
             rollback();
-            alert('저장 실패');
+            toaster.create({
+                title: '실패',
+                description: '식사 수정 중 오류가 발생했습니다.',
+                type: 'error'
+            });
+        } finally {
+            setSubmitting(false);
         }
     };
 
     return (
-        <Portal>
-            <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={(e) => e.stopPropagation()}>
-                <div
-                    className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-                    onClick={(e) => { e.stopPropagation(); onClose(); }}
-                />
-                <div
-                    className="bg-white rounded-[1.5rem] w-full max-w-sm shadow-2xl relative overflow-hidden flex flex-col border border-slate-200"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                        <div>
-                            <h3 className="text-lg font-bold text-slate-800">{label} 식사 수정</h3>
-                            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{date} / {mealTime}</p>
-                        </div>
-                        <button onClick={onClose} className="p-1.5 hover:bg-slate-200 rounded-full text-slate-400 transition-colors">
-                            <X size={18} />
-                        </button>
-                    </div>
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={`${label} 식사 수정`}
+        >
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-6 -mt-2 px-1">
+                {date} / {mealTime}
+            </p>
 
-                    <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 flex items-center gap-1.5 ml-1">
-                                환아 식사
-                            </label>
-                            <div className="grid grid-cols-2 gap-2">
-                                {PEDIATRIC_OPTIONS.map(opt => (
-                                    <button
-                                        key={opt}
-                                        type="button"
-                                        onClick={() => setPediatric(opt)}
-                                        className={`px-3 py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${pediatric === opt ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
-                                    >
-                                        {opt}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 flex items-center gap-1.5 ml-1">
-                                보호자 식사
-                            </label>
-                            <div className="grid grid-cols-2 gap-2">
-                                {GUARDIAN_OPTIONS.map(opt => (
-                                    <button
-                                        key={opt}
-                                        type="button"
-                                        onClick={() => setGuardian(opt)}
-                                        className={`px-3 py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${guardian === opt ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
-                                    >
-                                        {opt}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="pt-4 flex gap-3">
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-3">
+                    <label className="text-xs font-bold text-slate-500 flex items-center gap-1.5 ml-1">
+                        환아 식사
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {PEDIATRIC_OPTIONS.map(opt => (
                             <button
+                                key={opt}
                                 type="button"
-                                onClick={onClose}
-                                className="flex-1 py-3 bg-slate-50 text-slate-500 rounded-xl text-sm font-bold hover:bg-slate-100 transition-colors"
+                                onClick={() => setPediatric(opt)}
+                                className={`px-3 py-3 rounded-xl text-xs font-bold border-2 transition-all ${pediatric === opt ? 'bg-teal-50 border-teal-500 text-teal-600' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
                             >
-                                취소
+                                {opt}
                             </button>
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                                {submitting ? '저장 중...' : (
-                                    <>
-                                        <Check size={18} />
-                                        저장하기
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </form>
+                        ))}
+                    </div>
                 </div>
-            </div>
-        </Portal>
+
+                <div className="space-y-3">
+                    <label className="text-xs font-bold text-slate-500 flex items-center gap-1.5 ml-1">
+                        보호자 식사
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {GUARDIAN_OPTIONS.map(opt => (
+                            <button
+                                key={opt}
+                                type="button"
+                                onClick={() => setGuardian(opt)}
+                                className={`px-3 py-3 rounded-xl text-xs font-bold border-2 transition-all ${guardian === opt ? 'bg-teal-50 border-teal-500 text-teal-600' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                            >
+                                {opt}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 py-4 bg-slate-50 text-slate-500 rounded-xl text-sm font-bold hover:bg-slate-100 transition-colors"
+                    >
+                        취소
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={submitting}
+                        className="flex-1 py-4 bg-teal-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-teal-500/20 hover:bg-teal-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                        {submitting ? '저장 중...' : (
+                            <>
+                                <Check size={18} />
+                                저장하기
+                            </>
+                        )}
+                    </button>
+                </div>
+            </form>
+        </Modal>
     );
 }

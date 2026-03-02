@@ -31,10 +31,10 @@ export function Modal({ isOpen, onClose, title, children, className, unmountOnEx
             <Portal>
                 <Presence present={isOpen} unmountOnExit={unmountOnExit}>
                     <Dialog.Backdrop
-                        className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
+                        className="fixed inset-0 z-modal-backdrop bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
                     />
                     <Dialog.Positioner
-                        className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+                        className="fixed inset-0 z-modal-content flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
                     >
                         <Dialog.Content
                             className={cn(

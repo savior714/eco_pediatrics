@@ -193,6 +193,20 @@
 [Technical Note]
 - 문서 SSOT가 확보되었으므로, 차후 신규 에이전트 투입 시에도 환경 설정에 혼선이 없을 것으로 기대됨.
 
+### [2026-03-02 19:45 KST] - Z-index 표준화 및 잔여 모달 마이그레이션
+[Context]
+- Ark UI 마이그레이션 이후 신규 컴포넌트(`z-70`)와 레거시 컴포넌트(`z-[10001]`) 간의 레이어 충돌 발생.
+- 의미론적 Z-index 관리 체계가 부재하여 포지셔닝 이슈 발생 가능성 확인.
+[Action]
+- `tailwind.config.js`에 의미론적 Z-index 토큰(`layout`, `popover`, `modal-backdrop`, `modal-content`, `toast`) 추가.
+- `Modal`, `Select`, `Popover`, `Toast` 등 Ark UI 프리미먼트들에 표준 Z-index 토큰 적용.
+- 레거시 모달(`TransferModal`, `EditMealModal`, `AddExamModal`, `IVUploadForm` 줌 오버레이)을 표준 `Modal` 기반으로 전면 리팩토링하여 체계 편입.
+- 피드백 시스템 고도화: 수동 `alert`을 `toaster`로 전량 교체.
+[Status]
+- 완료. 전역 Z-index 충돌 위험 제거 및 UI 일관성 확보.
+[Technical Note]
+- 최상위 레이어는 `z-toast (5000)`로 설정하여 알림 유실 방지. 모든 모달은 `z-modal-content (2100)` 내외로 수렴됨.
+
 ### [2026-02-20 KST] - 보안 감사 및 백엔드 유틸 격리 (Legacy Archive)
 - **보안**: 프론트엔드 Stealth Logging 도입, RLS 정책 전면 활성화 마이그레이션 적용.
 - **아키텍처**: `backend/scripts/` 디렉토리로 22개 유틸리티 스크립트 격리 이동 및 표준 로거 적용.

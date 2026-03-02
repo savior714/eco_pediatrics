@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Card } from './Card';
 import { Upload, X, Check, Camera, Droplet } from 'lucide-react';
 import Image from 'next/image';
+import { toaster } from './ui/Toast';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -56,14 +57,27 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
                 setSuccess(true);
                 onUploadSuccess(rate === '' ? undefined : Number(rate));
                 setPhotoUrl(''); // Clear after success
+                toaster.create({
+                    title: '성공',
+                    description: '기록이 저장되었습니다.',
+                    type: 'success'
+                });
                 setTimeout(() => setSuccess(false), 3000);
             } else {
                 const errorData = await res.json().catch(() => ({}));
-                alert(`Upload failed: ${errorData.detail || 'Server error'}`);
+                toaster.create({
+                    title: '실패',
+                    description: errorData.detail || '기록 저장 중 서버 오류가 발생했습니다.',
+                    type: 'error'
+                });
             }
         } catch (e) {
             console.error(e);
-            alert('Error uploading record');
+            toaster.create({
+                title: '실패',
+                description: '기록 저장 중 오류가 발생했습니다.',
+                type: 'error'
+            });
         } finally {
             setIsUploading(false);
         }
@@ -141,7 +155,7 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
 
                 {/* QR Modal Overlay */}
                 {showQr && token && (
-                    <div className="absolute top-full right-0 mt-2 bg-white z-20 flex flex-col items-center justify-center rounded-xl p-3 animate-in fade-in zoom-in-95 border border-slate-200 shadow-xl w-48">
+                    <div className="absolute top-full right-0 mt-2 bg-white z-popover flex flex-col items-center justify-center rounded-xl p-3 animate-in fade-in zoom-in-95 border border-slate-200 shadow-xl w-48">
                         <button
                             onClick={() => setShowQr(false)}
                             className="absolute top-2 right-2 text-slate-300 hover:text-slate-500"
@@ -159,7 +173,7 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
             {/* Zoom Modal - Full Screen */}
             {showZoom && fullPhotoUrl && (
                 <div
-                    className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+                    className="fixed inset-0 z-modal-content bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
                     onClick={() => setShowZoom(false)}
                 >
                     <div className="relative w-full h-full max-w-5xl max-h-[90vh] flex flex-col items-center justify-center">

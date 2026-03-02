@@ -57,7 +57,7 @@ export function Select({ label, options, value, onValueChange, placeholder, clas
                 </ArkSelect.Trigger>
             </ArkSelect.Control>
             <Portal>
-                <ArkSelect.Positioner className="z-[80]">
+                <ArkSelect.Positioner className="z-popover">
                     <ArkSelect.Content className="bg-white rounded-xl shadow-xl border border-slate-100 p-1.5 min-w-[200px] animate-in fade-in zoom-in-95 duration-200">
                         <ArkSelect.ItemGroup>
                             {options.map((item) => (

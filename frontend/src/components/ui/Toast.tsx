@@ -20,7 +20,7 @@ export function ToastProvider() {
             {(toast) => (
                 <Toast.Root
                     key={toast.id}
-                    className="group bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 flex items-start gap-3 min-w-[320px] animate-in slide-in-from-right-10 fade-in duration-300 data-[closed]:animate-out data-[closed]:fade-out data-[closed]:slide-out-to-right-10"
+                    className="group bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 flex items-start gap-3 min-w-[320px] z-toast animate-in slide-in-from-right-10 fade-in duration-300 data-[closed]:animate-out data-[closed]:fade-out data-[closed]:slide-out-to-right-10"
                 >
                     <div className="shrink-0 mt-0.5">
                         {toast.type === 'success' && <CheckCircle size={20} className="text-teal-500" />}
