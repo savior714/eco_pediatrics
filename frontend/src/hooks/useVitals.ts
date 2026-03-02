@@ -305,8 +305,13 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     if (admissionIdRef.current && message.data.admission_id === admissionIdRef.current) {
                         const data = { ...(message.data as any), isOptimistic: false };
                         setMeals(prev => {
+                            // ⚡ Bolt: Use findIndex to update exact index, avoiding O(2N) loop
                             const idx = prev.findIndex(m => m.id === data.id);
-                            if (idx !== -1) return prev.map(m => m.id === data.id ? data : m);
+                            if (idx !== -1) {
+                                const next = [...prev];
+                                next[idx] = data;
+                                return next;
+                            }
                             return [...prev, data];
                         });
                     }
@@ -316,7 +321,11 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                         const data = { ...(message.data as any), isOptimistic: false };
                         setMeals(prev => {
                             const idx = prev.findIndex(m => m.id === data.id);
-                            if (idx !== -1) return prev.map(m => m.id === data.id ? data : m);
+                            if (idx !== -1) {
+                                const next = [...prev];
+                                next[idx] = data;
+                                return next;
+                            }
                             return [...prev, data];
                         });
                     }
@@ -402,17 +411,30 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
 
     const updateOptimisticMeal = useCallback((mealId: number, pediatric: string, guardian: string) => {
         let originalMeal: MealRequest | undefined;
-        setMeals(prev => prev.map(m => {
-            if (m.id === mealId) {
-                originalMeal = { ...m };
-                return { ...m, pediatric_meal_type: pediatric, guardian_meal_type: guardian, isOptimistic: true };
+        setMeals(prev => {
+            // ⚡ Bolt: Avoid mapping over all meals to make optimistic updates, shallow mutating only the matched meal
+            const idx = prev.findIndex(m => m.id === mealId);
+            if (idx !== -1) {
+                const next = [...prev];
+                originalMeal = { ...next[idx] };
+                next[idx] = { ...next[idx], pediatric_meal_type: pediatric, guardian_meal_type: guardian, isOptimistic: true };
+                return next;
             }
-            return m;
-        }));
+            return prev;
+        });
         return {
             rollback: () => {
                 if (originalMeal) {
-                    setMeals(prev => prev.map(m => m.id === mealId ? originalMeal! : m));
+                    setMeals(prev => {
+                        // ⚡ Bolt: Optimized rollback preventing re-render when mealId is not found
+                        const idx = prev.findIndex(m => m.id === mealId);
+                        if (idx !== -1) {
+                            const next = [...prev];
+                            next[idx] = originalMeal!;
+                            return next;
+                        }
+                        return prev;
+                    });
                 }
             }
         };

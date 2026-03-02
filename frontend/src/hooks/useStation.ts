@@ -199,25 +199,31 @@ export function useStation(): UseStationReturn {
                     };
 
                     setNotifications(prev => {
-                        const exists = prev.some(n => n.id === newMealId);
-                        if (exists) {
-                            return prev.map(n => n.id === newMealId ? newMealNotification : n);
+                        // ⚡ Bolt: Replace O(2N) some+map with findIndex and shallow mutation to avoid unnecessary re-renders when no match is found
+                        const idx = prev.findIndex(n => n.id === newMealId);
+                        if (idx !== -1) {
+                            const next = [...prev];
+                            next[idx] = newMealNotification as any;
+                            return next;
                         }
                         return [newMealNotification as any, ...prev];
                     });
 
                     // 2. Patch Bed State (Immediate UI Update)
-                    setBeds(prev => prev.map(bed => {
-                        if (String(bed.room) === String(message.data.room)) {
-                            return {
-                                ...bed,
+                    setBeds(prev => {
+                        // ⚡ Bolt: Use findIndex to update only the specific item, returning exactly prev if not found
+                        const idx = prev.findIndex(bed => String(bed.room) === String(message.data.room));
+                        if (idx !== -1) {
+                            const next = [...prev];
+                            next[idx] = {
+                                ...next[idx],
                                 latest_meal: {
                                     id: message.data.id,
                                     admission_id: message.data.admission_id,
                                     request_type: message.data.request_type,
                                     // Preserve current values to avoid premature UI change
-                                    pediatric_meal_type: bed.latest_meal?.pediatric_meal_type,
-                                    guardian_meal_type: bed.latest_meal?.guardian_meal_type,
+                                    pediatric_meal_type: next[idx].latest_meal?.pediatric_meal_type,
+                                    guardian_meal_type: next[idx].latest_meal?.guardian_meal_type,
                                     // Store requested values
                                     requested_pediatric_meal_type: message.data.requested_pediatric_meal_type || message.data.pediatric_meal_type,
                                     requested_guardian_meal_type: message.data.requested_guardian_meal_type || message.data.guardian_meal_type,
@@ -227,9 +233,10 @@ export function useStation(): UseStationReturn {
                                     meal_time: message.data.meal_time
                                 } as MealRequest
                             };
+                            return next;
                         }
-                        return bed;
-                    }));
+                        return prev;
+                    });
                     break;
 
                 case 'NEW_DOC_REQUEST':
@@ -245,9 +252,12 @@ export function useStation(): UseStationReturn {
                     };
 
                     setNotifications(prev => {
-                        const exists = prev.some(n => n.id === newDocId);
-                        if (exists) {
-                            return prev.map(n => n.id === newDocId ? newDocNotification : n);
+                        // ⚡ Bolt: Replace some+map with findIndex and shallow copy to prevent unnecessary array allocations and React re-renders
+                        const idx = prev.findIndex(n => n.id === newDocId);
+                        if (idx !== -1) {
+                            const next = [...prev];
+                            next[idx] = newDocNotification as any;
+                            return next;
                         }
                         return [newDocNotification as any, ...prev];
                     });
@@ -267,32 +277,37 @@ export function useStation(): UseStationReturn {
                 case 'NEW_IV':
                     const newDrops = message.data.infusion_rate;
                     const room = message.data.room;
-                    setBeds(prev => prev.map(bed => {
-                        if (String(bed.room) === String(room)) {
-                            return { ...bed, drops: newDrops };
+                    setBeds(prev => {
+                        // ⚡ Bolt: Optimize bed update by avoiding full map iteration
+                        const idx = prev.findIndex(bed => String(bed.room) === String(room));
+                        if (idx !== -1) {
+                            const next = [...prev];
+                            next[idx] = { ...next[idx], drops: newDrops };
+                            return next;
                         }
-                        return bed;
-                    }));
+                        return prev;
+                    });
                     break;
 
                 case 'NEW_VITAL':
                     const v = message.data;
-                    setBeds(prev => prev.map(bed => {
-                        // Match by admission_id if available, otherwise fallback to room if provided (though NEW_VITAL might not always have room)
-                        // Ideally match by admission_id.
-                        // However, beds state has admission_id as 'id'.
-                        if (bed.id === v.admission_id) {
+                    setBeds(prev => {
+                        // ⚡ Bolt: Optimize vital update by shallow copying only the target bed
+                        const idx = prev.findIndex(bed => bed.id === v.admission_id);
+                        if (idx !== -1) {
                             const isFever = v.temperature >= 38.0;
-                            return {
-                                ...bed,
+                            const next = [...prev];
+                            next[idx] = {
+                                ...next[idx],
                                 temp: v.temperature,
                                 last_vital_at: v.recorded_at,
-                                had_fever_in_6h: bed.had_fever_in_6h || isFever, // Keep true if already true, or set true if new fever
-                                status: (isFever || bed.had_fever_in_6h) ? 'fever' : 'normal'
+                                had_fever_in_6h: next[idx].had_fever_in_6h || isFever, // Keep true if already true, or set true if new fever
+                                status: (isFever || next[idx].had_fever_in_6h) ? 'fever' : 'normal'
                             };
+                            return next;
                         }
-                        return bed;
-                    }));
+                        return prev;
+                    });
                     break;
 
                 case 'NEW_EXAM_SCHEDULE':
