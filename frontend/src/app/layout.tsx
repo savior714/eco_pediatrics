@@ -19,6 +19,8 @@ export const viewport: Viewport = {
     themeColor: "#0f172a",
 };
 
+import { ToastProvider } from "@/components/ui/Toast";
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -26,7 +28,10 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en">
-            <body className={inter.className}>{children}</body>
+            <body className={inter.className}>
+                {children}
+                <ToastProvider />
+            </body>
         </html>
     );
 }

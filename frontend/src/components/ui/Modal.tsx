@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+'use client';
+
+import React from 'react';
 import { X } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { Dialog, Portal, Presence } from '@ark-ui/react';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -13,65 +16,57 @@ interface ModalProps {
     title?: string;
     children: React.ReactNode;
     className?: string;
+    unmountOnExit?: boolean;
 }
 
-export function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
-    const [isVisible, setIsVisible] = useState(false);
-
-    useEffect(() => {
-        if (isOpen) {
-            setIsVisible(true);
-            document.body.style.overflow = 'hidden'; // Prevent scrolling
-        } else {
-            const timer = setTimeout(() => setIsVisible(false), 300); // Wait for animation
-            document.body.style.overflow = 'unset';
-            return () => clearTimeout(timer);
-        }
-    }, [isOpen]);
-
-    if (!isVisible && !isOpen) return null;
-
+/**
+ * Ark UI 기반의 표준 모달 컴포넌트
+ * - Headless 구조를 통해 상태 로직과 스타일링을 분리
+ * - 접근성(WAI-ARIA) 자동 준수 (Focus Trap, Escape to Close 등)
+ * - Ark UI v4+ 대응: Portal 및 Presence를 명시적으로 사용
+ */
+export function Modal({ isOpen, onClose, title, children, className, unmountOnExit }: ModalProps) {
     return (
-        <div
-            className={cn(
-                "fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 transition-opacity duration-300",
-                "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
-                isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-            )}
-            onClick={(e) => e.stopPropagation()}
-        >
-            <div
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onClose();
-                }}
-                aria-hidden
-            />
-            <div
-                className={cn(
-                    "bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm max-h-[90dvh] overflow-hidden relative z-10 transform transition-all duration-300",
-                    isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-4",
-                    className
-                )}
-                onClick={(e) => e.stopPropagation()}
-            >
-                {title && (
-                    <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
-                        <h3 className="font-bold text-lg text-slate-800">{title}</h3>
-                        <button
-                            onClick={onClose}
-                            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full active:bg-slate-100 text-slate-400 touch-manipulation -mr-2"
-                            aria-label="닫기"
+        <Dialog.Root open={isOpen} onOpenChange={(details) => !details.open && onClose()}>
+            <Portal>
+                <Presence present={isOpen} unmountOnExit={unmountOnExit}>
+                    <Dialog.Backdrop
+                        className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
+                    />
+                    <Dialog.Positioner
+                        className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+                    >
+                        <Dialog.Content
+                            className={cn(
+                                "bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm max-h-[90dvh] overflow-hidden transform transition-all animate-in zoom-in-95 slide-in-from-bottom-4 duration-300",
+                                className
+                            )}
                         >
-                            <X size={22} />
-                        </button>
-                    </div>
-                )}
-                <div className="p-4 overflow-y-auto max-h-[calc(90dvh-4rem)]">
-                    {children}
-                </div>
-            </div>
-        </div>
+                            {title && (
+                                <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
+                                    <Dialog.Title className="font-bold text-lg text-slate-800">
+                                        {title}
+                                    </Dialog.Title>
+                                    <Dialog.CloseTrigger asChild>
+                                        <button
+                                            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full active:bg-slate-100 text-slate-400 touch-manipulation -mr-2"
+                                            aria-label="닫기"
+                                        >
+                                            <X size={22} />
+                                        </button>
+                                    </Dialog.CloseTrigger>
+                                </div>
+                            )}
+                            <Dialog.Description className="sr-only">
+                                {title || "모달 창"} 상세 내용
+                            </Dialog.Description>
+                            <div className="p-4 overflow-y-auto max-h-[calc(90dvh-4rem)]">
+                                {children}
+                            </div>
+                        </Dialog.Content>
+                    </Dialog.Positioner>
+                </Presence>
+            </Portal>
+        </Dialog.Root>
     );
 }

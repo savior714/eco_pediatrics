@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
+import { Select } from '@/components/ui/Select';
 import { Utensils, CheckCircle, AlertCircle, Check } from 'lucide-react';
 import { getNextThreeMealSlots } from '@/utils/dateUtils';
 import { clsx, type ClassValue } from 'clsx';
@@ -17,8 +18,17 @@ interface MealRequestModalProps {
     onSuccess?: () => void;
 }
 
-const PEDIATRIC_OPTIONS = ['일반식', '죽1', '죽2', '죽3'];
-const GUARDIAN_OPTIONS = ['일반식', '선택 안함'];
+const PEDIATRIC_OPTIONS = [
+    { label: '일반식', value: '일반식' },
+    { label: '죽1', value: '죽1' },
+    { label: '죽2', value: '죽2' },
+    { label: '죽3', value: '죽3' },
+];
+
+const GUARDIAN_OPTIONS = [
+    { label: '일반식', value: '일반식' },
+    { label: '선택 안함', value: '선택 안함' }
+];
 
 interface SlotState {
     pediatric: string;
@@ -154,55 +164,23 @@ export function MealRequestModal({ isOpen, onClose, admissionId, currentMeals = 
                     </div>
 
                     <div className="space-y-5">
-                        {/* Pediatric Section */}
-                        <div className="space-y-2.5">
-                            <label className="text-xs font-bold text-slate-500 flex items-center gap-1.5 ml-1">
-                                <span className="w-1 h-3 bg-teal-500 rounded-full" />
-                                환아 식사
-                            </label>
-                            <div className="grid grid-cols-2 gap-2">
-                                {PEDIATRIC_OPTIONS.map(opt => (
-                                    <button
-                                        key={opt}
-                                        type="button"
-                                        onClick={() => updateSelection('pediatric', opt)}
-                                        className={cn(
-                                            "px-4 py-2.5 rounded-xl text-xs font-bold border-2 transition-all active:scale-[0.98]",
-                                            currentSelection.pediatric === opt
-                                                ? "bg-teal-50 border-teal-500 text-teal-700 font-extrabold"
-                                                : "bg-white border-slate-100 text-slate-400 hover:border-slate-200"
-                                        )}
-                                    >
-                                        {opt}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                        {/* Pediatric Section using Select */}
+                        <Select
+                            label="환아 식사"
+                            options={PEDIATRIC_OPTIONS}
+                            value={[currentSelection.pediatric]}
+                            onValueChange={(val) => updateSelection('pediatric', val[0])}
+                            placeholder="식사 종류 선택"
+                        />
 
-                        {/* Guardian Section */}
-                        <div className="space-y-2.5">
-                            <label className="text-xs font-bold text-slate-500 flex items-center gap-1.5 ml-1">
-                                <span className="w-1 h-3 bg-teal-500 rounded-full" />
-                                보호자 식사
-                            </label>
-                            <div className="grid grid-cols-2 gap-2">
-                                {GUARDIAN_OPTIONS.map(opt => (
-                                    <button
-                                        key={opt}
-                                        type="button"
-                                        onClick={() => updateSelection('guardian', opt)}
-                                        className={cn(
-                                            "px-4 py-2.5 rounded-xl text-xs font-bold border-2 transition-all active:scale-[0.98]",
-                                            currentSelection.guardian === opt
-                                                ? "bg-teal-50 border-teal-500 text-teal-700 font-extrabold"
-                                                : "bg-white border-slate-100 text-slate-400 hover:border-slate-200"
-                                        )}
-                                    >
-                                        {opt}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                        {/* Guardian Section using Select */}
+                        <Select
+                            label="보호자 식사"
+                            options={GUARDIAN_OPTIONS}
+                            value={[currentSelection.guardian]}
+                            onValueChange={(val) => updateSelection('guardian', val[0])}
+                            placeholder="보호자 식사 여부 선택"
+                        />
                     </div>
 
                     {result === 'ERROR' && (

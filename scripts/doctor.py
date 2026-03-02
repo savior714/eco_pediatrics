@@ -12,12 +12,25 @@ REQUIRED_NODE_MINOR_MIN = 12
 REQUIRED_GIT_VERSION_MIN = "2.52"  # Loose check
 REQUIRED_MSVC_CHECK_CMD = "cl"
 REQUIRED_CARGO_CMD = "cargo"  # Tauri desktop app
+REQUIRED_UV_CMD = "uv"
 
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 
 def print_status(check_name, status, message=""):
     symbol = "[OK]" if status else "[FAIL]"
     print(f"{symbol:<6} {check_name:<30} {message}")
+
+def check_uv():
+    uv_path = shutil.which(REQUIRED_UV_CMD)
+    if uv_path:
+        try:
+            output = subprocess.check_output([REQUIRED_UV_CMD, "--version"], text=True).strip()
+            print_status("UV Package Manager", True, output)
+            return True
+        except subprocess.CalledProcessError:
+            pass
+    print_status("UV Package Manager", False, "uv not found. Install from https://github.com/astral-sh/uv")
+    return False
 
 def check_python():
     current_ver = sys.version_info[:2]
@@ -136,14 +149,14 @@ def check_project_structure():
     if backend_env.exists():
         print_status("Backend .env", True, "Exists")
     else:
-        print_status("Backend .env", False, "Missing (Run setup_env.bat)")
+        print_status("Backend .env", False, "Missing (Run 'eco setup')")
         all_good = False
         
     frontend_env = PROJECT_ROOT / "frontend" / ".env.local"
     if frontend_env.exists():
         print_status("Frontend .env.local", True, "Exists")
     else:
-        print_status("Frontend .env.local", False, "Missing (Run setup_env.bat)")
+        print_status("Frontend .env.local", False, "Missing (Run 'eco setup')")
         all_good = False
 
     return all_good
@@ -152,6 +165,7 @@ def main():
     print(f"[START] Running Eco-Pediatrics Environment Doctor...\nTarget: {PROJECT_ROOT}\n")
     
     results = [
+        check_uv(),
         check_python(),
         check_node(),
         check_git(),

@@ -40,5 +40,14 @@ module.exports = {
             }
         },
     },
-    plugins: [],
+    plugins: [
+        require('tailwindcss-animate'),
+        ({ addVariant }) => {
+            addVariant('open', ['&[data-state="open"]', '&[data-opened]']);
+            addVariant('closed', ['&[data-state="closed"]', '&[data-closed]']);
+            addVariant('selected', ['&[data-state="selected"]', '&[data-selected]']);
+            addVariant('active', ['&[data-state="active"]', '&[data-active]']);
+            addVariant('disabled', ['&[data-state="disabled"]', '&[data-disabled]']);
+        },
+    ],
 };

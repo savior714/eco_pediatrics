@@ -1,0 +1,70 @@
+'use client';
+
+import React from 'react';
+import { NumberInput as ArkNumberInput, Field as ArkField } from '@ark-ui/react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import { ChevronUp, ChevronDown } from 'lucide-react';
+
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
+
+interface NumberInputProps {
+    label?: string;
+    defaultValue?: string;
+    value?: string;
+    onValueChange?: (details: ArkNumberInput.ValueChangeDetails) => void;
+    min?: number;
+    max?: number;
+    step?: number;
+    placeholder?: string;
+    className?: string;
+    invalid?: boolean;
+}
+
+/**
+ * Ark UI 기반의 표준 수치 입력 컴포넌트
+ * - 증감 버튼 제어 및 WAI-ARIA 상태 관리
+ * - 체온, 수액 속도 등 정밀한 수치 입력에 최적화
+ */
+export function NumberInput({ label, defaultValue, value, onValueChange, min, max, step, placeholder, className, invalid }: NumberInputProps) {
+    return (
+        <ArkField.Root invalid={invalid} className={cn("w-full space-y-1.5", className)}>
+            {label && (
+                <ArkField.Label className="block text-xs font-bold text-slate-500 ml-1">
+                    {label}
+                </ArkField.Label>
+            )}
+            <ArkNumberInput.Root
+                defaultValue={defaultValue}
+                value={value}
+                onValueChange={onValueChange}
+                min={min}
+                max={max}
+                step={step}
+                className="w-full relative group"
+            >
+                <div className="relative flex items-center">
+                    <ArkNumberInput.Input
+                        placeholder={placeholder}
+                        className={cn(
+                            "w-full p-3.5 pr-12 border-2 border-slate-100 rounded-xl bg-white text-base font-bold text-slate-700 transition-all outline-none text-center",
+                            "hover:border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10",
+                            "data-[invalid]:border-red-500 data-[invalid]:focus:ring-red-500/10"
+                        )}
+                    />
+                    <div className="absolute right-1.5 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ArkNumberInput.Scrubber className="hidden" />
+                        <ArkNumberInput.IncrementTrigger className="p-0.5 hover:bg-slate-100 rounded text-slate-400 hover:text-teal-600">
+                            <ChevronUp size={16} />
+                        </ArkNumberInput.IncrementTrigger>
+                        <ArkNumberInput.DecrementTrigger className="p-0.5 hover:bg-slate-100 rounded text-slate-400 hover:text-teal-600">
+                            <ChevronDown size={16} />
+                        </ArkNumberInput.DecrementTrigger>
+                    </div>
+                </div>
+            </ArkNumberInput.Root>
+        </ArkField.Root>
+    );
+}

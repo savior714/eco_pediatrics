@@ -49,15 +49,14 @@ exit
 
 :backend
 echo.
-echo [ECO] Starting Backend Only...
+echo [ECO] Starting Backend (uv)...
 cd backend
-.venv\Scripts\activate
-python -m uvicorn main:app --reload --port 8000
+uv run uvicorn main:app --reload --port 8000
 goto end
 
 :frontend
 echo.
-echo [ECO] Starting Frontend Only...
+echo [ECO] Starting Frontend...
 cd frontend
 npm run dev
 goto end
@@ -84,15 +83,9 @@ if %errorlevel% neq 0 (
 )
 uv --version >nul 2>&1
 if %errorlevel% neq 0 (
-    py -3.14 -m uv --version >nul 2>&1
-    if !errorlevel! neq 0 (
-        echo [ERROR] uv not found. Install: pip install uv  or  irm https://astral.sh/uv/install.ps1 ^| iex
-        echo [%date% %time%] FAIL: uv not found >> "%SETUP_LOG%"
-        goto setup_fail
-    )
-    set "UV=py -3.14 -m uv"
-) else (
-    set "UV=uv"
+    echo [ERROR] uv not found. Please install uv (pip install uv).
+    echo [%date% %time%] FAIL: uv not found >> "%SETUP_LOG%"
+    goto setup_fail
 )
 
 :: 2. Backend Setup
@@ -100,17 +93,17 @@ echo.
 echo [1/4] Setting up Backend...
 cd /d "%~dp0backend"
 if not exist ".venv" (
-    echo    - Creating virtual environment with uv...
-    !UV! venv .venv --python 3.14
+    echo    - Creating virtual environment (uv)...
+    uv venv .venv --python 3.14
     if !errorlevel! neq 0 (
-        echo [ERROR] Failed to create backend .venv (uv venv).
-        echo [%date% %time%] FAIL: uv venv .venv >> "%SETUP_LOG%"
+        echo [ERROR] Failed to create backend .venv with uv.
+        echo [%date% %time%] FAIL: uv venv .venv --python 3.14 >> "%SETUP_LOG%"
         cd /d "%~dp0"
         goto setup_fail
     )
 )
 
-:: SDK auto-discovery (Windows Kits 10) + ?? ?? for C ?? ??(io.h ?)
+:: SDK auto-discovery (Windows Kits 10) + UCRT Path
 echo    - Configuring Build Environment (SDK Discovery)...
 powershell -ExecutionPolicy Bypass -NoProfile -File "%~dp0scripts\Refresh-BuildEnv.ps1"
 for /f "tokens=*" %%i in ('powershell -NoProfile -Command "Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\Include' -Directory -EA 0 | Where-Object { $_.Name -match '^10\.\d' } | Sort-Object Name -Desc | Select-Object -First 1 | ForEach-Object { $_.Name }"') do set "SDK_VER=%%i"
@@ -122,22 +115,15 @@ if defined SDK_VER (
     set "LIB=!SDK_LIB!\ucrt\x64;!SDK_LIB!\um\x64;!LIB!"
     set "PATH=!SDK_BIN!;!PATH!"
 ) else (
-    echo    - Windows SDK not found; build may fail for native deps.
+    echo    - Windows SDK not found. Build effort may fail for native deps (pyiceberg).
 )
 
-echo    - Installing dependencies with uv...
-call .venv\Scripts\activate
-if exist "uv.lock" (
-    !UV! sync
-) else (
-    !UV! pip install --upgrade pip setuptools wheel cython
-    !UV! pip install pyroaring pyiceberg --no-cache-dir 2>nul
-    !UV! pip install -r requirements.txt
-)
+echo    - Installing dependencies (uv pip)...
+uv pip install --upgrade pip setuptools wheel cython
+uv pip install -r requirements.txt
 if !errorlevel! neq 0 (
-    echo [ERROR] uv sync / uv pip install failed.
-    echo [%date% %time%] FAIL: uv sync or pip install >> "%SETUP_LOG%"
-    call deactivate
+    echo [ERROR] uv pip install failed.
+    echo [%date% %time%] FAIL: uv pip install >> "%SETUP_LOG%"
     cd /d "%~dp0"
     goto setup_fail
 )
@@ -145,7 +131,6 @@ if not exist ".env" (
     echo    - Creating .env from template...
     copy .env.example .env >nul
 )
-call deactivate
 cd /d "%~dp0"
 
 :: 3. Frontend Setup
