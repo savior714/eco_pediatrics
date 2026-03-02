@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { getKSTNowString } from '@/utils/dateUtils';
 
 export interface IVLabelData {
     name: string;
@@ -41,7 +42,7 @@ export class IVLabelService {
                 room: data.room,
                 rate: info,
                 ageGender: data.ageGender,
-                date: new Date().toLocaleString('ko-KR')
+                date: getKSTNowString()
             });
             return `data:image/png;base64,${previewBase64}`;
         } catch (error) {
@@ -63,7 +64,7 @@ export class IVLabelService {
                 room: data.room,
                 rate: info,
                 ageGender: data.ageGender,
-                date: new Date().toLocaleString('ko-KR')
+                date: getKSTNowString()
             });
         } catch (error) {
             console.error('라벨 인쇄 실패:', error);

@@ -123,3 +123,13 @@ export function getNextThreeMealSlots(now: Date = new Date()): { label: string; 
         { label: '내일 저녁', date: tomorrow, meal_time: 'DINNER' }
     ];
 }
+
+export function getKSTNowString(): string {
+    const d = getKSTDate(new Date());
+    const yr = d.getFullYear();
+    const mo = (d.getMonth() + 1).toString().padStart(2, '0');
+    const dy = d.getDate().toString().padStart(2, '0');
+    const hr = d.getHours().toString().padStart(2, '0');
+    const mi = d.getMinutes().toString().padStart(2, '0');
+    return `${yr}.${mo}.${dy} ${hr}:${mi}`;
+}

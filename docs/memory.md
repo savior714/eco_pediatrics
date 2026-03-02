@@ -58,3 +58,26 @@
 
 [Technical Note]
 - docs/memory.md가 유일한 맥락 SSOT임을 모든 관련 문서의 링크에서 통일시킴.
+
+[2026-03-03]
+[Context] 수액 속도 설정 UI 개선 및 라벨 미리보기 구현 계획 문의 대응.
+[Action] 
+- IVLabelPreviewModal.tsx: input[type='number']의 스핀 버튼(상하 화살표) 제거 (Tailwind appearance-none 적용).
+- 라벨 미리보기 구현 계획 수립: Brother b-PAC SDK (COM)의 Export 기능을 활용한 실시간 이미지 생성 방식 채택.
+[Status] 완료 (1/1)
+[Technical Note] 
+- 스핀 버튼 제거를 위해 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none 클래스 사용.
+- 라벨 프리뷰는 Rust 사이드에서 b-PAC SDK를 호출하여 이미지 파일로 덤프 후 Base64로 반환하는 아키텍처로 구현 예정.
+- 현재 docs/memory.md 줄 수: 74/200
+
+[2026-03-03]
+[Context] 수액 라벨 인쇄 시스템 논리 결함 수정.
+[Action] 
+- dateUtils.ts: KST 시각 문자열을 반환하는 getKSTNowString() 헬퍼 함수 추가.
+- IVLabelService.ts: 라벨 미리보기 및 인쇄 시 ko-KR local 시간 대신 getKSTNowString()을 사용하여 시간대 정합성 확보.
+- IVLabelPreviewModal.tsx: 미리보기 생성(isLoading) 중 '인쇄하기' 버튼 비활성화 가드 추가.
+[Status] 완료 (3/3)
+[Technical Note] 
+- 클라이언트의 시스템 시간에 의존하지 않는 KST 표준 시간대 준수 원칙 강화.
+- 반올림 오차 및 정합성 이슈 방지.
+- 현재 docs/memory.md 줄 수: 81/200

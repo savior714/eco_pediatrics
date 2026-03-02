@@ -105,7 +105,7 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
                                 value={rate || ''}
                                 onChange={(e) => setRate(Number(e.target.value))}
                                 onBlur={generatePreview}
-                                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 placeholder="0"
                             />
                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">cc/hr</span>
@@ -153,8 +153,8 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
                     </button>
                     <button
                         onClick={handlePrint}
-                        disabled={!previewUrl || isPrinting}
-                        className={`flex-[2] py-3 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all ${(!previewUrl || isPrinting) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!previewUrl || isPrinting || isLoading}
+                        className={`flex-[2] py-3 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all ${(!previewUrl || isPrinting || isLoading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         {isPrinting ? (
                             <Loader2 className="animate-spin" size={20} />
