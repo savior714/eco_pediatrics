@@ -9,14 +9,19 @@
 ## 🚀 최신 업데이트 및 주요 기능 (2026-03-02 기준)
 
 ### 1. Ark UI 전면 도입 및 UI 고도화 (Phase 3 완료)
-*   **Headless UI 전환**: `@ark-ui/react`를 활용하여 모달(`Modal`), 셀렉터(`Select`), 탭(`Tabs`), 입력 폼(`Field`, `NumberInput`) 등의 프리미티브를 Ark UI 기반으로 전면 리팩토링.
-*   **프리미엄 인터랙션 (Toast/Popover)**: 기존 `alert`을 대체하는 고급 토스트 시스템 및 상세 정보 팝오버 도입.
-*   **접근성 및 성능**: WAI-ARIA 표준 준수 및 `unmountOnExit` 적용으로 대규모 모달(`PatientDetailModal`)의 메모리 점유 최적화.
+*   **Headless UI 전환**: @ark-ui/react를 활용하여 모달(Modal), 셀렉터(Select), 탭(Tabs), 입력 폼(Field, NumberInput) 등의 프리미티브를 Ark UI 기반으로 전면 리팩토링.
+*   **프리미엄 인터랙션 (Toast/Popover)**: 기존 alert을 대체하는 고급 토스트 시스템 및 상세 정보 팝오버 도입.
+*   **접근성 및 성능**: WAI-ARIA 표준 준수 및 unmountOnExit 적용으로 대규모 모달(PatientDetailModal)의 메모리 점유 최적화.
 
-### 2. UV Native 백엔드 환경 구축
-*   **UV 기반 의존성 제어**: `pip/venv` 혼용을 중단하고 `uv`를 활용한 결정론적 빌드 및 초고속 패키지 설치 환경 구현.
-*   **통합 런처 고도화**: `eco.bat` 및 `start_backend_pc.bat`을 `uv run` 기반으로 리팩토링하여 활성화 과정 없는 즉각적인 실행 보장.
-*   **Setup(2번) PowerShell 위임**: [2] Environment Setup은 `scripts/Setup-Environment.ps1`에서 전부 수행. cmd 배치의 괄호·래퍼 호출 이슈를 피하고 안정적으로 npm/uv 실행. 배치 인코딩 문제 시 `pwsh -File scripts\Fix-BatEncoding.ps1`로 eco.bat을 CP949로 재저장.
+### 2. 수액 라벨 인쇄 시스템 및 Tauri Bridge (신규)
+*   **Brother b-PAC SDK 연동**: Tauri Bridge(Rust)를 통해 Brother TD-4520DN 프린터와 직접 통신하여 수액 라벨지 인쇄 기능 구현.
+*   **실시간 속도 환산 로직**: cc/hr 단위를 gtt/min(Micro: 1:1, Standard: 3:1)으로 자동 계산하는 임상 로직 통합.
+*   **레이어드 미리보기**: 인쇄 전 실시간 데이터가 매핑된 라벨 이미지를 확인할 수 있는 전용 프리뷰 모달 구축. (Z-Index elevation="nested" 적용)
+
+### 3. UV Native 및 통합 도구 관리 (Standard)
+*   **UV 기반 의존성 제어**: pip/venv 혼용을 중단하고 uv를 활용한 결정론적 빌드 및 초고속 패키지 설치 환경 구현.
+*   **프론트엔드 툴체인 격리**: uv run --with nodejs npm ... 형식을 채택하여 Node.js 버전 및 도구 체인의 일관성 확보.
+*   **통합 런처 고도화**: eco.bat 및 start_backend_pc.bat을 uv run 기반으로 리팩토링하여 활성화 과정 없는 즉각적인 실행 보장.
 
 ... (중략: 기존 업데이트 내역은 docs/CHANGELOG.md 참고)
 
@@ -63,9 +68,10 @@
 
 ## 📂 문서 (Documentation)
 
-*   [CONTEXT_SNAPSHOT.md](./CONTEXT_SNAPSHOT.md): 프로젝트의 상세 개발 현황 및 히스토리 (최신)
-*   [docs/CRITICAL_LOGIC.md](./docs/CRITICAL_LOGIC.md): **시스템 핵심 운영 로직 SSOT (프로젝트 헌법)**
-*   [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md): 주요 이슈 및 해결 가이드 (설정, Doctor, WT 레이아웃, Supabase 쿼리 패턴 등)
-*   [docs/prompts/](./docs/prompts/): 에러 모니터 출력(`prompt_for_gemini.md`), LLM 디버깅용 프롬프트, **30분 AI 코딩** 복붙용(`WORKFLOW_30MIN_PROMPTS.md` — eco_pediatrics 전용)
-*   [docs/WORKFLOW_30MIN_AI_CODING.md](./docs/WORKFLOW_30MIN_AI_CODING.md): 30분 AI 코딩 워크플로우(복붙 절차). 복붙용 프롬프트는 [docs/prompts/WORKFLOW_30MIN_PROMPTS.md](./docs/prompts/WORKFLOW_30MIN_PROMPTS.md)(eco_pediatrics 전용).
-*   [NEXT_STEPS.md](./NEXT_STEPS.md): 향후 개발 계획
+*   **[docs/README.md](./docs/README.md) — 전체 문서 인덱스 (가장 먼저 확인할 곳)**
+*   **[docs/memory.md](./docs/memory.md)** — **실시간 작업 맥락 및 히스토리 SSOT** ([Strict Append-Only] 로그)
+*   **[docs/CRITICAL_LOGIC.md](./docs/CRITICAL_LOGIC.md)** — **시스템 핵심 운영 로직 SSOT (프로젝트 헌법)**
+*   **[docs/DEV_ENVIRONMENT.md](./docs/DEV_ENVIRONMENT.md)** — UV Native 환경 구축 및 `eco.bat` 실행 가이드
+*   **[docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)** — 알려진 문제 및 해결 가이드 (설정, Doctor, WT 레이아웃 등)
+*   **[docs/WORKFLOW_30MIN_AI_CODING.md](./docs/WORKFLOW_30MIN_AI_CODING.md)** — 30분 AI 코딩 워크플로우 절차 가이드
+*   **[docs/archive/](./docs/archive/)** — 완료된 계획서 및 특정 이슈 레거시 로그 보관함

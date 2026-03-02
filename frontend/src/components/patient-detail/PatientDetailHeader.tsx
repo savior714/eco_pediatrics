@@ -1,7 +1,8 @@
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Printer } from 'lucide-react';
 import { Bed } from '@/types/domain';
 import { formatPatientDemographics } from '@/utils/dateUtils';
+import { IVLabelPreviewModal } from '../IVLabelPreviewModal';
 
 interface PatientDetailHeaderProps {
     bed: Bed;
@@ -13,6 +14,8 @@ interface PatientDetailHeaderProps {
 }
 
 export function PatientDetailHeader({ bed, onClose, onDischarge, onTransfer, onSeedData, isSeeding }: PatientDetailHeaderProps) {
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+
     return (
         <div className={`pl-12 pr-8 py-6 shrink-0 ${bed.status === 'fever' ? 'bg-red-50' : 'bg-slate-50'} border-b border-slate-100`}>
             <div className="flex justify-between items-center">
@@ -48,6 +51,13 @@ export function PatientDetailHeader({ bed, onClose, onDischarge, onTransfer, onS
                 </div>
                 <div className="flex items-center gap-2">
                     <button
+                        onClick={() => setIsPrintModalOpen(true)}
+                        className="px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
+                    >
+                        <Printer size={14} />
+                        수액 라벨지 인쇄
+                    </button>
+                    <button
                         onClick={onDischarge}
                         className={`px-4 py-2 text-xs font-bold rounded-xl transition-all border shadow-sm ${bed.status === 'fever'
                             ? 'bg-white border-red-500 text-red-600 hover:bg-red-600 hover:text-white'
@@ -78,6 +88,13 @@ export function PatientDetailHeader({ bed, onClose, onDischarge, onTransfer, onS
                     </button>
                 </div>
             </div>
+
+            <IVLabelPreviewModal
+                isOpen={isPrintModalOpen}
+                onClose={() => setIsPrintModalOpen(false)}
+                bed={bed}
+                currentRate={bed.drops || 0}
+            />
         </div>
     );
 }

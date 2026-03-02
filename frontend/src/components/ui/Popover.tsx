@@ -30,7 +30,7 @@ export function Popover({ trigger, children, title, className }: PopoverProps) {
             </ArkPopover.Trigger>
 
             <Portal>
-                <ArkPopover.Positioner className="z-popover">
+                <ArkPopover.Positioner className="z-dropdown">
                     <ArkPopover.Content
                         className={cn(
                             "bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 min-w-[240px] max-w-sm animate-in fade-in zoom-in-95 duration-200 outline-none",

@@ -56,6 +56,7 @@ export function VitalModal({ isOpen, onClose, admissionId, onSave }: VitalModalP
             onClose={onClose}
             title="체온 입력"
             className="max-w-[280px]"
+            elevation="nested"
         >
             <form onSubmit={handleSubmit} className="space-y-6">
                 <NumberInput

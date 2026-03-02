@@ -53,8 +53,8 @@
 
 ### 2.5 Environment Maintenance (인코딩 원칙)
 - **배치 파일 (.bat, .cmd)**: 반드시 **ANSI(CP949/EUC-KR)** 인코딩을 유지한다. `cmd.exe`는 UTF-16/UTF-8 BOM을 잘못 해석하여 `'cho'`(echo), `'edelayedexpansion'`(EnableDelayedExpansion) 등 구문 파편화로 창이 즉시 닫힌다.
-- **그 외 소스 (.ps1, .js, .ts, .json 등)**: **UTF-8 (no BOM)** 사용. PowerShell·Node 등 현대 런타임 표준이며, BOM이 있으면 파서 오류가 날 수 있다.
-- **수정 시**: 배치만 IDE에서 **Save with Encoding** → **Korean (EUC-KR)** 또는 **Western (Windows 1252)**로 저장. 에이전트는 배치 파일 수정 시 인코딩을 변경하지 않는다.
+- **표준 도구 (uv Standard)**: 백엔드뿐만 아니라 프론트엔드 도구(npm, node)도 uv run --with nodejs@24.12.0 ... 형식을 통해 호출함으로써 툴체인의 일관성을 확보한다.
+- **수정 시**: 배치만 IDE에서 Save with Encoding -> Korean (EUC-KR) 또는 Western (Windows 1252)로 저장. 에이전트는 배치 파일 수정 시 인코딩을 변경하지 않는다.
 
 ---
 
@@ -106,9 +106,13 @@
 - **슬롯 결정**: `getNextThreeMealSlots` 로직(06시, 14시, 19시 분기)에 따라 표시할 식사 슬롯을 결정한다.
 - **상태 관리**: 보호자의 신청은 `requested_*` 필드에 임시 저장되며, 간호 스테이션의 '완료' 처리가 있어야만 실제 식단 필드로 전이된다. 수락 전까지 UI는 기존 식단을 유지한다.
 
-### 4.2 수액 모니터링 (IV Monitoring)
-- **표준 단위**: 병원 현장 표준에 따라 모든 수액 주입 속도는 **`cc/hr`** 단위를 사용한다.
-- **데이터 구조**: `IV_Records`는 반드시 확인 시각과 현재 속도 정보를 포함해야 한다.
+### 4.2 수액 모니터링 및 라벨 인쇄 (IV Monitoring & Printing)
+- **표준 단위**: 병원 현장 표준에 따라 모든 수액 주입 속도는 cc/hr 단위를 사용한다.
+- **속도 환산 공식 (Standard)**:
+    - Micro set (60 gtt): gtt/min = cc/hr (1:1 환산)
+    - Standard set (20 gtt): gtt/min = cc/hr / 3 (3:1 환산)
+- **인쇄 아키텍처**: Tauri Bridge(Rust)를 통해 b-PAC SDK와 통신하며, .lbx 템플릿 기반으로 실시간 데이터를 매핑하여 출력한다.
+- **안전 규칙**: 속도 변경 시 반드시 새로운 라벨지를 인쇄하여 수액백에 부착해야 하며, 라벨지에는 환자 식별 정보, 속도(cc/hr 및 gtt/min), 인쇄 시각이 포함되어야 한다.
 
 ---
 

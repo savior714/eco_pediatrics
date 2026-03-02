@@ -10,7 +10,7 @@ $feCmd = "$psExe -NoExit -EncodedCommand $encodedCmd"
 
 # 각 커맨드를 단순 문자열로 정의 (중첩 따옴표 최소화)
 # Error Monitor는 루트의 .venv 혹은 uv run을 통해 실행
-$monCmd = "cmd /k `"uv run error_monitor.py --clear`""
+$monCmd = "cmd /k `"uv run python -m plugins.error_monitor --clear`""
 # Backend는 backend 디렉토리 내의 uv를 통해 uvicorn 실행
 $beCmd = "cmd /k `"uv run uvicorn main:app --reload --port 8000`""
 

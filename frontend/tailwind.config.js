@@ -41,8 +41,11 @@ module.exports = {
             zIndex: {
                 'layout': '10',
                 'popover': '1000',
+                'dropdown': '2200',   // 모달 내 Select 등 드롭다운이 modal-content(2100) 위에 오도록
                 'modal-backdrop': '2000',
                 'modal-content': '2100',
+                'modal-backdrop-nested': '3000',  // 환자 상세 등 부모 모달 위에 뜨는 서브모달용
+                'modal-content-nested': '3100',
                 'toast': '5000',
             }
         },

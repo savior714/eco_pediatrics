@@ -158,9 +158,6 @@ export function PatientDetailModal({
                                 }).catch(err => {
                                     toaster.create({ title: '처리 실패', type: 'error' });
                                 });
-                                requestAnimationFrame(() => {
-                                    document.getElementById('patient-sidebar-completed-docs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                });
                             }}
                         />
                     </div>

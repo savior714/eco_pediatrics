@@ -1,11 +1,25 @@
-# Documentation Index
+# Eco-Pediatrics Documentation Index
 
-- **[Core]** `CRITICAL_LOGIC.md` — 비즈니스 핵심 로직 및 기술 원칙
-- **[Dev]** `DEV_ENVIRONMENT.md` — 환경 설정 및 PowerShell 워크플로우
-- **[AI]** `WORKFLOW_30MIN_AI_CODING.md` — 30분 AI 코딩 워크플로우(복붙 절차). 복붙용 프롬프트 문구는 `prompts/WORKFLOW_30MIN_PROMPTS.md`(eco_pediatrics 전용) 참조.
-- **[History]** `TROUBLESHOOTING.md` — 과거 해결된 주요 장애 이력
-- **[Changelog]** `CHANGELOG.md` — 문서·워크플로우 및 기능 변경 이력
-- [Perf] `FRONTEND_RENDER_OPTIMIZATION.md` — 스테이션 페이지 렌더 최적화(TemperatureGraph, MealGrid, NotificationItem) 및 관련 타입 수정
-- [Memory] `memory.md` — 전체 작업 맥락, 아키이브, 세부 변경 이력 [SSOT]
+## Core Business Documents (SSOT)
+- **[CRITICAL_LOGIC.md](./CRITICAL_LOGIC.md)** — 전체 시스템의 유일한 진실의 원천 (Business Rules & Core Logic).
+- **[memory.md](./memory.md)** — 전체 작업 맥락, 아키텍처 결정 이력 및 미션 상태 (Context SSOT).
+- **[DEVELOPMENT_STANDARDS.md](./DEVELOPMENT_STANDARDS.md)** — 코딩 규격 및 디자인 시스템 표준 가이드.
 
-추가: `ARCHITECTURAL_PLAN.md`, `DEVELOPMENT_STANDARDS.md`, `ERROR_MONITOR_ARCHITECTURE.md` 등은 필요 시 참조. 30분 워크플로우 사용 시 `prompts/WORKFLOW_30MIN_PROMPTS.md`에서 Phase 1~3·통합 마스터 프롬프트 복사.
+## Environment & Architecture
+- **[DEV_ENVIRONMENT.md](./DEV_ENVIRONMENT.md)** — UV Native 기반 개발 환경 구성 가이드 및 실행 (`eco.bat`).
+- **[ARCHITECTURAL_PLAN.md](./ARCHITECTURAL_PLAN.md)** — 상위 레벨 아키텍처 설계 및 구성도.
+- **[ERROR_MONITOR_ARCHITECTURE.md](./ERROR_MONITOR_ARCHITECTURE.md)** — 에러 모니터링 시스템 구조.
+- **[FRONTEND_RENDER_OPTIMIZATION.md](./FRONTEND_RENDER_OPTIMIZATION.md)** — 프론트엔드 성능 최적화 전략.
+- **[SECURITY_REVIEW.md](./SECURITY_REVIEW.md)** — 보안 검사 및 권한 관리 정책.
+
+## Rules & Workflows
+- **[VERIFICATION_GLOBAL_RULES.md](./VERIFICATION_GLOBAL_RULES.md)** — 글로벌 룰 및 에이전트 행동 지침.
+- **[WORKFLOW_30MIN_AI_CODING.md](./WORKFLOW_30MIN_AI_CODING.md)** — AI 코딩 파트너십을 위한 최속 워크플로우.
+- **[CHANGELOG.md](./CHANGELOG.md)** — 주요 기능 단위 변경 이력.
+
+## Help & Troubleshooting
+- **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** — 알려진 문제 및 해결 방법 모음.
+- **[archive/](./archive/)** — 완료된 계획서 및 특정 이슈 로그 보관함.
+
+---
+*Last updated: 2026-03-02*

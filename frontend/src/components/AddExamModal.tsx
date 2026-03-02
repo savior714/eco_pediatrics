@@ -57,6 +57,7 @@ export function AddExamModal({ isOpen, onClose, onSave, onApiSave }: AddExamModa
             isOpen={isOpen}
             onClose={onClose}
             title="검사 일정 등록"
+            elevation="nested"
         >
             <form onSubmit={handleSubmit} className="space-y-6 mt-2">
                 <div className="space-y-2">

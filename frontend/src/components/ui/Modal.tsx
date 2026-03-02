@@ -17,6 +17,8 @@ interface ModalProps {
     children: React.ReactNode;
     className?: string;
     unmountOnExit?: boolean;
+    /** 다른 모달 위에 띄울 때 true (예: 환자 상세 모달 안에서 뜨는 체온/전실 모달) */
+    elevation?: 'default' | 'nested';
 }
 
 /**
@@ -25,16 +27,22 @@ interface ModalProps {
  * - 접근성(WAI-ARIA) 자동 준수 (Focus Trap, Escape to Close 등)
  * - Ark UI v4+ 대응: Portal 및 Presence를 명시적으로 사용
  */
-export function Modal({ isOpen, onClose, title, children, className, unmountOnExit }: ModalProps) {
+const elevationClasses = {
+    default: { backdrop: 'z-modal-backdrop', content: 'z-modal-content' },
+    nested: { backdrop: 'z-modal-backdrop-nested', content: 'z-modal-content-nested' },
+};
+
+export function Modal({ isOpen, onClose, title, children, className, unmountOnExit, elevation = 'default' }: ModalProps) {
+    const z = elevationClasses[elevation];
     return (
         <Dialog.Root open={isOpen} onOpenChange={(details) => !details.open && onClose()}>
             <Portal>
                 <Presence present={isOpen} unmountOnExit={unmountOnExit}>
                     <Dialog.Backdrop
-                        className="fixed inset-0 z-modal-backdrop bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
+                        className={cn("fixed inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300", z.backdrop)}
                     />
                     <Dialog.Positioner
-                        className="fixed inset-0 z-modal-content flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+                        className={cn("fixed inset-0 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]", z.content)}
                     >
                         <Dialog.Content
                             className={cn(

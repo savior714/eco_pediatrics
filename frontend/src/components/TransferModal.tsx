@@ -62,6 +62,7 @@ export function TransferModal({ isOpen, onClose, currentRoom, onTransfer }: Tran
             isOpen={isOpen}
             onClose={onClose}
             title="병실 이동 (전실)"
+            elevation="nested"
         >
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                 <div className="flex items-center justify-center gap-4 bg-slate-50 py-4 rounded-xl border border-slate-100">

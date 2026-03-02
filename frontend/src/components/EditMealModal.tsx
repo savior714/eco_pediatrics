@@ -67,6 +67,7 @@ export function EditMealModal({
             isOpen={isOpen}
             onClose={onClose}
             title={`${label} 식사 수정`}
+            elevation="nested"
         >
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-6 -mt-2 px-1">
                 {date} / {mealTime}
