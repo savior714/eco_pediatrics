@@ -1,0 +1,3 @@
+## 2025-01-31 - [Array Iteration and State Mutation in React Hooks]
+**Learning:** State updaters using a combination of `some` or `findIndex` followed by `.map(...)` lead to an O(2N) time complexity and create unnecessary array references, which cause React to re-render even if the condition is not met (element not found).
+**Action:** Replace `.some() + .map()` with `.findIndex()` and shallow array copy mutation (`next[idx] = ...`). This allows returning the exact `prev` state reference if the item isn't found, preventing unnecessary re-renders while converting an O(2N) operation to O(N). Ensure comments are added describing the optimization.
