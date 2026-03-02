@@ -124,6 +124,18 @@
 - [ ] **API 엔드포인트 수정 시**: 해당 데이터를 참조하는 WebSocket 브로드캐스트 로직(`broadcast_to_room` 등)이 누락되지 않았는지 확인.
 - [ ] **UI 컴포넌트 수정 시**: `mask_name` 유틸리티가 적용되어 환자 성함이 노출되지 않는지 확인.
 
+### 5.1 메모리 누수 방지 원칙 (Memory Safety)
+
+**Frontend**
+- `setTimeout`/`setInterval` 생성 시 반드시 ID를 `useRef`에 보관하고, `useEffect` cleanup에서 `clearTimeout`/`clearInterval` 호출.
+- `useCallback` 내부에서 타이머를 교체하는 debounce 패턴은 컴포넌트 수명과 별개이므로, 별도 `useEffect(() => () => clearTimeout(ref.current), [])` cleanup 필수.
+- `api.ts`의 GET 요청은 30초 `AbortController` timeout이 적용됨. 응답이 30초를 초과하면 abort 에러로 간주되어 재시도 로직 적용.
+
+**Backend**
+- `asyncio.create_task()` 사용 시 반드시 반환값을 변수에 저장하고 `task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)` 추가. 미추적 태스크는 GC 시 예외가 silent-discard 됨.
+- fire-and-forget 태스크 내부 DB 쿼리에는 `asyncio.wait_for(coro, timeout=10.0)`으로 감싸 좀비 태스크 방지.
+- WebSocket `receive_text()` 루프는 `asyncio.wait_for(timeout=120)` 적용. 타임아웃 시 `close(1001)`로 연결 종료. `manager.disconnect()`는 반드시 `finally` 블록에서 호출.
+
 ---
 
 ## 6. Skill & Agent Maintenance: 에이전트 및 스킬 관리

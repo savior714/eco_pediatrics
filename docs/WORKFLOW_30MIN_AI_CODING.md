@@ -145,7 +145,7 @@ npx repomix@latest --style markdown --include "backend/main.py,backend/routers/*
 ### 최근 변경 (작업 내역)
 
 - **2026-02-25**: `docs/prompts/WORKFLOW_30MIN_PROMPTS.md`를 **eco_pediatrics 전용**으로 정리. Phase 1~3·통합 마스터 프롬프트에 CRITICAL_LOGIC·supabase-py 2단계·logger 규칙 반영. 본 워크플로우 문서는 프롬프트 문서 참조 방식으로 정리.
-- **2025-02-23**: repomix 출력을 **`docs/repomix-output.md` 한 파일만** 쓰도록 통일. Phase 1은 같은 파일 붙여넣고 Step 1(백엔드) → Step 2(프론트) 따로 묻는 방식만 문서화. 상세: `docs/CHANGELOG.md`.
+- **2025-02-23**: repomix 출력을 **`docs/repomix-output.md` 한 파일만** 쓰도록 통일. Phase 1은 같은 파일 붙여넣고 Step 1(백엔드) → Step 2(프론트) 따로 묻는 방식만 문서화. 상세: `docs/memory.md`.
 
 ---
 

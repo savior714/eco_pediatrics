@@ -7,7 +7,7 @@
 | **상태** | 해결 완료 |
 | **원인** | 비제어 `defaultValue` + 전실 시 `bed.room` 기반 행 리마운트로 뷰-상태 불일치. LUNCH 단일 의존으로 해당 레코드 없을 때 비고 유실. |
 | **적용 수정** | `MealGrid.tsx`에 `RoomNoteInput` 제어 컴포넌트 추가. LUNCH/BREAKFAST/DINNER 폴백 읽기·저장. |
-| **상세 문서** | `docs/CHANGELOG.md` §2026-02-23, `docs/SESSION_2026-02-23.md` §7 |
+| **상세 문서** | `docs/memory.md` §2026-02-23, `docs/SESSION_2026-02-23.md` §7 |
 
 ---
 

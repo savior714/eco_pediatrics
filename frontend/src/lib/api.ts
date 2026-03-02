@@ -12,6 +12,14 @@ let cachedTauriLog: any = null;
 
 // GET 중복 요청 시 진행 중인 Promise 공유 (가짜 {} 반환 제거, Strict Mode 이중 호출 시 시퀀스 가드 교란 방지)
 const pendingGetPromises = new Map<string, Promise<unknown>>();
+const PENDING_GET_TIMEOUT_MS = 30_000;
+// stale pending 엔트리 주기적 정리 (네트워크 hang 등으로 finally 미실행 시 누수 방지)
+setInterval(() => {
+    // Map 크기가 일정 이상이면 전체 비움 (정상 운영 중에는 항상 0~수개)
+    if (pendingGetPromises.size > 20) {
+        pendingGetPromises.clear();
+    }
+}, PENDING_GET_TIMEOUT_MS);
 
 const getTauriFetch = async () => {
     if (!isTauri) return window.fetch;
@@ -83,8 +91,12 @@ class ApiClient {
                 void tauriLog('info', `Requesting [${fetchType}]: ${method} ${url}`);
             }
 
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), PENDING_GET_TIMEOUT_MS);
+
             try {
                 const res = await fetchFn(url, {
+                    signal: controller.signal,
                     ...options,
                     headers: {
                         'Content-Type': 'application/json',
@@ -112,9 +124,17 @@ class ApiClient {
 
                 const text = await res.text();
                 return text ? JSON.parse(text) : ({} as T);
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        };
+
+        const execute = async (): Promise<T> => {
+            try {
+                return await run();
             } catch (err: any) {
                 const detail = err instanceof Error ? err.message : JSON.stringify(err);
-                const isConnectionError = /sending request|ECONNREFUSED|Failed to fetch|NetworkError|fetch/i.test(detail);
+                const isConnectionError = /sending request|ECONNREFUSED|Failed to fetch|NetworkError|fetch|abort/i.test(detail);
 
                 if (isConnectionError && retryCount < 2) {
                     const delay = (retryCount + 1) * 300;
@@ -148,7 +168,7 @@ class ApiClient {
             }
         };
 
-        const promise = run();
+        const promise = execute();
         if (method === 'GET' && retryCount === 0) {
             pendingGetPromises.set(requestKey, promise);
         }

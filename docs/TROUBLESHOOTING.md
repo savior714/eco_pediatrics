@@ -1,6 +1,12 @@
 # Eco-Pediatrics 트러블슈팅 가이드
 
-이 문서는 **eco.bat / Environment Setup / Doctor** 관련 이슈와 해결 과정을 정리합니다. Windows Terminal 레이아웃 이슈는 `TROUBLESHOOTING_WT_LAYOUT.md`를 참고하세요.
+이 문서는 개발 환경, 런타임, 비즈니스 로직 관련 이슈와 해결 과정을 정리합니다.
+
+**카테고리:**
+- [환경 설정 (§1–§5)](#1-setup-2번-실행-시-에러가-나도-창이-닫혀-원인을-알-수-없음)
+- [런타임 / 실행 오류 (§6–§11)](#6-setup-완료-후-run-npm-audit-for-details-메시지)
+- [비즈니스 로직 버그 (§12–§15)](#12-스테이션-그리드-초기-로드-시-빈-화면-race-condition)
+- [Windows Terminal 레이아웃 상세](#windows-terminal-layout-race-condition-2026-02-19)
 
 ---
 
@@ -73,10 +79,9 @@
 
 #### 레이아웃 역전 (상단 2분할로 나오는 현상)
 - **현상**: `split-pane -H` 후 `split-pane -V`만 쓰면, WT 버전/설정에 따라 포커스가 상단(20%)에 머물러 있어 **상단이 좌우로 쪼개지고** 하단이 1개 큰 패널로 나옴.
-- **시도**: `-p 1`로 하단 패널을 지정해 분할했으나, 환경에 따라 동작하지 않음.
 - **최종 해결**: `split-pane -H` 직후 **`move-focus down`** 을 넣어 포커스를 하단 패널로 강제 이동한 뒤 `split-pane -V` 실행. 인덱스에 의존하지 않아 결정론적으로 **상단 1개 + 하단 2분할** 유지.
 
-자세한 레이아웃 원인/전략은 **`TROUBLESHOOTING_WT_LAYOUT.md`** 참고.
+자세한 레이아웃 원인/전략은 본 문서 하단 [Windows Terminal Layout Race Condition](#windows-terminal-layout-race-condition-2026-02-19) 참고.
 
 ---
 
@@ -91,7 +96,7 @@
 - 설치 후 **터미널을 새로 열어** `PATH`에 `cargo`가 반영되었는지 확인. `cargo --version` 실행.
 - `eco check` 실행 시 **Rust (cargo)** 항목이 [OK]면 Tauri 빌드 가능.
 
-자세한 설치 및 표준 버전은 **`docs\DEV_ENVIRONMENT.md`** §1 표·§4.1 참고.
+자세한 설치 및 표준 버전은 `docs/DEV_ENVIRONMENT.md` §1 표·§4.1 참고.
 
 ---
 
@@ -110,16 +115,8 @@
 
 ### 현상
 - eco.bat 실행 후 **[1] Start Dev Mode** 선택 시, 런처 창이 닫히는 것은 의도이나 **Windows Terminal(3분할) 창도 뜨지 않거나**, 잠깐 뜨었다가 연달아 모두 사라짐.
-- “하나 뜨고 사라지고, 하나 뜨고 사라지고” 반복 후 결국 아무 창도 남지 않음.
 
-### 시도했던 방식과 원인
-
-| 방식 | 동작 | 원인 |
-|------|------|------|
-| **`start /b`** 후 `exit` | 런처만 닫히려 했으나 WT도 안 뜸 또는 같이 사라짐 | `start /b`로 띄운 PowerShell이 **부모 CMD와 같은 세션**에서 백그라운드로만 동작. CMD가 `exit`로 종료되면 자식 프로세스까지 함께 종료됨. |
-| **`start ""`** (새 창) 후 `exit` | 창이 여러 번 뜨었다 사라짐 | 새 창으로 띄운 PowerShell이 WT를 띄운 뒤 종료할 때, **부모‑자식 관계나 작업 그룹** 때문에 WT 프로세스까지 정리되는 환경이 있을 수 있음. |
-
-### 해결 (적용됨)
+### 원인 및 해결 (적용됨)
 - **PowerShell을 별도 창으로 띄우지 말고**, **런처 CMD와 같은 콘솔**에서 실행.
 - `eco.bat`의 `:dev`에서 `start`를 제거하고, 곧바로 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\launch_wt_dev.ps1" -Root "%ROOT%"` 호출.
 - 스크립트가 `Start-Process "wt" -ArgumentList $wtArgs`로 WT만 띄우고 **즉시 반환**하면, 제어가 다시 CMD로 돌아옴.
@@ -131,9 +128,6 @@
 exit
 ```
 
-### 요약
-- **같은 콘솔에서 PowerShell 실행 → 스크립트가 WT만 띄우고 반환 → 런처만 exit** 순서를 지키면, 런처 창만 닫히고 3분할 WT 창은 정상적으로 남음.
-
 ---
 
 ## 8. eco.bat / start_backend_pc.bat 실행 시 명령어 파편화 에러 (인코딩)
@@ -141,53 +135,26 @@ exit
 ### 현상
 - `eco.bat` 또는 `start_backend_pc.bat` 실행 시 에러 메시지가 연달아 출력되며 터미널이 종료됨.
 - 예: `'cho'은(는) 내부 또는 외부 명령이 아닙니다.`, `'edelayedexpansion'은(는) 인식되지 않습니다.`, `'1"==""'은(는) 인식되지 않습니다.` 등.
-- 명령어가 **잘려서** 인식됨 (`echo` → `cho`, `setlocal enabledelayedexpansion` → `edelayedexpansion`, `if not "%1"==""` → `1"==""`).
 
 ### 근본 원인
-- **인코딩 불일치**: Windows 배치(`.bat`) 파일은 `cmd.exe`가 **ANSI(CP949/EUC-KR)** 또는 **OEM 코드 페이지**로 해석함.
+- **인코딩 불일치**: Windows 배치(`.bat`) 파일은 `cmd.exe`가 **ANSI(CP949/EUC-KR)** 로 해석함.
 - IDE(Cursor/VS Code)나 Git 설정에 의해 파일이 **UTF-16 LE** 또는 **UTF-8 BOM**으로 저장되면, `cmd.exe`가 바이트를 잘못 해석하여 명령어가 파편화됨.
-- UTF-16은 2바이트(또는 4바이트) 단위이므로, `cmd.exe`가 1바이트 단위로 읽을 때 Null 바이트가 끼어들어 `echo`가 `e`+`cho`처럼 깨짐.
 
 ### 해결 (적용됨)
 
-1. **스크립트로 일괄 재저장 (권장)**  
-   프로젝트 루트에서 실행하면 `eco.bat`, `start_backend_pc.bat`을 **ANSI(CP949)** 로 다시 씁니다.
+1. **스크립트로 일괄 재저장 (권장)**
    ```powershell
    pwsh -NoProfile -ExecutionPolicy Bypass -File scripts\Fix-BatEncoding.ps1
    ```
    실행 후 eco.bat을 다시 실행하세요.
 
-2. **chcp 65001**: `eco.bat`·`start_backend_pc.bat`에는 `chcp 65001 >nul`이 포함되어 있음. 재발 시 배치를 ANSI(CP949)로만 유지.
+2. **chcp 65001**: `eco.bat`·`start_backend_pc.bat`에는 `chcp 65001 >nul`이 포함되어 있음.
 
 3. **한글 주석 → ASCII**: 배치 내 한글 주석을 영문으로 치환하여 인코딩 의존성 제거.
 
 ### 재발 방지 (CRITICAL_LOGIC §2.5)
 - `eco.bat`, `start_backend_pc.bat` 등 `.bat` 파일은 반드시 **ANSI(EUC-KR/CP949)** 또는 **ASCII** 인코딩 유지.
 - IDE에서 배치 파일 수정 후 **Save with Encoding** → **Korean (EUC-KR)** 또는 **Western (Windows 1252)** 선택.
-- 에이전트는 배치 파일 수정 시 인코딩을 변경하지 않도록 주의.
-
----
-
-## 해결 과정 요약 (타임라인)
-
-| 순서 | 이슈 | 조치 |
-|------|------|------|
-| 1 | Setup 실패 시 창이 닫혀 원인 불명 | eco.bat Setup에 단계별 errorlevel 검사, `logs\eco_setup.log` 기록, 실패 시 pause + goto menu |
-| 2 | Doctor Node [FAIL] (v24.13 등) | doctor.py: Node major/minor 파싱, major 24 & minor ≥ 12 허용 |
-| 3 | Doctor MSVC [FAIL] (경로 주입 환경) | doctor.py: `INCLUDE`에 `ucrt` 있으면 "Environment Injection"으로 통과 |
-| 4 | Python 3.14/VS 최신 환경에서 SDK 미인식 | eco.bat Setup에서 Windows Kits 10 최신 버전 자동 탐색 후 INCLUDE/LIB/PATH 주입 |
-| 5 | WT 3분할 미동작 / 탭 과다 / 런처 탭 잔류 | launch_wt_dev.ps1 인자 배열로 `;` 전달 |
-| 6 | [1번] 선택 시 터미널이 모두 사라짐 (WT까지 종료) | eco.bat [1]에서 **start 없이** 같은 콘솔에서 PowerShell 실행 → 스크립트가 WT 띄우고 반환 → exit로 런처만 종료 |
-| 7 | 3분할 레이아웃 역전 (상단 2분할 + 하단 1개) | `split-pane -H` 직후 **`move-focus down`** 추가 → 그 다음 `split-pane -V`로 하단만 좌우 분할 (포커스 의존 제거) |
-| 8 | Frontend `cargo ... program not found` (Tauri) | Rust 툴체인 설치: rustup (https://rustup.rs/ 또는 `winget install Rustlang.Rustup`). 설치 후 터미널 재시작. doctor에 cargo 검사 추가. |
-| 9 | 에러 모니터 미동작 / 프론트 에러 미감지 | launch_wt_dev.ps1: 모니터는 backend\\.venv\\Scripts\\python.exe 사용, Frontend는 Tee-Object로 frontend/logs/frontend.log 기록. error_monitor.py: main() 진입 시 로그 디렉터리 선제 생성. |
-| 10 | 식단/서류 상태 변경 시 AsyncFilterRequestBuilder 에러 | station.py: update/delete 후 `.select()` 체이닝 대신 2단계 분리 (update 실행 → 별도 select 조회). supabase-py v2+는 UpdateRequestBuilder에서 .select() 미지원. |
-| 11 | eco.bat [2] 선택 시 터미널 크래시 | Setup 전체를 **PowerShell** `scripts/Setup-Environment.ps1`로 이관. eco.bat은 해당 스크립트만 호출. ProjectRoot 인자 끝 `\` 제거해 경로 파싱 오류 방지. 인코딩 문제 시 `Fix-BatEncoding.ps1` 실행. |
-| 12 | eco.bat 실행 시 명령어 파편화 (`'cho'`, `'edelayedexpansion'` 인식 불가) | UTF-16/UTF-8 BOM 인코딩 → cmd.exe 해석 오류. 배치 파일을 ANSI(CP949)/ASCII로 재저장. `Fix-BatEncoding.ps1` 또는 CRITICAL_LOGIC §2.5 및 본 문서 §8 참고. |
-| 13 | 간호 스테이션 모달에서 완료된 서류 미표시 (보호자 대시보드는 정상) | useVitals: force 시 시퀀스 가드 우회, 빈 응답 처리 강화, document_requests 명시 업데이트. CRITICAL_LOGIC §2.3, PROMPT_COMPLETED_DOCS_NOT_SHOWING 근본 원인 분석 참고. Network 탭 검증은 다음 할 일로 남김. |
-| 14 | 스테이션 그리드 초기 로드/퇴원 후 리로드 시 빈 화면 (Race Condition) | admissions.py: Cache-Control 헤더. useStation.ts: useEffect 파괴적 리셋 제거, initialFetchDoneRef로 1회 fetch, force 시 시퀀스 가드 우회·캐시 버스팅. §13 참고. |
-
-위 조치 적용 후 **[2] Environment Setup** 실행 시 Doctor까지 [OK]로 통과하고, **[1] Start Dev Mode** 실행 시 런처는 닫히고 **상단 20% Error Monitor + 하단 80% Backend/Frontend 2분할** WT 창이 정상적으로 유지됩니다.
 
 ---
 
@@ -202,73 +169,9 @@ exit
 - **모니터 Python 경로**: 시스템 기본 `python`을 쓰면 venv 미적용으로 의존성 오류로 즉시 종료될 수 있음. **backend\\.venv\\Scripts\\python.exe**를 사용해야 함.
 
 ### 해결 (적용됨)
-- **launch_wt_dev.ps1**: (1) Error Monitor 패널에서 `backend\.venv\Scripts\python.exe error_monitor.py --clear` 실행. (2) Frontend 패널에서 `npm run tauri dev` 출력을 `powershell -Command "npm run tauri dev 2>&1 | Tee-Object -FilePath 'logs\frontend.log' -Append"`로 실행해 `frontend/logs/frontend.log`에 기록.
+- **launch_wt_dev.ps1**: Error Monitor 패널에서 `backend\.venv\Scripts\python.exe -m plugins.error_monitor` 실행.
 - **error_monitor.py**: `main()` 진입 시 `_ensure_log_directories()`로 감시 대상 로그 디렉터리(`backend/logs`, `frontend/logs`)를 선제 생성.
-- **검증**: `frontend/logs/frontend.log` 파일이 생성·갱신되는지, Backend 로그 끝에 `ERROR: Manual Test`를 넣었을 때 `docs/prompts/prompt_for_gemini.md`가 갱신되는지 확인.
-# Troubleshooting
-
-## 1. Next.js 빌드 캐시 이슈
-- **문제**: `Cannot find module './vendor-chunks/lodash.js'` 에러 발생
-- **원인**: Next.js 빌드 시 이전 캐시가 남아서 최신 모듈 경로를 찾지 못함
-- **해결**: `.next` 폴더를 삭제하고 다시 빌드
-    ```bash
-    cd frontend
-    rm -rf .next
-    npm run dev
-    ```
-
-## 2. Windows Terminal 레이아웃 깨짐
-- **문제**: `run_dev.bat` 실행 시 에러 모니터가 하단 전체를 차지하지 않고 BE/FE 패널이 엉뚱하게 분할됨
-- **원인**: 보이지 않는 특수 문자(BOM 등)가 배정 파일에 포함되거나, 패널 인덱스 타겟팅(`-t`, `-p`)이 명확하지 않아 발생
-- **해결**: 모든 `split-pane` 명령어에 `-p 0` (첫 번째 패널 타겟) 옵션을 추가하고, 파일을 BOM 없는 ANSI/UTF8로 재생성
-
-## 3. PowerShell 로그 인코딩 이슈 (UTF-16 LE)
-- **문제**: `Tee-Object`로 생성된 프론트엔드 로그를 `error_monitor.py`가 읽지 못해 감지가 안 됨
-- **원인**: PowerShell 5.1의 `Tee-Object`는 기본적으로 UTF-16 LE 인코딩을 사용하여 UTF-8 기반 모니터에서 깨짐 발생
-- **해결**: `error_monitor.py`의 로그 읽기 함수(`_tail`)에 다중 인코딩 지원 추가 (UTF-8 시도 후 실패 시 UTF-16 LE 자동 재시도)
-
-## 4. AI 에이전트 문서 편집 실패 및 오염
-- **문제**: 에이전트가 문서를 수정할 때 이전 작업의 줄 번호(`26: ` 등)가 실제 파일 내용으로 삽입되거나 매칭에 실패함
-- **원인**: `view_file` 출력 결과를 필터링 없이 `TargetContent`나 `ReplacementContent`에 그대로 사용함
-- **해결**: 
-    1. `TargetContent`에서 줄 번호 접두사를 반드시 제거하고 순수 코드/텍스트만 포함
-    2. 다중 행 매칭보다는 고유한 단일 앵커 행을 기준으로 수정
-    3. 인코딩(`\r\n` vs `\n`) 호환성을 위해 `multi_replace_file_content` 활용
-
-## 5. RLS 정책 위반 (`42501`)
-- **문제**: 식단 정보 수정 시 `permission denied` 발생
-- **원인**: Supabase RLS 정책에서 `UPDATE` 권한이 누락되었거나 `auth.uid()` 체크가 서비스 롤과 충돌
-- **해결**: `SECURITY DEFINER` 권한을 가진 RPC 함수를 생성하여 정책 제약을 우회하거나, 필요한 테이블에 명시적 `UPDATE` 정책 추가
-
-## 6. Pydantic v2 스키마 검증 에러
-- **문제**: `AdmissionResponse` 등에서 특정 필드 누락 시 서버 500 에러 발생
-- **원인**: `Optional` 타입은 선언했으나 기본값(`= None`)을 지정하지 않아 필수 필드로 인식됨
-- **해결**: 선택적 필드에는 반드시 `= None` 기본값을 명시하여 방어적 구현
-
-## 7. 실시간 알림 데이터 불일치 및 스태일(Stale) 현상
-- **문제**: 식단 변경 신청 시 알림창에 신청한 내역이 아닌 현재 상태나 빈 값이 표시됨
-- **원인**: 
-    1. 백엔드에서 `requested_...` 필드가 아닌 현재 상태 필드를 참조함
-    2. 프론트엔드(`useStation.ts`)에서 웹소켓 수신 시 자체 로직으로 포맷팅하면서 구버전 필드를 참조함
-- **해결**: 
-    1. 백엔드 `station_service.py`에서 `requested_...` 필드를 우선 참조하도록 수정
-    2. 백엔드에서 포맷팅된 `content` 문구를 직접 생성하여 웹소켓으로 전송하고, 프론트엔드는 이를 그대로 사용하도록 일원화
-
-## 8. 다중 신청 시 알림 순서 뒤섞임
-- **문제**: 아침, 점심, 저녁을 동시 신청할 때 알림창에 순서가 뒤죽박죽으로 표시됨
-- **원인**: 생성 시간(`created_at`)이 거의 동일할 경우 정렬 기준이 모호해짐
-- **해결**: `notifications.sort` 시 `(created_at, meal_date, meal_rank)` 다중 키를 적용하여 논리적인 식사 순서(아침->점심->저녁) 보장
-
-## 9. 0xc000013a (Win32 Error 1411) Tauri NativeCommandError 및 IPC Race Condition
-- **문제**: `tauri dev` 환경에서 에러 로깅 중이거나 종료 시그널 수신 시, 프로세스가 `NativeCommandError` 및 `Win32 Error 1411` 등과 함께 오작동하거나 WT 패널이 강제 종료됨. 또한 `Waiting for your frontend...` 메시지에서 멈추는 현상 발생.
-- **원인**: 
-  1. Next.js(Turbopack)가 뱉어내는 런타임 `stderr`를 PowerShell이 `NativeCommandError`로 오인하여 부모 프로세스에 강제 예외를 던짐.
-  2. 파이프라인(`Tee-Object`)이 출력 스트림을 캡처하는 과정에서 Tauri가 감지해야 할 '서버 준비 완료' 신호를 지연 또는 누락시킴. 또한 `wt.exe` 파싱 단계에서 복잡한 구문 오류(0x80070002) 유발.
-  3. 프론트엔드 API (`api.ts`) 상의 통신 로그 기록 과정에서 `await tauriLog()`를 사용할 때, 종료(Shutdown) 중 IPC 채널이 블로킹되어 WebView 자원 반환과 레이스 컨디션을 유발함.
-- **해결**:
-  1. `frontend/src/lib/api.ts`의 `tauriLog` 후킹 시 `await`를 제거하고 명시적 `void`로 Fire-and-forget 비동기 처리 적용. (IPC 블로킹 해제)
-  2. `tauri.conf.json`의 `beforeDevCommand`는 순수 `"npm run dev"`로 원복하여 Tauri의 Ready 시그널 감지 정상화.
-  3. `launch_wt_dev.ps1`에서 모든 **쉘 레벨 파이프라인(`| Tee-Object`)을 삭제**하여 Windows Terminal의 파싱 안정성 확보.
+- **Tee-Object 파이프라인 주의**: `Tee-Object`를 통한 로그 리다이렉션은 WT 파싱 부하를 가중시켜 창이 즉시 종료(`0x80070002`)되거나 Tauri 서버 준비 완료 신호를 방해할 수 있음. 현재는 파이프라인 없이 순수 명령만 실행하는 방식으로 운영 중.
 
 ---
 
@@ -284,7 +187,7 @@ exit
 ### 해결 (적용됨, launch_wt_dev.ps1)
 - **Outer Quote 제거**: 각 패널의 실행 명령(`$feCmd` 등) 앞뒤의 따옴표를 제거하여 `wt`가 실행 파일과 인자를 토큰별로 정확히 구분하게 함.
 - **Raw Delimiter**: 백슬래시 없는 순수 세미콜론(` ; `)으로 명령 단위를 분할.
-- **Pipeline Removal**: `Tee-Object` 파이프라인을 완전히 제거하여 구문 복잡도를 낮추고 실행 안정성 100% 확보.
+- **Pipeline Removal**: `Tee-Object` 파이프라인을 완전히 제거하여 구문 복잡도를 낮추고 실행 안정성 확보.
 
 ---
 
@@ -296,12 +199,10 @@ exit
 
 ### 원인
 - **supabase-py v2+**에서 `UpdateRequestBuilder`/`DeleteRequestBuilder`는 `.select()` 메서드를 지원하지 않음.
-- `update().eq().select()` 또는 `update({"status": "..."}).eq("id", id).select("*")` 형태의 체이닝이 불가능.
+- `update().eq().select()` 체이닝이 불가능.
 
 ### 해결 (적용됨, backend/routers/station.py)
-- **2단계 분리 패턴** 적용:
-  1. `update().eq()` 또는 `delete().eq()`만 실행 (`await execute_with_retry_async(...)`).
-  2. 브로드캐스트용 데이터가 필요하면 **별도** `select().eq()` 호출로 조회.
+- **2단계 분리 패턴** 적용 (CRITICAL_LOGIC §2.4, DEVELOPMENT_STANDARDS §4 참고):
 
 ```python
 # BAD (supabase-py에서 지원 안 함)
@@ -311,9 +212,6 @@ res = await db.table("meal_requests").update(payload).eq("id", id).select("*").e
 await execute_with_retry_async(db.table("meal_requests").update(payload).eq("id", request_id))
 row = await execute_with_retry_async(db.table("meal_requests").select("*").eq("id", request_id).single())
 ```
-
-### 영향 범위
-- `update_document_request_status`, `update_meal_request_status` 엔드포인트.
 
 ### 검증
 - `backend/search_error.py` 실행 시 `.update().select()`, `.delete().select()` 등 BAD 패턴이 남아 있으면 출력됨.
@@ -329,59 +227,107 @@ row = await execute_with_retry_async(db.table("meal_requests").select("*").eq("i
 
 ### 원인
 1. **useEffect 내 파괴적 리셋**: effect 첫 줄에서 `setBeds(ROOM_NUMBERS.map(...))`로 빈 슬롯을 덮어써, API 응답 도착 전·후로 그리드가 강제 초기화되며 데이터가 증발.
-2. **React Strict Mode 이중 호출**: 개발 모드에서 effect가 두 번 실행되며 `fetchAdmissions()`가 두 번 호출됨. 두 번째 요청의 `requestRef`가 첫 번째를 덮어쓰고, **첫 번째(실제 데이터가 담긴) 응답**이 시퀀스 가드(`currentRequestId !== requestRef.current`)에 걸려 "오래된 응답"으로 버려짐.
+2. **React Strict Mode 이중 호출**: 개발 모드에서 effect가 두 번 실행되며 `fetchAdmissions()`가 두 번 호출됨. 두 번째 요청의 `requestRef`가 첫 번째를 덮어쓰고, **첫 번째(실제 데이터가 담긴) 응답**이 시퀀스 가드에 걸려 버려짐.
 3. **캐시**: 브라우저나 프록시가 빈 배열 `[]` 응답을 캐싱해, 최초 로드 시 캐시된 빈 배열이 반환될 수 있음.
 
 ### 해결 (적용됨)
 
 | 구분 | 파일 | 조치 |
 |------|------|------|
-| **백엔드** | `backend/routers/admissions.py` | `list_admissions`에서 `Response` 주입 후 `Cache-Control: no-cache, no-store, must-revalidate` 헤더 설정. 빈 배열 캐싱 원천 차단. |
-| **프론트** | `frontend/src/hooks/useStation.ts` | ① 초기 상태를 `useState(emptySlotsInitial)`로 선언 시 빈 슬롯 할당. effect 내 `setBeds(ROOM_NUMBERS.map(...))` **삭제**. ② `initialFetchDoneRef`로 마운트 시 `fetchAdmissions(true)` **1회만** 실행(Strict Mode 방어). ③ `force=true`일 때 응답 처리부에서 시퀀스 가드 우회(`&& !force`). ④ `force=true`일 때 URL에 `?_t=Date.now()` 추가해 캐시 버스팅. |
+| **백엔드** | `backend/routers/admissions.py` | `Cache-Control: no-cache, no-store, must-revalidate` 헤더 설정. |
+| **프론트** | `frontend/src/hooks/useStation.ts` | ① 초기 상태를 `useState(emptySlotsInitial)`로 선언. effect 내 `setBeds(ROOM_NUMBERS.map(...))` 삭제. ② `initialFetchDoneRef`로 마운트 시 1회만 실행(Strict Mode 방어). ③ `force=true`일 때 시퀀스 가드 우회. ④ `force=true`일 때 `?_t=Date.now()` 캐시 버스팅. |
 
-### 검증
-- 최초 로드: `/station` 접속 시 페이지가 뜨자마자 그리드에 환자 데이터 표시.
-- 퇴원 후 리로드: 퇴원 처리 후 새로고침 시 나머지 환자 카드가 정상 복구.
-- Network 탭: 최초 요청이 `/api/v1/admissions?_t=...` 형태로 나가고, 200 OK 응답 확인(304 아님).
-# Windows Terminal Layout Race Condition (2026-02-19)
+---
+
+## 13. 간호 스테이션 모달에서 완료된 서류 미표시
+
+### 현상
+- 보호자 대시보드에서는 정상적으로 서류가 보이나, 간호 스테이션 모달에서 완료된 서류 요청이 표시되지 않음.
+
+### 원인
+- `fetchDashboardData` 호출 직후 WebSocket이나 debounce로 인한 연속 요청이 `force` 요청 응답을 "오래된 응답"으로 버리는 시퀀스 가드 충돌.
+
+### 해결 (적용됨)
+- `fetchDashboardData({ force: true })`: `force` 시 시퀀스 가드를 우회하여 해당 응답을 항상 반영.
+- 빈 응답(`{}`) 방어 로직 추가: API 응답이 비어 있는 경우 기존 상태 유지.
+- `document_requests` 상태 필터 금지 원칙 준수: PENDING·COMPLETED 구분 없이 모든 서류 요청 반환 (CRITICAL_LOGIC §3.3 참고).
+
+---
+
+## 14. Next.js 빌드 캐시 이슈
+
+### 현상
+- `Cannot find module './vendor-chunks/lodash.js'` 에러 발생
+
+### 원인
+- Next.js 빌드 시 이전 캐시가 남아서 최신 모듈 경로를 찾지 못함
+
+### 해결
+```bash
+cd frontend
+rm -rf .next
+npm run dev
+```
+
+---
+
+## 15. RLS 정책 위반 (`42501`)
+
+### 현상
+- 식단 정보 수정 시 `permission denied` 발생
+
+### 원인
+- Supabase RLS 정책에서 `UPDATE` 권한이 누락되었거나 `auth.uid()` 체크가 서비스 롤과 충돌
+
+### 해결
+- `SECURITY DEFINER` 권한을 가진 RPC 함수를 생성하여 정책 제약을 우회하거나, 필요한 테이블에 명시적 `UPDATE` 정책 추가
+
+---
+
+## 해결 과정 요약 (타임라인)
+
+| 순서 | 이슈 | 조치 |
+|------|------|------|
+| 1 | Setup 실패 시 창이 닫혀 원인 불명 | eco.bat Setup에 단계별 errorlevel 검사, `logs\eco_setup.log` 기록, 실패 시 pause |
+| 2 | Doctor Node [FAIL] (v24.13 등) | doctor.py: Node major/minor 파싱, major 24 & minor ≥ 12 허용 |
+| 3 | Doctor MSVC [FAIL] (경로 주입 환경) | doctor.py: `INCLUDE`에 `ucrt` 있으면 "Environment Injection"으로 통과 |
+| 4 | Python 3.14/VS 최신 환경에서 SDK 미인식 | eco.bat Setup에서 Windows Kits 10 최신 버전 자동 탐색 후 INCLUDE/LIB/PATH 주입 |
+| 5 | WT 3분할 미동작 / 탭 과다 / 런처 탭 잔류 | launch_wt_dev.ps1 인자 배열로 `;` 전달 |
+| 6 | [1번] 선택 시 터미널이 모두 사라짐 | eco.bat [1]에서 start 없이 같은 콘솔에서 PowerShell 실행 → exit로 런처만 종료 |
+| 7 | 3분할 레이아웃 역전 | `split-pane -H` 직후 `move-focus down` 추가 → 하단만 좌우 분할 |
+| 8 | Frontend `cargo ... program not found` | Rust 툴체인 설치. 설치 후 터미널 재시작. |
+| 9 | 에러 모니터 미동작 | launch_wt_dev.ps1: venv python 경로 사용, Tee-Object 파이프라인 제거 |
+| 10 | 식단/서류 상태 변경 시 AsyncFilterRequestBuilder 에러 | 2단계 분리 패턴 적용 (§11 참고) |
+| 11 | eco.bat [2] 선택 시 터미널 크래시 | Setup 전체를 PowerShell Setup-Environment.ps1로 이관 |
+| 12 | eco.bat 실행 시 명령어 파편화 | 배치 파일을 ANSI(CP949)/ASCII로 재저장 (§8 참고) |
+| 13 | 간호 스테이션 모달에서 완료된 서류 미표시 | force 시 시퀀스 가드 우회, 빈 응답 처리 강화 |
+| 14 | 스테이션 그리드 초기 로드 시 빈 화면 | useEffect 파괴적 리셋 제거, initialFetchDoneRef, force 캐시 버스팅 |
+
+---
+
+## Windows Terminal Layout Race Condition (2026-02-19)
 
 ### Issue
 `run_dev.bat` 실행 시, 의도한 레이아웃(상단 에러 모니터, 하단 개발 환경)이 아닌 엉뚱한 형태로 창이 분할되거나 터미널이 즉시 종료되는 현상 발생.
 
 ### Root Cause
-1. **Race Condition**: `wt` 명령어가 비동기로 실행되면서 창이 생성되는 속도보다 `-p` (Pane Index)를 찾는 속도가 더 빠르거나 늦어 인덱싱이 빗나감. (특히 1.23 Preview 버전)
+1. **Race Condition**: `wt` 명령어가 비동기로 실행되면서 창이 생성되는 속도보다 `-p` (Pane Index)를 찾는 속도가 더 빠르거나 늦어 인덱싱이 빗나감.
 2. **Focus Shift**: 새 창이 생성되면 포커스가 자동으로 이동하는데, 이 시점이 불확실하여 후속 분할 명령이 엉뚱한 창을 대상으로 실행됨.
 3. **Batch Parsing**: `;` 문자가 Batch 파일 내에서 쉘 구분자로 잘못 해석되어 명령어가 끊김.
 
 ### Solution: Deterministic Layout Strategy
 인덱스 번호(`-p 0`)에 의존하는 논리적 타겟팅을 버리고, **물리적 커서 위치**를 기반으로 한 강제 이동 전략을 채택.
 
-1. **Escape Characters**: `^;`를 사용하여 `wt` 내부 명령어를 온전하게 전달.
-2. **Top-Down Construction**: 상단(모니터)을 먼저 만들고 하단 영역을 확보.
-3. **Physical Force Move**: **`move-focus down`** 명령어를 명시적으로 사용하여 커서를 무조건 하단으로 내림.
-4. **Split**: 하단에 도착한 커서 위치에서 수직 분할(`-V`) 수행.
+1. **Top-Down Construction**: 상단(모니터)을 먼저 만들고 하단 영역을 확보.
+2. **Physical Force Move**: **`move-focus down`** 명령어를 명시적으로 사용하여 커서를 무조건 하단으로 내림.
+3. **Split**: 하단에 도착한 커서 위치에서 수직 분할(`-V`) 수행.
 
-```batch
-wt -M -d . --title "ErrorMonitor" pwsh -NoExit -Command "..." ^; ^
-split-pane -H -d . --title "Backend" --size 0.8 pwsh -NoExit -Command "..." ^; ^
-move-focus down ^; ^
-split-pane -V -d . --title "Frontend" pwsh -NoExit -Command "..."
-```
+### 현재 구현 (scripts\launch_wt_dev.ps1)
 
-### Result
-5회 연속 테스트 결과 100% 동일한 레이아웃 보장 확인.
-
----
-
-## 현재 구현 (scripts\launch_wt_dev.ps1)
-
-위 이슈를 피하기 위해 **인자 배열** + **move-focus** 조합으로 고정되어 있습니다.
-
-- **세미콜론 파싱 및 백그라운드 런처**: 런처 스크립트(`launch_wt_dev.ps1`)는 Windows Terminal을 호출할 때 PowerShell의 파싱 오작동(`Start-Process` 배열 버그)을 피하기 위해 `System.Diagnostics.ProcessStartInfo`를 사용하여 `wt.exe`를 직접 띄우고 종료합니다.
-- **레이아웃 (결정론적)**: `nt` → `split-pane -H --size 0.8` (Backend) → **`move-focus down`** → `split-pane -V --size 0.5` (Frontend). `move-focus down`으로 포커스를 하단으로 고정한 뒤 수직 분할해, 상단이 2분할로 나오는 역전 현상을 방지. (`-p 1`은 환경에 따라 미동작하여 사용하지 않음.)
+- **레이아웃 (결정론적)**: `nt` → `split-pane -H --size 0.8` (Backend) → **`move-focus down`** → `split-pane -V --size 0.5` (Frontend). `move-focus down`으로 포커스를 하단으로 고정한 뒤 수직 분할해, 상단이 2분할로 나오는 역전 현상 방지.
+- **세미콜론 파싱**: `System.Diagnostics.ProcessStartInfo`를 사용하여 `wt.exe`를 직접 띄워 PowerShell 파싱 오작동 방지.
+- **Pipeline Removal**: `Tee-Object`를 통한 쉘 로깅 시도가 WT 파싱 부하를 가중시켜 창이 즉시 종료(`0x80070002`)되거나 Tauri 서버 준비 완료 신호를 방해함. 모든 파이프라인(`|`)을 제거하고 순수 명령만 실행.
 - Backend: `cmd /k` + `call .venv\Scripts\activate.bat`.
 - Frontend: `pwsh.exe -NoExit -EncodedCommand ...` (npm run tauri dev).
-  - **파이프라인(`|`) 충돌 및 크래시 이슈**: `Tee-Object`를 통한 쉘 로깅 시도가 Windows Terminal의 파싱 부하를 가중시켜 창이 즉시 종료(0x80070002)되거나, Tauri의 서버 준비 완료 신호를 방해하여 무한 대기(Hang)를 유발함.
-  - **해결책 (Clean Execution)**: 모든 쉘 레벨 파이프라인(`|`)을 제거하고 순수 명령만 실행하도록 아키텍처를 단순화함. 로깅은 애플리케이션 레벨(Backend: loguru 등)에 맡기고, 프론트엔드 API 블로킹(`tauriLog`) 해제를 병행하여 안정성을 100% 확보함.
 
-상세 메뉴·CLI·설정은 `docs\DEV_ENVIRONMENT.md` §3, 전체 트러블슈팅은 `docs\TROUBLESHOOTING.md` 참고.
+상세 메뉴·CLI·설정은 `docs/DEV_ENVIRONMENT.md` §3 참고.

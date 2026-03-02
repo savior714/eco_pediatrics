@@ -86,8 +86,11 @@ async def upsert_meal_request(db: AsyncClient, req: MealRequestCreate):
     if new_req_data:
         async def broadcast():
             try:
-                adm_res = await execute_with_retry_async(
-                    db.table("admissions").select("access_token, room_number").eq("id", req.admission_id).single()
+                adm_res = await asyncio.wait_for(
+                    execute_with_retry_async(
+                        db.table("admissions").select("access_token, room_number").eq("id", req.admission_id).single()
+                    ),
+                    timeout=10.0
                 )
                 if adm_res.data:
                     msg = {
@@ -107,9 +110,12 @@ async def upsert_meal_request(db: AsyncClient, req: MealRequestCreate):
                         }
                     }
                     await broadcast_to_station_and_patient(manager, msg, adm_res.data.get("access_token"))
+            except asyncio.TimeoutError:
+                get_logger().warning("Meal broadcast timed out after 10s")
             except Exception as be:
                 get_logger().error(f"Failed broadcast: {be}")
-        asyncio.create_task(broadcast())
+        task = asyncio.create_task(broadcast())
+        task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
 
     return new_req_data
 

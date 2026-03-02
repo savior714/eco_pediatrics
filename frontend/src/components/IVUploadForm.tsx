@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from './Card';
 import { Upload, X, Check, Camera, Droplet } from 'lucide-react';
 import Image from 'next/image';
@@ -25,6 +25,13 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
     const [success, setSuccess] = useState(false);
     const [showQr, setShowQr] = useState(false);
     const [showZoom, setShowZoom] = useState(false);
+    const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (successTimerRef.current) clearTimeout(successTimerRef.current);
+        };
+    }, []);
 
     // Auto-fill from WebSocket event
     React.useEffect(() => {
@@ -62,7 +69,8 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
                     description: '기록이 저장되었습니다.',
                     type: 'success'
                 });
-                setTimeout(() => setSuccess(false), 3000);
+                if (successTimerRef.current) clearTimeout(successTimerRef.current);
+                successTimerRef.current = setTimeout(() => setSuccess(false), 3000);
             } else {
                 const errorData = await res.json().catch(() => ({}));
                 toaster.create({

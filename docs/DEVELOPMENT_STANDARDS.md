@@ -22,6 +22,7 @@
 ## 3. Backend Sorting
 - **In-Memory Sorting**: For data requiring complex sort logic (e.g., Meals: Date > Time Priority), sort in Python after fetching if SQL `ORDER BY` is insufficient.
 - **Meal Priority**: Dinner > Lunch > Breakfast.
+- **supabase-py v2+ DB Update**: `update().eq()` 또는 `delete().eq()` 후 `.select()` 체이닝 불가. 2단계 분리 패턴 필수. 상세: `CRITICAL_LOGIC.md §2.4`, 실제 사례: `TROUBLESHOOTING.md §11`.
 
 ## 4. AI Agent Collaboration & Safe Editing
 To prevent document corruption and editing failures (Anti-Pattern Guide):

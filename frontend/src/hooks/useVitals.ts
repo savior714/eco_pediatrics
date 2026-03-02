@@ -194,6 +194,12 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
 
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
+    useEffect(() => {
+        return () => {
+            if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        };
+    }, []);
+
     const debouncedRefetch = useCallback(() => {
         if (debounceTimer.current) {
             clearTimeout(debounceTimer.current);

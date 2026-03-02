@@ -161,6 +161,8 @@ async def verify_ws_token(token: str):
     
     return False
 
+WS_RECEIVE_TIMEOUT = 120  # 120초간 메시지 없으면 좀비 연결로 간주
+
 @app.websocket("/ws/{token}")
 async def websocket_endpoint(websocket: WebSocket, token: str):
     # Validate Token
@@ -174,9 +176,16 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
     await manager.connect(websocket, token)
     try:
         while True:
-            await websocket.receive_text() # Keep connection alive
+            try:
+                await asyncio.wait_for(websocket.receive_text(), timeout=WS_RECEIVE_TIMEOUT)
+            except asyncio.TimeoutError:
+                # 클라이언트 생존 확인 후 연결 종료 (좀비 연결 방지)
+                logger.warning(f"WebSocket idle timeout for token: {token}. Closing.")
+                await websocket.close(code=1001)
+                break
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected for token: {token}")
+    finally:
         manager.disconnect(websocket, token)
 
 
