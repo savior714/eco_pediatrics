@@ -243,7 +243,8 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                             return nextVitals;
                         }
 
-                        if (prev.some(existing => existing.recorded_at === v.recorded_at)) return prev;
+                        const idx = prev.findIndex(existing => existing.recorded_at === v.recorded_at);
+                        if (idx !== -1) return prev;
                         return [formattedV, ...prev];
                     });
                     break;
@@ -306,7 +307,11 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                         const data = { ...(message.data as any), isOptimistic: false };
                         setMeals(prev => {
                             const idx = prev.findIndex(m => m.id === data.id);
-                            if (idx !== -1) return prev.map(m => m.id === data.id ? data : m);
+                            if (idx !== -1) {
+                                const next = [...prev];
+                                next[idx] = data;
+                                return next;
+                            }
                             return [...prev, data];
                         });
                     }
@@ -316,7 +321,11 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                         const data = { ...(message.data as any), isOptimistic: false };
                         setMeals(prev => {
                             const idx = prev.findIndex(m => m.id === data.id);
-                            if (idx !== -1) return prev.map(m => m.id === data.id ? data : m);
+                            if (idx !== -1) {
+                                const next = [...prev];
+                                next[idx] = data;
+                                return next;
+                            }
                             return [...prev, data];
                         });
                     }
@@ -402,17 +411,28 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
 
     const updateOptimisticMeal = useCallback((mealId: number, pediatric: string, guardian: string) => {
         let originalMeal: MealRequest | undefined;
-        setMeals(prev => prev.map(m => {
-            if (m.id === mealId) {
-                originalMeal = { ...m };
-                return { ...m, pediatric_meal_type: pediatric, guardian_meal_type: guardian, isOptimistic: true };
+        setMeals(prev => {
+            const idx = prev.findIndex(m => m.id === mealId);
+            if (idx !== -1) {
+                originalMeal = { ...prev[idx] };
+                const next = [...prev];
+                next[idx] = { ...next[idx], pediatric_meal_type: pediatric, guardian_meal_type: guardian, isOptimistic: true };
+                return next;
             }
-            return m;
-        }));
+            return prev;
+        });
         return {
             rollback: () => {
                 if (originalMeal) {
-                    setMeals(prev => prev.map(m => m.id === mealId ? originalMeal! : m));
+                    setMeals(prev => {
+                        const idx = prev.findIndex(m => m.id === mealId);
+                        if (idx !== -1) {
+                            const next = [...prev];
+                            next[idx] = originalMeal!;
+                            return next;
+                        }
+                        return prev;
+                    });
                 }
             }
         };

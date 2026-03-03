@@ -1,0 +1,4 @@
+
+## 2024-05-19 - React State Array Mutations (.some().map() Anti-pattern)
+**Learning:** Found multiple usages of `prev.some(condition)` followed by `prev.map(mutation)` inside `setState` callbacks to update items in arrays. This is an anti-pattern because it iterates through the entire array twice (`O(2N)` complexity). Furthermore, using `.map()` creates a new array reference even if the item isn't found or doesn't change, causing unnecessary React re-renders when the exact previous state reference could have been returned instead.
+**Action:** Always replace the `.some()` + `.map()` pattern with `.findIndex()`. When an item is found, create a shallow copy of the array (`[...prev]`), mutate the specific index, and return the copy. Crucially, if the item is *not* found (index is -1), or if the data doesn't actually change, return the exact `prev` reference to avoid breaking React's bail-out mechanism and prevent unnecessary re-renders.
