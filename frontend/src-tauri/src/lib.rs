@@ -4,13 +4,20 @@ async fn generate_iv_label_preview(
   room: String,
   rate: String,
   age_gender: String,
-  date: String
+  date: String,
+  patient_id: Option<String>,
+  manual_name: Option<String>,
+  fluid_type: Option<String>,
+  mix_meds: Option<String>,
+  ast_check: Option<bool>,
+  lab_results: Option<String>,
 ) -> Result<String, String> {
   // 실제 b-PAC SDK (COM) 연동 로직. (이모지 금지 원칙 준수)
   // [Antigravity Architect Note]
   // 1. bpac.Document.Open(template_path)
   // 2. doc.GetObject("obj_name").Text = name
   // 3. doc.GetObject("obj_rate").Text = rate
+  // 4. doc.GetObject("obj_patient_id").Text = patient_id.unwrap_or_default()
   // ...
   // 4. doc.Export(IMAGE_TYPE, temp_path)
   // 5. Read temp_path -> base64
@@ -41,9 +48,15 @@ async fn print_iv_label(
   room: String,
   rate: String,
   age_gender: String,
-  date: String
+  date: String,
+  patient_id: Option<String>,
+  manual_name: Option<String>,
+  fluid_type: Option<String>,
+  mix_meds: Option<String>,
+  ast_check: Option<bool>,
+  lab_results: Option<String>,
 ) -> Result<(), String> {
-  log::info!("[IV Label] Printing Label for {} - Room: {}, Rate: {}", name, room, rate);
+  log::info!("[IV Label] Printing Label for {} - Room: {}, Rate: {}, PatientID: {:?}", name, room, rate, patient_id);
   // [Surgical Change] 실출력 로직
   // doc.StartPrint("", bpac::PrintOptionConstants::bpoDefault);
   // doc.PrintOut(1, bpac::PrintOptionConstants::bpoDefault);

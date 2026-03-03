@@ -147,12 +147,11 @@
 에이전트의 지능형 파트너십 유지를 위한 관리 프로토콜입니다.
 
 ### 6.1 스킬 배포 프로토콜 (Skill Deployment)
-- **SSOT**: 사용자 정의 스킬의 최상위 저장소는 **`https://github.com/savior714/skills`**이다.
+- **SSOT**: 공식 지원 스킬은 **`repomix`** 단일 체제로 운영하며, 최상위 저장소는 `https://github.com/savior714/skills`이다.
+- **관리 원칙**: 컨텍스트 품질 유지를 위해 불필요한 레거시 스킬은 배제하고, `repomix`를 통한 컨텍스트 최적화에 집중한다.
 - **푸시 절차 (@skills push)**:
-  1. `.agent/skills/` 하위의 신규/수정 스킬 리스트업 및 사용자 제안.
-  2. 로컬 클론 저장소(`c:\develop\skills`)의 `git pull` 상태 확인 및 정합성 검증.
-  3. Conventional Commits 형식(`feat: add [name] skill`)으로 커밋 및 푸시.
-- **저장소 분리**: `antigravity-awesome-skills` 레포지토리와는 별개로 운영되며, 명시적 요청이 없는 한 `savior714/skills`를 우선 타겟으로 한다.
+  1. `plugins/repomix/` 하위의 변경 사항 발생 시 사용자 제안.
+  2. 외부 리포지토리(`c:\develop\skills`)와 동기화 및 검증 후 Conventional Commits 형식으로 푸시.
 
 ---
 

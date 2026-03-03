@@ -22,9 +22,9 @@
 *   **실시간 속도 환산 로직**: `cc/hr` 단위를 `gtt/min`으로 자동 계산하는 임상 로직 통합.
 *   **레이어드 미리보기**: 인쇄 전 실시간 데이터가 매핑된 라벨 이미지를 확인할 수 있는 전용 프리뷰 모달 구축.
 
-### 3. UV Native 및 통합 도구 관리 (Standard)
-*   **UV 기반 의존성 제어**: `pip/venv` 혼용을 중단하고 `uv`를 활용한 결정론적 빌드 및 초고속 패키지 설치 환경 구현.
-*   **에이전트/플러그인 체계**: `.agent`, `.agents` 레거시를 폐기하고 `plugins/` 폴더 내 DDD 3-Layer(Definition, Repository, Service) 구조로 에이전트 및 서비스 모듈화.
+### 4. 스킬셋 슬림화 및 컨텍스트 최적화
+*   **Repomix 단일 체제**: 파편화된 다수의 스킬을 폐기하고 `repomix` 중심으로 스킬셋을 통합하여 에이전트의 컨텍스트 노이즈를 최소화하고 작업 효율성 극대화.
+*   **플러그인 구조**: `plugins/repomix`를 통해 프로젝트 맞춤형 코드베이스 덤프 기능을 상시 지원.
 
 ---
 
@@ -35,7 +35,7 @@
 | **Frontend** | Next.js 15 (App Router), **Ark UI**, Tailwind CSS, Lucide React, Framer Motion |
 | **Backend** | FastAPI (Python 3.14+), **UV Native**, WebSockets, Pydantic |
 | **Database** | Supabase (PostgreSQL), RLS |
-| **DevOps** | Batch Scripts, **uv**, `plugins/error_monitor/` |
+| **DevOps** | Batch Scripts, **uv**, `plugins/repomix/` |
 
 ---
 
@@ -51,13 +51,7 @@
 2.  **통합 실행 (Dev Mode)**:
     ```bash
     .\eco.bat dev
-    # Backend(uv run), Frontend(npm run dev), Error Monitor가 Windows Terminal에서 동시 실행됩니다.
-    ```
-
-3.  **개별 실행 (Backend)**:
-    ```bash
-    cd backend
-    uv run uvicorn main:app --reload
+    # Backend(uv run), Frontend(npm run dev)가 Windows Terminal에서 동시 실행됩니다.
     ```
 
 ---
@@ -74,7 +68,6 @@
 
 ### 2. 아키텍처 및 상세 시스템
 *   **[docs/ARCHITECTURAL_PLAN.md](./docs/ARCHITECTURAL_PLAN.md)** — 상위 레벨 아키텍처 설계
-*   **[docs/ERROR_MONITOR_ARCHITECTURE.md](./docs/ERROR_MONITOR_ARCHITECTURE.md)** — 에러 모니터링 시스템 구조
 *   **[docs/IV_LABEL_PRINTING_SYSTEM.md](./docs/IV_LABEL_PRINTING_SYSTEM.md)** — 수액 라벨 인쇄 시스템 및 환산 공식
 *   **[docs/DEVELOPMENT_STANDARDS.md](./docs/DEVELOPMENT_STANDARDS.md)** — 코딩 규격 및 디자인 시스템 표준
 
@@ -85,4 +78,4 @@
 *   **[docs/archive/](./docs/archive/)** — 과거 로그 및 완료된 계획서 보관함
 
 ---
-*Last updated: 2026-03-03 (Audit & Optimization Phase)*
+*Last updated: 2026-03-03 (Skill Consolidation & Optimization Phase)*

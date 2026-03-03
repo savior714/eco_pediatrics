@@ -7,6 +7,12 @@ export interface IVLabelData {
     ageGender: string;
     infusionRate: number; // cc/hr
     dropFactor: 20 | 60; // 20: Standard, 60: Micro
+    patientId?: string;
+    manualName?: string;
+    fluidType?: string;
+    mixMeds?: string;
+    astCheck?: boolean;
+    labResults?: string;
 }
 
 export class IVLabelService {
@@ -42,7 +48,13 @@ export class IVLabelService {
                 room: data.room,
                 rate: info,
                 ageGender: data.ageGender,
-                date: getKSTNowString()
+                date: getKSTNowString(),
+                patientId: data.patientId,
+                manualName: data.manualName,
+                fluidType: data.fluidType,
+                mixMeds: data.mixMeds,
+                astCheck: data.astCheck,
+                labResults: data.labResults
             });
             return `data:image/png;base64,${previewBase64}`;
         } catch (error) {
@@ -64,7 +76,13 @@ export class IVLabelService {
                 room: data.room,
                 rate: info,
                 ageGender: data.ageGender,
-                date: getKSTNowString()
+                date: getKSTNowString(),
+                patientId: data.patientId,
+                manualName: data.manualName,
+                fluidType: data.fluidType,
+                mixMeds: data.mixMeds,
+                astCheck: data.astCheck,
+                labResults: data.labResults
             });
         } catch (error) {
             console.error('라벨 인쇄 실패:', error);

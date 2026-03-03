@@ -5,7 +5,7 @@ param([string]$Root)
 
 # 1. Root 경로 보정 (파라미터가 없으면 스크립트 위치 기준으로 자동 설정)
 if ([string]::IsNullOrWhiteSpace($Root)) {
-    $Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    $Root = Split-Path -Parent $PSScriptRoot
     Write-Host "[ECO] Root path not provided, using detected root: $Root" -ForegroundColor Yellow
 }
 
@@ -20,19 +20,14 @@ $logFile = Join-Path $logsDir "frontend.log"
 if (!(Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
 
 # 2. 각 패널에서 실행할 커맨드 정의
-# [Critical] wt.exe는 세미콜론(;)을 명령 구분자로 사용하므로, 내부 커맨드의 세미콜론은 반드시 `\;`로 이스케이프해야 함.
-$monCmd = "pwsh.exe -NoExit -Command `"Set-Location '$Root'\; uv run --project '$backendDir' python -m plugins.error_monitor --clear`""
 $beCmd  = "pwsh.exe -NoExit -Command `"Set-Location '$backendDir'\; uv run uvicorn main:app --reload --port 8000`""
 $feCmd  = "pwsh.exe -NoExit -Command `"Set-Location '$frontendDir'\; npm run tauri dev 2>&1 | Tee-Object -FilePath '$logFile'`""
 
 # 3. Windows Terminal (wt.exe) 실행 인자 문자열 구성
-# [Golden Layout] 
-# Pane 1 (Top, 20%): Error Monitor
-# Pane 2 (Bottom Left, 40%): Backend
-# Pane 3 (Bottom Right, 40%): Frontend
-$argStr = "--maximized -w 0 nt --title `"Eco-Monitor`" -d `"$Root`" $monCmd ; " +
-          "split-pane -H --size 0.8 -d `"$backendDir`" $beCmd ; " +
-          "move-focus down ; " +
+# [Standard Layout] 
+# Pane 1 (Left): Backend (uv run)
+# Pane 2 (Right): Frontend (npm run dev)
+$argStr = "--maximized -w 0 nt --title `"Eco-Backend`" -d `"$backendDir`" $beCmd ; " +
           "split-pane -V --size 0.5 -d `"$frontendDir`" $feCmd"
 
 # 4. 프로세스 실행

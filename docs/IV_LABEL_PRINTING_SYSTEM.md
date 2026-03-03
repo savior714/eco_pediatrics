@@ -25,9 +25,12 @@
 ### 2.3 안전 규칙
 - **라벨 교체 필수**: 속도 변경 시 반드시 새 라벨지를 인쇄하여 수액백에 부착한다.
 - **라벨 필수 포함 항목**:
-  1. 환자 식별 정보 (마스킹 이름, 병실 번호)
-  2. 주입 속도 (cc/hr 및 gtt/min 동시 표기)
-  3. 인쇄 시각 (KST 기준)
+  1. 환자 식별 정보 (마스킹 이름, 병실 번호, 환자번호, 직접 입력 이름)
+  2. 환자 인구통계 (SEX/AGE)
+  3. 주입 설정 (수액 종류, cc/hr, gtt/min)
+  4. 혼합 약물 정보 및 AST 여부
+  5. 검사 결과 내역 (CBC, R-B, UA, B/Cx, Stool, Resp)
+  6. 인쇄 시각 (KST 기준) 및 로고 (에코청소년과)
 
 ---
 
@@ -75,13 +78,21 @@ const calculateGtt = (ccPerHr: number, setType: 'micro' | 'standard'): number =>
 };
 
 // 인쇄 요청 (Tauri invoke)
+// 인쇄 요청 (Tauri invoke)
 const handlePrint = async () => {
     await invoke('print_iv_label', {
-        patientName: vitals.display_name,
-        roomNumber: vitals.room_number,
-        ccPerHr: inputCcPerHr,
-        gttPerMin: calculateGtt(inputCcPerHr, selectedSetType),
-        printedAt: getKSTNow(),  // dateUtils.ts KST 헬퍼 사용
+        name: bed.name,
+        room: `${bed.room}호`,
+        ageGender,
+        infusionRate: rate,
+        dropFactor,
+        patientId,
+        manualName,
+        fluidType: fluidType[0],
+        mixMeds,
+        astCheck,
+        labResults: JSON.stringify(labResults),
+        date: getKSTNowString()
     });
 };
 ```
