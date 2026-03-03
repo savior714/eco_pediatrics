@@ -10,6 +10,7 @@ async fn generate_iv_label_preview(
   fluid_type: Option<String>,
   mix_meds: Option<String>,
   ast_check: Option<bool>,
+  ast_result: Option<String>,
   lab_results: Option<String>,
 ) -> Result<String, String> {
   // 실제 b-PAC SDK (COM) 연동 로직. (이모지 금지 원칙 준수)
@@ -54,6 +55,7 @@ async fn print_iv_label(
   fluid_type: Option<String>,
   mix_meds: Option<String>,
   ast_check: Option<bool>,
+  ast_result: Option<String>,
   lab_results: Option<String>,
 ) -> Result<(), String> {
   log::info!("[IV Label] Printing Label for {} - Room: {}, Rate: {}, PatientID: {:?}", name, room, rate, patient_id);

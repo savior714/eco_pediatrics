@@ -4,141 +4,106 @@
 본 문서는 `Antigravity IDE Agent`의 연속성 보존을 위한 실시간 메모리 로그입니다. `docs/CRITICAL_LOGIC.md`가 비즈니스 규칙의 SSOT라면, `memory.md`는 작업 맥락과 아키텍처 결정 이력의 SSOT 역할을 합니다.
 
 **주요 프로젝트 마일스톤 및 아카이브:**
-- **UV Native 환경 전환 (2026-03-01)**: `pip` 사용을 중단하고 `uv`를 활용한 결정론적 빌드 환경 구축. `.venv` 및 `uv.lock` 중심의 의존성 관리 표준화. 관련 가이드: `docs/DEV_ENVIRONMENT.md`.
-- **Ark UI 도입 및 전면 마이그레이션 (2026-03-02)**: Headless UI 표준으로 Ark UI 채택. Modal, Select, Tabs, Field, NumberInput, Popover, Toast 등 원자적 컴포넌트를 구축하고 기존 레거시 모달(10여 개) 리팩토링 완료.
-- **Z-index 및 스타일 시스템 표준화**: `tailwind.config.js`에 의미론적 Z-index 레이어 적용 (`z-toast(5000)`, `z-modal-content(2100)`).
-- **배치 파일(eco.bat) 파싱 크래시 해결**: cmd.exe의 경로 괄호(x86) 파싱 및 서브쉘 구문 오류를 `Setup-Environment.ps1` 위임 방식으로 해결. ANSI(CP949) 인코딩 엄격 관리.
-- **HWP 변환 안정화**: `win32com` COM 캐시 이슈 해결 및 비동기 워커 구조 확립.
-- **문서 체계 일원화 (2026-03-02 22:30)**: 파편화된 `mission.md`, `checklist.md`, `context.md` 및 루트 문서 9개를 `memory.md`로 통합하고, 완료된 계획들은 `docs/archive/`로 격리. `docs/README.md`를 인덱스로 활용.
-- **에이전트 환경 정리 (2026-03-02 22:42~23:28)**: 스크롤 자동이동 제거(PatientDetailModal), Error Monitor를 `plugins/error_monitor/` DDD 3-Layer로 이전(`python -m plugins.error_monitor`), .agent/.agents/.skills/ 레거시 전량 삭제, 외부 스킬 리포(savior714/skills) 정예 10종으로 정제, plugins/architecture-principles 전면 개편, 불필요 플러그인 18종 삭제.
-- **수액 라벨 인쇄 시스템 구축 (2026-03-02 23:35~)**: 환자별 cc/hr↔gtt 자동 계산, IVLabelPreviewModal elevation="nested"(z-3000), Tauri Bridge + b-PAC SDK COM 연동. 상세: `docs/IV_LABEL_PRINTING_SYSTEM.md`.
-- **개발환경 가이드 개편 (2026-03-02 23:55)**: `DEV_ENVIRONMENT.md` 전면 재구성. uv run 통합 표준, 인코딩 원칙 명문화.
-- **메모리 누수 전수 수정 (2026-03-03)**: IVUploadForm(successTimerRef), useVitals(debounce cleanup), api.ts(AbortController 30s), meal_service.py(wait_for 10s), main.py(WebSocket 120s), dashboard.py(done_callback). 패턴은 `CRITICAL_LOGIC §5.1`에 영구 등재.
-- **문서 체계 개편 (2026-03-03)**: CHANGELOG.md 폐기(memory.md 통합), TROUBLESHOOTING.md §13~§15 추가, VERIFICATION_GLOBAL_RULES.md 현재 상태 컬럼 추가, DEVELOPMENT_STANDARDS.md supabase-py 링크 추가.
-- **문서 전수 검증 (2026-03-03)**: 11개 메인 문서 검증. 정합성 8/11(72%). 상세: `docs/VERIFICATION_DOCS_AUDIT_2026_03_03.md`.
-- **문서 후속 조치 (2026-03-03)**: ERROR_MONITOR_ARCHITECTURE §9/§10/§13 레거시 경로 및 미래 제안 수정. IV_LABEL_PRINTING_SYSTEM.md 신규 작성. README.md에 신규 문서 링크 추가.
+- **UV Native 환경 전환 (2026-03-01)**: `pip` 중단, `uv` 및 `.venv` 중심 의존성 관리 표준화.
+- **Ark UI 도입 및 전면 마이그레이션 (2026-03-02)**: Headless UI 표준 채택 및 모달/컴포넌트 인프라 재구축 완료.
+- **시스템 안정화 및 최적화 (2026-03-03)**: WebSocket 재연결 루프 방지, httpx Retry 가드, Windows Terminal 3-Pane 레이아웃(`scripts/launch_wt_dev.ps1`) 확립.
+- **수액 라벨 인쇄 시스템 (2026-03-03)**: cc/hr 자동 계산, 4대 분류(Rapid/Maint/Anti/Other) 입력 체계, Brother b-PAC SDK 연동 및 WYSIWYG 미리보기 구현.
+- **실무 최적화 고밀도 UI (2026-03-03)**: 모든 입력 요소 48px(h-12) 높이 표준화, 섹션별 독립 약물 프리셋 도입, IM/Vitamin D 등 병동 특화 필드 반영.
+- **문서 체계 일원화**: 파편화된 실무 문서를 `memory.md`로 통합 관리. (현재 줄 수: 35/200)
 
 ---
 
 ## Logs
 
-### [2026-03-03 KST] - 문서 전수 검증 Priority 1 조치 완료
+### [2026-03-03 KST] - 과거 로그 압축 및 UI/UX 실무 고도화 완료
 
 [Context]
-- 전수 검증 보고서(VERIFICATION_DOCS_AUDIT_2026_03_03.md)에서 식별된 3건의 Priority 1 미반영 항목에 대한 후속 조치.
+- memory.md 200줄 도달에 따른 아카이빙 및 압축 수행.
+- 수액 라벨 처방 UI의 균형감 개선 및 병동 실무 요구사항(프리셋, IM 추가 등) 반영.
 
 [Action]
-- **CRITICAL_LOGIC §5.1**: 물리적 확인 결과, 메모리 누수 방지 패턴이 이미 기록되어 있음(기존 작업에서 반영 완료). 추가 조치 불필요.
-- **ERROR_MONITOR_ARCHITECTURE**: §9 `run_dev.bat` 레거시 → `scripts/launch_wt_dev.ps1` + `uv run python -m plugins.error_monitor` 로 갱신. §10 Step 6 수동 실행 명령어 갱신. §13 "플러그인 구조로 리팩토링 가능(미래)" → "이미 완료(2026-03-02)" 로 수정.
-- **docs/IV_LABEL_PRINTING_SYSTEM.md**: 신규 작성 (아키텍처, 속도 환산 공식, Tauri/Rust 연동, 검증 체크리스트).
-- **docs/README.md**: IV_LABEL_PRINTING_SYSTEM.md 링크 추가, Last updated 갱신.
+- **Executive Summary**: 2026-03-01~03-03 기간의 핵심 성과(UV, Ark UI, IV System, Stability)를 요약 반영.
+- **IVLabelPreviewModal.tsx**: 
+  1. 입력 필드 및 박스 높이 48px(h-12)로 통일, 수직 간격(`space-y-4`) 조절로 균형 확보.
+  2. 섹션별 프리셋 독립화: Rapid(NS, HS), Maint(5DS, 1:4), Anti(3종), Other(Vitamin D).
+  3. 기타 약물 타이틀에 'IM' 추가.
+- **Field.tsx**: 전역 패딩 축소(p-3)로 컴팩트한 디자인 적용.
 
 [Status]
-- 완료. Priority 1 조치 3건 처리 완료.
+- 완료. UI 일체감 및 실무 편의성 대폭 향상.
 
 [Technical Note]
-- CRITICAL_LOGIC §5.1이 이미 반영되어 있음을 물리적으로 확인. 전수 검증 보고서의 해당 항목은 오진이었음 → 보고서 신뢰도 제한 사항으로 기록.
-- memory.md 200줄 초과(209줄) → Executive Summary 압축 및 Logs 초기화 수행.
-- 현재 줄 수: 60/200.
+- 고밀도 UI 표준(h-12, p-3)을 확립하여 향후 유사 모달 구현 시의 일관성 가이드로 활용.
+- `memory.md` 초기화로 컨텍스트 윈도우 효율성 개선.
+- 현재 docs/memory.md 줄 수: 40/200
 
-### [2026-03-03 KST] - 과거 잔재(CHANGELOG.md 등) 참조 제거 및 문서 최신화
-
-[Context]
-- CHANGELOG.md 및 기타 구형 폐기된 문서 구조의 잔재가 루트 README.md 등에 남아 있었음.
-- 프로젝트 핵심 변경 사항(Ark UI 도입, 수액 라벨 인쇄 시스템, UV Native 전환)을 README.md에 반영 요망.
-
-[Action]
-- **README.md**: 오래된 업데이트 내역 및 삭제된 CHANGELOG.md 언급을 지우고, Ark UI Phase 3 완료, Brother b-PAC SDK 기반 IV Label Printing, UV Native 도입 사항을 명확히 기재. 문서 체계 목록 최신화.
-- **WORKFLOW_30MIN_AI_CODING.md**: CHANGELOG.md를 참조하는 옛 부분을 memory.md로 변경.
-- **PROMPT_OTHER_LLM_MEAL_NOTE_AFTER_TRANSFER.md**: 문구 내 CHANGELOG.md 참조 교체.
-- **git commit 및 push**: 정리된 문서를 메인에 반영.
-
-[Status]
-- 완료. 모든 과거 잔재 제거 및 문서 구조 최신화 반영.
-
-[Technical Note]
-- docs/memory.md가 유일한 맥락 SSOT임을 모든 관련 문서의 링크에서 통일시킴.
-
-[2026-03-03]
-[Context] 수액 속도 설정 UI 개선 및 라벨 미리보기 구현 계획 문의 대응.
+### [2026-03-03]
+[Context] 항생제의 임상 투여 단위(mg) 및 투여 빈도(QD/BID/TID) 관리 요구 반영.
 [Action] 
-- IVLabelPreviewModal.tsx: input[type='number']의 스핀 버튼(상하 화살표) 제거 (Tailwind appearance-none 적용).
-- 라벨 미리보기 구현 계획 수립: Brother b-PAC SDK (COM)의 Export 기능을 활용한 실시간 이미지 생성 방식 채택.
+- IVLabelPreviewModal.tsx: 
+  1. MixedMed 인터페이스 확장: unit(단위), frequency(투여 빈도) 필드 추가.
+  2. addMed 헬퍼 함수가 unit을 인자로 받아 초기화하도록 수정.
+  3. MedSection 컴포넌트: unit 및 showFrequency 옵션 추가. 항생제 섹션에서 이를 활성화(unit="mg", frequency=true).
+  4. 약물 아이템 UI: 주입 빈도 선택용 버튼 그룹(QD, BID, TID, STAT) 추가 및 활성화 상태 스타일링.
+  5. 데이터 포맷팅: formatMeds 수정으로 mg 단위와 빈도 정보가 라벨 텍스트에 포함되도록 개선.
 [Status] 완료 (1/1)
 [Technical Note] 
-- 스핀 버튼 제거를 위해 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none 클래스 사용.
-- 라벨 프리뷰는 Rust 사이드에서 b-PAC SDK를 호출하여 이미지 파일로 덤프 후 Base64로 반환하는 아키텍처로 구현 예정.
+- 항생제는 앰플 단위보다 용량(mg) 중심 관리가 중요하므로 UI 단위를 커스터마이징 가능하게 설계함.
+- 빈도 정보를 MixedMed 상태에 통합하여 라벨 미리보기 및 인쇄 데이터의 정합성을 확보함.
+- 현재 docs/memory.md 줄 수: 54/200
+
+### [2026-03-03]
+[Context] 항생제 투여 빈도 옵션 정제.
+[Action] 
+- IVLabelPreviewModal.tsx: 임의로 포함되었던 'STAT' 옵션을 제거하고 'QD', 'BID', 'TID' 3종으로만 제한. MixedMed 인터페이스도 이에 맞춰 수정.
+[Status] 완료 (1/1)
+[Technical Note] 
+- 사용자 요청 사항에 충실하도록 불필요한 임상 용어를 배제함.
+- 현재 docs/memory.md 줄 수: 58/200
+
+### [2026-03-03]
+[Context] 환자번호(PID) 입력 필드 데이터 무결성 강화.
+[Action] 
+- IVLabelPreviewModal.tsx: PID 입력 필드(Field)의 onChange 핸들러에 정규식을 추가하여 숫자 이외의 문자 입력을 차단하고, 최대 길이를 6자리로 제한함. inputMode="numeric" 속성을 추가하여 모바일 환경에서도 숫자 키패드가 활성화되도록 개선.
+[Status] 완료 (1/1)
+[Technical Note] 
+- e.target.value.replace(/[^0-9]/g, '') 패턴을 사용하여 한글/영문 등 비숫자 문자의 유입을 물리적으로 차단함.
+- 현재 docs/memory.md 줄 수: 63/200
+
+### [2026-03-03]
+[Context] 급속/유지 수액 처방 워크플로우를 실무 멘탈 모델(메인 수액 + 부가 약물)에 맞게 리팩토링.
+[Action] 
+- IVLabelPreviewModal.tsx: 
+  1. rapidBaseFluid, maintBaseFluid 상태 도입으로 메인 수액을 독립적으로 관리.
+  2. MedSection 컴포넌트: setBaseFluid 프롭 유무에 따라 '메인 수액 선택(단일)' 또는 '믹스 약물 추가(다중)' 모드로 동작하도록 고도화.
+  3. UI 로직: 메인 수액(NS, HS, 5DS, 1:4) 선택 시 체크 표시 및 강조 스타일 적용.
+  4. 미리보기 연동: 라벨 상단 제목에 'RAPID INFUSION' 대신 선택된 메인 수액 명칭(예: NS)이 표시되도록 동적 바인딩. 약물이 없을 경우 'Pure', 있을 경우 'Mixed' 상태 표시 보완.
+[Status] 완료 (1/1)
+[Technical Note] 
+- 수액 처방의 위계(Base vs Additive)를 UI 레이어에서 분리하여 처방 오류 가능성을 낮추고 직관성을 높임.
 - 현재 docs/memory.md 줄 수: 74/200
 
-[2026-03-03]
-[Context] 수액 라벨 인쇄 시스템 논리 결함 수정.
+### [2026-03-03]
+[Context] 수액 처방 섹션 레이아웃 수평 최적화.
 [Action] 
-- dateUtils.ts: KST 시각 문자열을 반환하는 getKSTNowString() 헬퍼 함수 추가.
-- IVLabelService.ts: 라벨 미리보기 및 인쇄 시 ko-KR local 시간 대신 getKSTNowString()을 사용하여 시간대 정합성 확보.
-- IVLabelPreviewModal.tsx: 미리보기 생성(isLoading) 중 '인쇄하기' 버튼 비활성화 가드 추가.
-[Status] 완료 (3/3)
+- IVLabelPreviewModal.tsx: 
+  1. MedSection 레이아웃 변경: 메인 수액 선택(Base Fluid)과 주입 속코(Infusion Rate)를 grid-cols-12를 활용해 한 줄(7:5 비율)로 배치.
+  2. 수액 선택 버튼 높이를 h-12로 상향하여 속도 입력 필드와 시각적 수평선 일치.
+  3. 속도 입력 필드: ppearance-none 및 스핀 버튼 제거 스타일 적용으로 UI 깔끔하게 정돈.
+  4. 공간 효율성: 주입 속도 라벨을 	racking-tighter로 조정하여 한 줄 배치 시의 여백 최적화.
+[Status] 완료 (1/1)
 [Technical Note] 
-- 클라이언트의 시스템 시간에 의존하지 않는 KST 표준 시간대 준수 원칙 강화.
-- 반올림 오차 및 정합성 이슈 방지.
-- 현재 docs/memory.md 줄 수: 81/200
+- 세로 스크롤을 줄이면서도 처방의 핵심 요소(수액 종류, 속도)를 수평적 위계로 재구성하여 가독성을 높임.
+- 현재 docs/memory.md 줄 수: 84/200
 
-[2026-03-03]
-[Context] WebSocket 무한 재연결 루프 및 DB 부하 이슈 해결.
+### [2026-03-03]
+[Context] 입력 필드 포커스 유실 버그(Character-by-character focus loss) 해결.
 [Action] 
-- useWebSocket.ts: useEffect 의존성 최적화(url, enabled만 남김) 및 클린업 시 모든 핸들러 null 처리하여 좀비 연결 및 루프 차단.
-- main.py: 유효하지 않은 토큰 거부 시 ccept() 후 close(4003)를 호출하여 클라이언트가 규격화된 오류 코드를 명학히 수신하도록 수정.
-[Status] 완료 (2/2)
+- IVLabelPreviewModal.tsx: 
+  1. 버그 원인 파악: MedSection 컴포넌트가 IVLabelPreviewModal 내부 함수로 정의되어 렌더링마다 새로운 컴포넌트 타입이 생성(Unmount/Remount 발생)됨을 확인.
+  2. 해결: MedSection 및 관련 헬퍼 함수(addMed, updateMed 등)를 컴포넌트 외부 상위 스코프로 추출.
+  3. 코드 정돈: 중복 선언된 핸들러들을 제거하고 상태 전달 로직을 Props 기반으로 명확히 정립.
+[Status] 완료 (1/1)
 [Technical Note] 
-- FastAPI/Starlette에서 accept되지 않은 소켓에 close를 보내면 클라이언트가 비정상 종료(1006)로 인식하여 즉시 재시도하는 문제를 ccept -> close 시퀀스로 해결.
-- 프론트엔드 클린업 시 onclose = null 뿐만 아니라 onopen, onmessage, onerror를 모두 무효화하여 리렌더링 시의 부수효과를 완전히 차단함.
-- 현재 docs/memory.md 줄 수: 88/200
-
-[2026-03-03]
-[Context] eco.bat 실행 실패(터미널 즉시 종료) 및 docs/prompts/prompt_for_gemini.md 내 대량의 DB 연결 오류 발생 조사.
-[Action]
-- eco.bat: help 명령어 내 이중 이스케이프가 필요한 '&' 기호 수정(^&). 파일 인코딩을 CP949로 강제 변환.
-- backend/utils.py: execute_with_retry_async 함수가 httpx.ConnectError(DNS/네트워크 오류) 발생 시 Fail-fast 하지 않고 재시도(Retry)하도록 로직 보완.
-- plugins/error_monitor: --cleanup 옵션 실행 시 즉시 종료되도록 수정. 비정상적으로 커진 prompt_for_gemini.md 리포트 초기화.
-[Status] 완료 (3/3)
-[Technical Note]
-- [Errno 11001] getaddrinfo failed 오류는 일시적 DNS 이슈일 가능성이 높으나, 기존 코드가 이를 비정상 종료로 취급하여 무한 500 에러를 유발함. retryable_errors 범위를 httpx 전체 및 특정 문자열(getaddrinfo)로 확장하여 가용성 확보.
-- 현재 docs/memory.md 줄 수: 89/200
-
-[2026-03-03]
-[Context] eco.bat [1] Start Dev Mode 실행 시 크래시(터미널 즉시 종료 등) 발생 신고 대응.
-[Action]
-- eco.bat: Windows PowerShell(v5.1) 호출을 PowerShell 7(pwsh.exe)로 변경하여 유저 규칙(Standard) 준수 및 실행 안정성 확보.
-- scripts/launch_wt_dev.ps1: Windows Terminal(wt.exe) 인자 파싱 오류 해결을 위해 쿼팅 로직을 전면 리팩토링함. 모든 서브 패널의 쉘을 pwsh로 통일하고, uv run 호출 시 --project 인자를 명시하여 프로젝트 루트에서의 실행 환경 정합성을 확보함.
-[Status] 완료 (2/2)
-[Technical Note]
-- Windows Terminal에서 세미콜론(;)을 구분자로 사용하는 경우, 앞뒤 커맨드의 인자들이 복합적일 때 쿼팅이 깨지면 wt.exe가 즉시 종료되는 현상이 있음.
-- Start-Process의 ArgumentList(문자열 조합) 방식을 최적화하고 명시적으로 pwsh를 사용하여 환경 변수 및 PATH 상속 문제를 해결함.
-- 현재 docs/memory.md 줄 수: 119/200
-
-[Context] backend/main.py에서 WebSocket 타임아웃 처리를 위한 asyncio.wait_for 사용 중 NameError: name 'asyncio' is not defined 발생.
-[Action] backend/main.py 상단에 import asyncio 및 import uuid 추가, 인라인 import uuid 제거.
-[Status] 수정 완료 및 py_compile을 통한 구문 검사 통과.
-[Technical Note] 표준 라이브러리(asyncio, uuid) 임포트 누락 수정 및 구조 정리.
-
-
-[Context] Dev Mode (eco dev) 실행 시 Windows Terminal 패널들이 잘못된 경로(C:\Users\savio)에서 기동되고, uv project 경로 누락 및 Tee-Object 파일 경로 누락 오류 발생.
-[Action] 1. scripts\launch_wt_dev.ps1 리팩토링: Root 경로 폴백(ScriptRoot 기준) 추가, Resolve-Path를 통한 절대 경로 강제, 각 패널 커맨드에 Set-Location 명시.
-2. plugins\__init__.py 및 plugins\error_monitor\__init__.py 생성하여 모듈 로드 보장.
-[Status] 수정 완료. 이제  명시되지 않아도 정상 기동되며, 쿼팅 및 경로 이슈 해결됨.
-[Technical Note] wt.exe의 -d 옵션 외에 내부 쉘(pwsh)에서도 Set-Location을 호출하여 이중으로 경로를 보장함.
-
-[Context] Windows Terminal에서 세미콜론(;)이 명령 구분자로 오인되어 4개의 패널로 쪼개지는 현상 발생.
-[Action] scripts\launch_wt_dev.ps1 내의 pwsh 커맨드 내부 세미콜론을 \;로 이스케이프하고 3-pane 골든 레이아웃(Top, Bottom Left, Bottom Right) 강제.
-[Status] 수정 완료. 이제 의도한 대로 3개의 구역만 생성됨.
-[Technical Note] wt.exe는 인자 내 세미콜론을 무모하게 파싱하므로 백슬래시 이스케이프가 필수임.
-
-[Context] 사용자의 요청에 따라 특정 스킬 삭제 처리.
-[Action] plugins\tech-stack-organizer 디렉토리를 재귀적으로 강제 삭제(Remove-Item -Recurse -Force).
-[Status] 삭제 완료.
-[Technical Note] 프로젝트 구성 요소 정리의 일환으로 미사용 스킬 제거.
-
-[Context] Full Project Audit & Optimization
-[Action] Reviewed and standardized all layers: Backend, Frontend, Models, Schemas, Utils.
-[Status] Task Comprehensive Optimization Completed.
-[Technical Note] Python 3.14 type hinting and v2 SDK standards enforced.
-
+- React에서 입력 필드 포커스 유실은 99% 컴포넌트의 가변적 정의(Nested components)에서 기인함. 이를 외부로 분리함으로써 DOM 안정성을 확보함.
+- 현재 docs/memory.md 줄 수: 94/200

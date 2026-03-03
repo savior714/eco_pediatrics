@@ -6,13 +6,14 @@ export interface IVLabelData {
     room: string;
     ageGender: string;
     infusionRate: number; // cc/hr
-    dropFactor: 20 | 60; // 20: Standard, 60: Micro
+    dropFactor: 60; // Micro 고정
     patientId?: string;
     manualName?: string;
-    fluidType?: string;
+    fluidType?: string; // RAPID | MAINTENANCE
     mixMeds?: string;
-    astCheck?: boolean;
-    labResults?: string;
+    astCheck?: boolean; // AST 결과 여부
+    astResult?: 'NONE' | 'NEG' | 'POS'; // 상세 결과
+    labResults?: string; // JSON string of lab results
 }
 
 export class IVLabelService {
@@ -37,12 +38,9 @@ export class IVLabelService {
      * @returns 생성된 미리보기 이미지의 Base64 또는 로컬 경로
      */
     static async generatePreview(data: IVLabelData): Promise<string> {
-        const gttMin = this.calculateGttFromCc(data.infusionRate, data.dropFactor);
-        const info = `${data.infusionRate} cc/hr (${Math.round(gttMin)} gtt/min)`;
+        const info = `${data.infusionRate} cc/hr`;
 
         try {
-            // Tauri 명령 호출: iv_label_preview
-            // 결과는 base64 이미지 스트링
             const previewBase64 = await invoke<string>('generate_iv_label_preview', {
                 name: data.name,
                 room: data.room,
@@ -54,6 +52,7 @@ export class IVLabelService {
                 fluidType: data.fluidType,
                 mixMeds: data.mixMeds,
                 astCheck: data.astCheck,
+                astResult: data.astResult,
                 labResults: data.labResults
             });
             return `data:image/png;base64,${previewBase64}`;
@@ -67,8 +66,7 @@ export class IVLabelService {
      * 실제로 라벨을 인쇄합니다.
      */
     static async printLabel(data: IVLabelData): Promise<void> {
-        const gttMin = this.calculateGttFromCc(data.infusionRate, data.dropFactor);
-        const info = `${data.infusionRate} cc/hr (${Math.round(gttMin)} gtt/min)`;
+        const info = `${data.infusionRate} cc/hr`;
 
         try {
             await invoke('print_iv_label', {
@@ -82,6 +80,7 @@ export class IVLabelService {
                 fluidType: data.fluidType,
                 mixMeds: data.mixMeds,
                 astCheck: data.astCheck,
+                astResult: data.astResult,
                 labResults: data.labResults
             });
         } catch (error) {

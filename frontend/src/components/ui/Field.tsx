@@ -33,7 +33,7 @@ export function Field({ label, helperText, errorText, invalid, className, id, ..
                 <input
                     {...props}
                     className={cn(
-                        "w-full p-3.5 border-2 border-slate-100 rounded-xl bg-white text-xs font-bold text-slate-700 transition-all outline-none",
+                        "w-full p-3 border-2 border-slate-100 rounded-xl bg-white text-xs font-bold text-slate-700 transition-all outline-none",
                         "hover:border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10",
                         "data-[invalid]:border-red-500 data-[invalid]:focus:ring-red-500/10",
                         className

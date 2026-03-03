@@ -25,12 +25,18 @@
 ### 2.3 안전 규칙
 - **라벨 교체 필수**: 속도 변경 시 반드시 새 라벨지를 인쇄하여 수액백에 부착한다.
 - **라벨 필수 포함 항목**:
-  1. 환자 식별 정보 (마스킹 이름, 병실 번호, 환자번호, 직접 입력 이름)
+  1. 환자 식별 정보 (마스킹 이름, 병실 번호, 환자번호(PID), 직접 입력 이름)
   2. 환자 인구통계 (SEX/AGE)
-  3. 주입 설정 (수액 종류, cc/hr, gtt/min)
+  3. 주입 설정 (메인 수액 종류, cc/hr, gtt/min)
   4. 혼합 약물 정보 및 AST 여부
-  5. 검사 결과 내역 (CBC, R-B, UA, B/Cx, Stool, Resp)
+  5. 검사 결과 내역 (CBC, LFT, Electrolyte, UA, B/Cx, Stool, Resp)
   6. 인쇄 시각 (KST 기준) 및 로고 (에코청소년과)
+
+### 2.4 위계 및 단위 규칙 (2026-03-03 추가)
+- **Fluid Hierarchy**: 'Base Fluid(메인 수액)'와 'Mixed Meds(부가 약물)'를 철저히 분리한다. 메인 수액은 대제목으로 표시되며, 약물은 하단 리스트로 구성된다.
+- **Antibiotics Unit**: 항생제는 앰플(amp) 단위가 아닌 실무 용량(**mg**) 단위를 기본으로 사용한다.
+- **Frequency**: 항생제 및 특정 약물의 경우 투여 빈도(**QD, BID, TID**) 정보를 포함할 수 있다.
+- **Data Integrity**: PID(환자번호)는 숫자 이외의 입력을 제한하며, 최대 6자리(000000)를 준수한다.
 
 ---
 
@@ -53,11 +59,16 @@ PatientDetailHeader.tsx
 
 | 레이어 | 파일 | 책임 |
 |---|---|---|
-| **UI (미리보기)** | `frontend/src/components/IVLabelPreviewModal.tsx` | 속도 입력, 환산 표시, 인쇄 요청 |
+| **UI (Main)** | `frontend/src/components/IVLabelPreviewModal.tsx` | 처방 위계(Base/Mix) 관리, 프리셋 제공, PID 입력 제한 |
+| **UI (Components)** | `frontend/src/components/ui/Field.tsx` | 고밀도 UI 표준(h-12, p-3) 제공 |
 | **진입점 (버튼)** | `frontend/src/components/PatientDetailHeader.tsx` | 모달 open 트리거 |
-| **Tauri Bridge** | `frontend/src-tauri/src/commands/iv_label.rs` | Rust → COM 연동 |
-| **SDK 통신** | Rust (`windows` 크레이트) | b-PAC SDK COM 인터페이스 호출 |
-| **템플릿** | `docs/templates/*.lbx` | Brother 라벨 레이아웃 |
+| **Tauri Bridge** | `frontend/src-tauri/src/commands/iv_label.rs` | Rust → b-PAC SDK 연동 |
+| **템플릿** | `docs/templates/*.lbx` | Brother 라벨 레이아웃 (62mm 감열지 기준) |
+
+### 3.3 고밀도 UI 설계 (High-Density UI)
+- **표준 높이**: 모든 입력 필드 및 박스 높이를 **48px (h-12)**로 통일하여 시각적 일체감 확보.
+- **수평 레이아웃**: 공간 효율을 위해 'Base Fluid 선택'과 'Infusion Rate 입력'을 7:5 비율의 한 줄(Grid)로 배치.
+- **포커스 유지**: 컴포넌트 재생성으로 인한 포커스 유실 방지를 위해 하위 컴포넌트(`MedSection`)와 헬퍼 함수를 외부 스코프로 추출.
 
 ### 3.3 모달 Z-Index 규칙
 - **IVLabelPreviewModal**: `elevation="nested"` 적용 (z-index 3000/3100)
@@ -71,30 +82,23 @@ PatientDetailHeader.tsx
 ### 4.1 IVLabelPreviewModal.tsx 핵심 로직
 
 ```typescript
-// 속도 환산 계산 (CRITICAL_LOGIC §4.2 기준)
-const calculateGtt = (ccPerHr: number, setType: 'micro' | 'standard'): number => {
-    if (setType === 'micro') return ccPerHr;          // 60 gtt: 1:1
-    return Math.round(ccPerHr / 3);                   // 20 gtt: 3:1
-};
+// Base Fluid & Rate 동적 바인딩
+const fluidType = rapidRate > 0 
+    ? (rapidBaseFluid || 'RAPID') 
+    : (maintBaseFluid || 'MAINTENANCE');
 
-// 인쇄 요청 (Tauri invoke)
-// 인쇄 요청 (Tauri invoke)
-const handlePrint = async () => {
-    await invoke('print_iv_label', {
-        name: bed.name,
-        room: `${bed.room}호`,
-        ageGender,
-        infusionRate: rate,
-        dropFactor,
-        patientId,
-        manualName,
-        fluidType: fluidType[0],
-        mixMeds,
-        astCheck,
-        labResults: JSON.stringify(labResults),
-        date: getKSTNowString()
-    });
-};
+// 약물 데이터 구조 확장 (MixedMed)
+interface MixedMed {
+    id: string;
+    name: string;
+    amount: number;
+    unit?: string;             // amp | mg (항생제는 mg 기본)
+    frequency?: 'QD' | 'BID' | 'TID'; // 투여 빈도
+}
+
+// 데이터 포맷팅 (라벨 인쇄용)
+const formatMeds = (meds: MixedMed[]) => 
+    meds.map(m => `${m.name} ${m.amount}${m.unit}${m.frequency ? ` (${m.frequency})` : ''}`).join(', ');
 ```
 
 ### 4.2 메모리 누수 방지 (CRITICAL_LOGIC §5.1 준수)
