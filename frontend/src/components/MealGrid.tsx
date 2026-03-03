@@ -264,7 +264,7 @@ function MealGridBase({ beds }: MealGridProps) {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-auto border border-slate-300 relative bg-white">
+            <div className="flex-1 overflow-hidden border border-slate-300 relative bg-white">
                 <table className="w-full text-xs text-left border-collapse">
                     <thead className="bg-slate-100 text-slate-700 font-bold sticky top-0 z-20 shadow-sm">
                         <tr>

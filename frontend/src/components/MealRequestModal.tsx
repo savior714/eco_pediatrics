@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { Select } from '@/components/ui/Select';
+
 import { Utensils, CheckCircle, AlertCircle, Check } from 'lucide-react';
 import { getNextThreeMealSlots } from '@/utils/dateUtils';
 import { clsx, type ClassValue } from 'clsx';
@@ -163,24 +163,56 @@ export function MealRequestModal({ isOpen, onClose, admissionId, currentMeals = 
                         ))}
                     </div>
 
-                    <div className="space-y-5">
-                        {/* Pediatric Section using Select */}
-                        <Select
-                            label="환아 식사"
-                            options={PEDIATRIC_OPTIONS}
-                            value={[currentSelection.pediatric]}
-                            onValueChange={(val) => updateSelection('pediatric', val[0])}
-                            placeholder="식사 종류 선택"
-                        />
+                    <div className="space-y-6">
+                        {/* Pediatric Section using Selection Grid */}
+                        <div className="space-y-2.5">
+                            <label className="text-sm font-bold text-slate-600 ml-1">환아 식사</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {PEDIATRIC_OPTIONS.map((opt) => {
+                                    const isSelected = currentSelection.pediatric === opt.value;
+                                    return (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => updateSelection('pediatric', opt.value)}
+                                            className={cn(
+                                                "h-12 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2",
+                                                isSelected
+                                                    ? "bg-teal-500 border-teal-500 text-white shadow-md shadow-teal-100"
+                                                    : "bg-white border-slate-200 text-slate-500 hover:border-teal-200 whitespace-nowrap"
+                                            )}
+                                        >
+                                            {isSelected && <Check size={14} />}
+                                            {opt.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
-                        {/* Guardian Section using Select */}
-                        <Select
-                            label="보호자 식사"
-                            options={GUARDIAN_OPTIONS}
-                            value={[currentSelection.guardian]}
-                            onValueChange={(val) => updateSelection('guardian', val[0])}
-                            placeholder="보호자 식사 여부 선택"
-                        />
+                        {/* Guardian Section using Selection Grid */}
+                        <div className="space-y-2.5">
+                            <label className="text-sm font-bold text-slate-600 ml-1">보호자 식사</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {GUARDIAN_OPTIONS.map((opt) => {
+                                    const isSelected = currentSelection.guardian === opt.value;
+                                    return (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => updateSelection('guardian', opt.value)}
+                                            className={cn(
+                                                "h-12 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2",
+                                                isSelected
+                                                    ? "bg-amber-500 border-amber-500 text-white shadow-md shadow-amber-100"
+                                                    : "bg-white border-slate-200 text-slate-500 hover:border-amber-200 whitespace-nowrap"
+                                            )}
+                                        >
+                                            {isSelected && <Check size={14} />}
+                                            {opt.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
 
                     {result === 'ERROR' && (

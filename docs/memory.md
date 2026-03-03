@@ -1,176 +1,125 @@
 # Memory (Append-Only)
 
 ## Executive Summary
-본 문서는 `Antigravity IDE Agent`의 연속성 보존을 위한 실시간 메모리 로그입니다. `docs/CRITICAL_LOGIC.md`가 비즈니스 규칙의 SSOT라면, `memory.md`는 작업 맥락과 아키텍처 결정 이력의 SSOT 역할을 합니다.
-
-**주요 프로젝트 마일스톤 및 아카이브:**
-- **UV Native 환경 전환 (2026-03-01)**: `pip` 중단, `uv` 및 `.venv` 중심 의존성 관리 표준화.
-- **Ark UI 도입 및 전면 마이그레이션 (2026-03-02)**: Headless UI 표준 채택 및 모달/컴포넌트 인프라 재구축 완료.
-- **시스템 안정화 및 최적화 (2026-03-03)**: WebSocket 재연결 루프 방지, httpx Retry 가드, Windows Terminal 3-Pane 레이아웃(`scripts/launch_wt_dev.ps1`) 확립.
-- **수액 라벨 인쇄 시스템 (2026-03-03)**: cc/hr 자동 계산, 4대 분류(Rapid/Maint/Anti/Other) 입력 체계, Brother b-PAC SDK 연동 및 WYSIWYG 미리보기 구현.
-- **실무 최적화 고밀도 UI (2026-03-03)**: 모든 입력 요소 48px(h-12) 높이 표준화, 섹션별 독립 약물 프리셋 도입, IM/Vitamin D 등 병동 특화 필드 반영.
-- **문서 체계 일원화**: 파편화된 실무 문서를 `memory.md`로 통합 관리. (현재 줄 수: 35/200)
+본 문서는 `Antigravity IDE Agent`의 연속성 보존을 위한 실시간 메모리 로그입니다.
+- **Tauri UI/UX 고도화 (2026-03-03)**: 스마트폰 미리보기 싱글톤 패턴 적용, QR 코드 모달 안정화.
+- **보호자 대시보드 최적화 (2026-03-03)**: 식단 신청 UI를 버튼 그리드(Selection Grid)로 전환하여 모바일 사용성 극대화.
+- **수액 라벨 시스템 완비 (2026-03-03)**: Base/Mix 위계 정립, AST/Lab 결과 연동, 실무 표준 인쇄 레이아웃 구현.
+- **인프라 및 안정성 (2026-03-03)**: DNS 11001 에러(IPv6) 자동 최적화(`eco.bat`), 백엔드 Retry 로직 강화.
 
 ---
 
 ## Logs
 
-### [2026-03-03 KST] - 과거 로그 압축 및 UI/UX 실무 고도화 완료
-
-[Context]
-- memory.md 200줄 도달에 따른 아카이빙 및 압축 수행.
-- 수액 라벨 처방 UI의 균형감 개선 및 병동 실무 요구사항(프리셋, IM 추가 등) 반영.
-
+### [2026-03-03] - 작업 디렉토리 유실(Home Dir Fallback) 최종 방어
+[Context] `wt.exe` 가끔 환경에 따라 `-d` 옵션을 무시하고 홈 디렉토리(`C:\Users\savio`)에서 프로세스를 시작하여 백엔드/프런트엔드 실행에 실패(ENOENT)하는 현상 발생. 
 [Action]
-- **Executive Summary**: 2026-03-01~03-03 기간의 핵심 성과(UV, Ark UI, IV System, Stability)를 요약 반영.
-- **IVLabelPreviewModal.tsx**: 
-  1. 입력 필드 및 박스 높이 48px(h-12)로 통일, 수직 간격(`space-y-4`) 조절로 균형 확보.
-  2. 섹션별 프리셋 독립화: Rapid(NS, HS), Maint(5DS, 1:4), Anti(3종), Other(Vitamin D).
-  3. 기타 약물 타이틀에 'IM' 추가.
-- **Field.tsx**: 전역 패딩 축소(p-3)로 컴팩트한 디자인 적용.
-
-[Status]
-- 완료. UI 일체감 및 실무 편의성 대폭 향상.
-
-[Technical Note]
-- 고밀도 UI 표준(h-12, p-3)을 확립하여 향후 유사 모달 구현 시의 일관성 가이드로 활용.
-- `memory.md` 초기화로 컨텍스트 윈도우 효율성 개선.
-- 현재 docs/memory.md 줄 수: 40/200
-
-### [2026-03-03]
-[Context] 항생제의 임상 투여 단위(mg) 및 투여 빈도(QD/BID/TID) 관리 요구 반영.
-[Action] 
-- IVLabelPreviewModal.tsx: 
-  1. MixedMed 인터페이스 확장: unit(단위), frequency(투여 빈도) 필드 추가.
-  2. addMed 헬퍼 함수가 unit을 인자로 받아 초기화하도록 수정.
-  3. MedSection 컴포넌트: unit 및 showFrequency 옵션 추가. 항생제 섹션에서 이를 활성화(unit="mg", frequency=true).
-  4. 약물 아이템 UI: 주입 빈도 선택용 버튼 그룹(QD, BID, TID, STAT) 추가 및 활성화 상태 스타일링.
-  5. 데이터 포맷팅: formatMeds 수정으로 mg 단위와 빈도 정보가 라벨 텍스트에 포함되도록 개선.
+- **scripts/Start-Backend.ps1, scripts/Start-Frontend.ps1**: 스크립트 내부에서 `$env:ECO_BE_DIR` 또는 `$env:ECO_FE_DIR` 환경 변수를 직접 확인하여 **강제로 `Set-Location`을 수행**하는 자가 보정(Self-Correction) 로직 추가.
+- **scripts/launch_wt_dev.ps1**: 부모 프로세스에서 해당 경로 환경 변수를 미리 설정하여 자식 프로세스에 상속되도록 보정.
 [Status] 완료 (1/1)
-[Technical Note] 
-- 항생제는 앰플 단위보다 용량(mg) 중심 관리가 중요하므로 UI 단위를 커스터마이징 가능하게 설계함.
-- 빈도 정보를 MixedMed 상태에 통합하여 라벨 미리보기 및 인쇄 데이터의 정합성을 확보함.
-- 현재 docs/memory.md 줄 수: 54/200
-
-### [2026-03-03]
-[Context] 항생제 투여 빈도 옵션 정제.
-[Action] 
-- IVLabelPreviewModal.tsx: 임의로 포함되었던 'STAT' 옵션을 제거하고 'QD', 'BID', 'TID' 3종으로만 제한. MixedMed 인터페이스도 이에 맞춰 수정.
-[Status] 완료 (1/1)
-[Technical Note] 
-- 사용자 요청 사항에 충실하도록 불필요한 임상 용어를 배제함.
-- 현재 docs/memory.md 줄 수: 58/200
-
-### [2026-03-03]
-[Context] 환자번호(PID) 입력 필드 데이터 무결성 강화.
-[Action] 
-- IVLabelPreviewModal.tsx: PID 입력 필드(Field)의 onChange 핸들러에 정규식을 추가하여 숫자 이외의 문자 입력을 차단하고, 최대 길이를 6자리로 제한함. inputMode="numeric" 속성을 추가하여 모바일 환경에서도 숫자 키패드가 활성화되도록 개선.
-[Status] 완료 (1/1)
-[Technical Note] 
-- e.target.value.replace(/[^0-9]/g, '') 패턴을 사용하여 한글/영문 등 비숫자 문자의 유입을 물리적으로 차단함.
-- 현재 docs/memory.md 줄 수: 63/200
-
-### [2026-03-03]
-[Context] 급속/유지 수액 처방 워크플로우를 실무 멘탈 모델(메인 수액 + 부가 약물)에 맞게 리팩토링.
-[Action] 
-- IVLabelPreviewModal.tsx: 
-  1. rapidBaseFluid, maintBaseFluid 상태 도입으로 메인 수액을 독립적으로 관리.
-  2. MedSection 컴포넌트: setBaseFluid 프롭 유무에 따라 '메인 수액 선택(단일)' 또는 '믹스 약물 추가(다중)' 모드로 동작하도록 고도화.
-  3. UI 로직: 메인 수액(NS, HS, 5DS, 1:4) 선택 시 체크 표시 및 강조 스타일 적용.
-  4. 미리보기 연동: 라벨 상단 제목에 'RAPID INFUSION' 대신 선택된 메인 수액 명칭(예: NS)이 표시되도록 동적 바인딩. 약물이 없을 경우 'Pure', 있을 경우 'Mixed' 상태 표시 보완.
-[Status] 완료 (1/1)
-[Technical Note] 
-- 수액 처방의 위계(Base vs Additive)를 UI 레이어에서 분리하여 처방 오류 가능성을 낮추고 직관성을 높임.
-- 현재 docs/memory.md 줄 수: 74/200
-
-### [2026-03-03]
-[Context] 수액 처방 섹션 레이아웃 수평 최적화.
-[Action] 
-- IVLabelPreviewModal.tsx: 
-  1. MedSection 레이아웃 변경: 메인 수액 선택(Base Fluid)과 주입 속코(Infusion Rate)를 grid-cols-12를 활용해 한 줄(7:5 비율)로 배치.
-  2. 수액 선택 버튼 높이를 h-12로 상향하여 속도 입력 필드와 시각적 수평선 일치.
-  3. 속도 입력 필드: ppearance-none 및 스핀 버튼 제거 스타일 적용으로 UI 깔끔하게 정돈.
-  4. 공간 효율성: 주입 속도 라벨을 	racking-tighter로 조정하여 한 줄 배치 시의 여백 최적화.
-[Status] 완료 (1/1)
-[Technical Note] 
-- 세로 스크롤을 줄이면서도 처방의 핵심 요소(수액 종류, 속도)를 수평적 위계로 재구성하여 가독성을 높임.
+[Technical Note] 터미널 에뮬레이터의 인자 해석에 의존하지 않고, 환경 변수를 통한 아키텍처적 SSOT를 유지함으로써 어떤 환경에서도 정확한 소스 경로에서 서비스가 기동됨을 보장함.
 - 현재 docs/memory.md 줄 수: 84/200
 
-### [2026-03-03]
-[Context] 입력 필드 포커스 유실 버그(Character-by-character focus loss) 해결.
-[Action] 
-- IVLabelPreviewModal.tsx: 
-  1. 버그 원인 파악: MedSection 컴포넌트가 IVLabelPreviewModal 내부 함수로 정의되어 렌더링마다 새로운 컴포넌트 타입이 생성(Unmount/Remount 발생)됨을 확인.
-  2. 해결: MedSection 및 관련 헬퍼 함수(addMed, updateMed 등)를 컴포넌트 외부 상위 스코프로 추출.
-  3. 코드 정돈: 중복 선언된 핸들러들을 제거하고 상태 전달 로직을 Props 기반으로 명확히 정립.
-[Status] 완료 (1/1)
-[Technical Note] 
-- React에서 입력 필드 포커스 유실은 99% 컴포넌트의 가변적 정의(Nested components)에서 기인함. 이를 외부로 분리함으로써 DOM 안정성을 확보함.
-- 현재 docs/memory.md 줄 수: 94/200
-
-### [2026-03-03] - 프로젝트 문서화 및 Git 동기화 완료
-[Context] 수액 라벨 인쇄 시스템 대규모 고도화 작업 완료에 따른 문서 동기화 및 형상 관리.
-[Action] 
-- IV_LABEL_PRINTING_SYSTEM.md: 고밀도 UI 표준(h-12), 처방 위계(Base/Mix), 항생제 mg/빈도 시스템 반영 전면 업데이트.
-- CRITICAL_LOGIC.md: 수액 처방 업무 규칙(Hierarchy, Density, Unit) 최신화.
-- Git Push: 모든 변경 사항(feat: high-density UI refactoring)을 원격 저장소에 푸시 완료.
-[Status] 완료 (1/1)
-[Technical Note] 
-- 실무 데이터 구조와 UI 설계 원칙을 문서화에 통합하여 향후 유지보수 일관성을 확보함.
-- 현재 docs/memory.md 줄 수: 105/200
-
-### [2026-03-03] - 라벨 미리보기 디자인 복구 및 입력 도구 보완
-[Context] 라벨 미리보기 디자인이 실무용 양식(Mockup)에서 벗어났다는 사용자 피드백 반영.
-[Action] 
-- IVLabelPreviewModal.tsx: 
-  1. 미리보기 시뮬레이터 전면 개편: 사용자가 제공한 두 번째 스크린샷(병원 표준 라벨 양식)과 1:1 대응하도록 UI 재구현. (로고, 섹션 박스, 체크박스 등)
-  2. 입력 필드 확장: 라벨에 표시될 AST 결과 및 주요 검사 결과(CBC, LFT 등)를 입력할 수 있는 전용 섹션 좌측에 추가.
-- Git Push: 디자인 복구 및 기능 보완 사항 반영 완료.
-[Status] 완료 (1/1)
-[Technical Note] 
-- 단순한 '앱 디자인'이 아닌 '실제 인쇄물 시뮬레이션'에 초점을 맞추어 사용자 의도를 정확히 반영함.
-- 현재 docs/memory.md 줄 수: 118/200
-
-### [2026-03-03] - 혼합 약물 입력 방식 혁신 및 실무 레이아웃 완성
-[Context] 혼합 약물 입력 시 반복되는 타이핑 불편함 해소 및 긴 약물 이름으로 인한 UI 깨짐 현상 해결.
-[Action] 
-- **IVLabelPreviewModal.tsx**: 
-  1. **하이브리드 입력 도구**: MixedMed 입력부에 Select(드롭다운)와 Input(직접 입력)을 결합한 하이브리드 UX 도입. 
-  2. **직접 입력 모드**: '직접 입력...' 선택 시 텍스트 필드로 전환되며, '목록' 버튼을 통해 언제든 드롭다운으로 복귀 가능.
-  3. **레이아웃 안정화**: 긴 약물 이름 입력 시 UI가 깨지는 문제를 해결하기 위해 min-w-0 및 flex-shrink-0 속성 적용.
-  4. **급속 수액 요법**: 실무 관례에 따라 단위를 'CC/HR'에서 'CC(Volume)'으로 변경하여 직관성 강화.
-  5. **미리보기 로고**: 로고 위치가 상단으로 치우치던 현상을 헤더 pt-4 및 items-center 적용으로 해결.
-[Status] 완료 (1/1)
-[Technical Note] 
-- flex-1 min-w-0 패턴은 자식 요소의 팽창을 억제하면서도 부모의 공간을 효율적으로 활용하는 시니어 아키텍처의 필수 기법임.
-- 입력 위젯 전환(Select ↔ Input) 시 포커스 및 상태 유지를 위해 상태 전이 로직을 정밀하게 설계함.
-- 현재 docs/memory.md 줄 수: 145/200
-
-### [2026-03-03] - 백엔드 DNS 에러(Errno 11001) 대응 로직 강화
-[Context] 백엔드에서 Supabase API 호출 시 [Errno 11001] getaddrinfo failed 에러 발생(DNS 확인 실패).
+### [2026-03-03] - 쿼팅(Quoting) 지옥 최종 해결: Env-Delegation 패턴 적용
+[Context] 이전의 위임 패턴에서조차 파라미터(`-BackendDir`) 전달 시 `wt.exe`가 인자를 단절시키고 공백에서 끊어버리는 등 극도로 불안한 거동을 보임.
 [Action]
-- **backend/utils.py**: execute_with_retry_async의 max_retries를 3 -> 5로 상향하고, DNS 에러 시 대기 시간을 최대 5초로 늘려 네트워크 불안정성에 대비.
-- **frontend/src/lib/api.ts**: API 연결 실패 가이드에 DNS 및 인터넷 연결 확인 메시지 보충.
+- **scripts/Start-Backend.ps1, Start-Frontend.ps1**: 파라미터 선언을 아예 제거하고, `$env:ECO_LOG_FILE` 등 환경 변수와 터미널에서 지정된 시작 디렉토리에만 의존하도록 초간소화.
+- **scripts/launch_wt_dev.ps1**: 부모 레벨에서 환경 변수를 주입하고, `wt.exe`에는 오직 실행 파일인 `-File "path.ps1"`만 전달하는 단순 토큰 구조로 개편.
 [Status] 완료 (1/1)
-[Technical Note]
-- [Errno 11001]은 Windows 환경에서 IPv6 DNS 조회 이슈나 일시적 네트워크 단절 시 빈번히 발생함. Exponential Backoff를 DNS 에러 특성에 맞춰 조정하여 회복 탄력성을 높임.
-- 현재 docs/memory.md 줄 수: 158/200
+[Technical Note] Windows 아키텍처에서 환경 변수는 프로세스 트리를 거치며 완벽하게 상속되지만, 명령줄 인자는 각 레이어의 개별 파서(Parser)에 의해 변조됨. 인자 위생(Sanitization) 보다는 **환경 변수 위임**이 가장 안정적인 대형 대시보드 기동 전략임.
 
-### [2026-03-03] - IPv6 관련 잠재적 이슈 차단 및 IPv4 통신 우선화
-[Context] IPv6 활성화로 인한 DNS 조회 지연 및 11001 에러 방지를 위해 IPv4 중심 환경으로 최적화.
+### [2026-03-03] - CLI 실행 안정성 확보: Command Delegation 패턴(스크립트 위임) 도입
+[Context] Windows Terminal 실행 인자 구성 시 발생하는 극도로 예민한 쿼팅(Quoting) 이슈로 인한 런타임 에러(File Not Found)가 반복되는 문제에 대한 최종 아키텍처적 솔루션 적용.
 [Action]
-- **backend/.env**: ALLOWED_ORIGINS에서 127.0.0.1 주소를 localhost보다 앞쪽에 배치하여 브라우저/Tauri가 IPv4를 우선 사용하도록 유도.
-- **OS Guide**: PowerShell을 통한 IPv6 바인딩 해제 명령어(Disable-NetAdapterBinding) 안내.
+- **scripts/Start-Backend.ps1, Start-Frontend.ps1**: 백엔드와 프런트엔드 전용 기동 헬퍼 스크립트 생성. 쿼팅 복잡도를 해당 파일 내부로 고립시킴.
+- **scripts/launch_wt_dev.ps1**: `wt.exe`에 직접 명령어를 주입하던 방식을 버리고, 위 헬퍼 스크립트들을 `pwsh -File`로 호출하는 구조로 전면 개편.
+- **docs/CRITICAL_LOGIC.md**: 'Command Delegation Pattern'을 핵심 CLI 표준으로 명시하여 기술적 파편화 방지.
 [Status] 완료 (1/1)
-[Technical Note]
-- Windows 11은 기본적으로 IPv6를 선호(Prefix Policy)하므로, localhost 사용 시 ::1 조회가 선행됩니다. 이를 127.0.0.1로 고정하거나 IPv6를 비활성화하는 것이 로컬 개발 서비스의 안정성에 직결됩니다.
-- 현재 docs/memory.md 줄 수: 167/200
+[Technical Note] Windows CLI 환경에서 Pipe(`|`)나 Redirect(`>`)를 포함한 명령을 중첩 쉘 환경에서 실행할 경우, 터미널 인자 레벨에서 이를 올바르게 이스케이프하는 것은 불가능에 가까움. 전용 스크립트로 위임(Delegation)하는 것이 최상위 시니어 아키트트의 표준 대응 방식임.
 
-### [2026-03-03] - eco.bat에 네트워크 최적화(IPv6 비활성화) 자동화 추가
-[Context] 사용자가 매번 수동으로 IPv6를 끄지 않아도 되도록 실행 스크립트에 포함 요청.
+### [2026-03-03] - Windows Native CLI 실행 표준 SSOT 명문화
+[Context] `wt.exe` 쿼팅 이슈 및 배치 파일 인코딩 오류가 반복됨에 따라, 이를 방지하기 위한 강제 기술 표준을 프로젝트 헌법(SSOT)에 박제 요청.
 [Action]
-- **eco.bat**: :dev 모드 실행 시 자동으로 :opt_network를 호출하도록 수정. PowerShell을 통해 IPv6 활성 여부를 체크하고, 활성 시 비활성화를 시도함 (권한 부족 시 안내 메시지 출력 후 진행).
+- **docs/CRITICAL_LOGIC.md**: `2.7 Command Line & Terminal Standards` 섹션 추가.
+  1. 배치 파일(.bat)의 **ANSI(CP949) 및 CRLF** 형식 강제.
+  2. `wt.exe` 호출 시 **전체 명령어 쿼팅 금지** 원칙 명시 (0x80070002 에러 방지).
+  3. `Set-Location` 대신 **`-d` 플래그** 우선 사용 표준 확립.
+  4. 복잡한 명령은 반드시 **`.ps1` 외부 스크립트**로 분리할 것을 명시.
 [Status] 완료 (1/1)
-[Technical Note]
-- 배치 파일 내에서 powershell -Command를 활용하여 원포인트 최적화를 매 실행 시마다 수행하도록 설계함. 이를 통해 DNS 11001 에러의 근본 원인을 상시 억제함.
-- 현재 docs/memory.md 줄 수: 177/200
+[Technical Note] 에이전트가 바뀔 때마다 발생하는 환경 의존적 실수를 줄이기 위해, 비즈니스 로직뿐만 아니라 '환경 운영 로직'도 SSOT에 통합 관리함.
+- 현재 docs/memory.md 줄 수: 56/200
+
+### [2026-03-03] - Windows Terminal 파싱 구조 오류(File Not Found) 근본 해결
+[Context] `wt.exe`에 전달되는 커맨드가 따옴표로 과도하게 감싸져 시스템이 명령줄 전체를 파일명으로 인식, 실행에 실패하던 이슈(0x80070002) 해결.
+[Action]
+- **scripts/launch_wt_dev.ps1**: 
+  1. **구조적 분리**: `wt.exe` 호출 시 실행 파일(`pwsh.exe`)과 인자들을 분리된 토큰으로 전달하도록 수정(커맨드 전체 따옴표 제거).
+  2. **중복 제거**: `wt.exe`의 `-d` 옵션과 내부 `Set-Location`이 중복되던 것을 제거하고 `-d`에만 의존하도록 간소화.
+  3. **쿼킹 최적화**: 공백이 포함된 인자(`-Command` 뒤의 구문)에만 선택적으로 따옴표를 적용하여 파싱 가득성 확보.
+[Status] 완료 (1/1)
+[Technical Note] `ArgumentList`가 아닌 단일 `Arguments` 문자열로 명령을 구성할 때, 공백이 포함된 프로세스 실행을 위해서는 `cmd /c`나 `wt`의 파싱 규칙을 정확히 따라야 함. 명령줄 전체를 `" "`로 감싸는 것은 `CreateProcess` 레벨에서 실행 파일 경로로 취급될 위험이 큼.
+- 현재 docs/memory.md 줄 수: 85/200
+
+### [2026-03-03] - Windows Terminal 개발 스택(wt_dev) 쿼팅 및 경로 비매칭 오류 수정
+[Context] `eco.bat dev` 실행 시 백엔드/프런트엔드 패널의 작업 디렉토리가 잘못 지정(홈 디렉토리로 폴백)되거나 `Tee-Object` 경로가 비어있다는 에러가 발생하는 이슈 대응.
+[Action]
+- **scripts/launch_wt_dev.ps1**: 
+  1. `wt.exe`에 전달되는 커맨드 문자열(`$beCmd`, `$feCmd`)에 명시적인 이중 쿼팅(`"`)을 추가하여 공백이 포함된 경로/명령 처리 안정성 확보.
+  2. `Set-Location` 구문 내 불필요한 이스케이프 문자(`\`) 제거.
+  3. `$pathFix` 변수 도입으로 경로 설정 로직의 가독성 및 정밀도 향상.
+[Status] 완료 (1/1)
+[Technical Note] `wt.exe`는 인자를 받을 때 공백을 기준으로 명령을 분리하기 때문에, 공백이 포함된 `pwsh -Command` 문자열은 반드시 외부에서 다시 한번 따옴표로 감싸주어야 함.
+- 현재 docs/memory.md 줄 수: 71/200
+
+### [2026-03-03] - 병동 대시보드 메인 그리드 스크롤 제거
+[Context] 대형 모니터 환경에서 환자 리스트 및 식단 관리 화면이 한 화면에 모두 들어옴에도 불구하고 불필요한 스크롤바가 표시되는 현상 개선 요청.
+[Action]
+- **Station/page.tsx**: `main` 영역의 `overflow-y-auto`를 `overflow-hidden`으로 변경하고, 환자 그리드의 하단 여백(`pb-20` -> `pb-4`)을 축소하여 뷰포트 활용도 극대화.
+- **MealGrid.tsx**: 내부 테이블 래퍼의 `overflow-auto`를 `overflow-hidden`으로 변경하여 일관된 Non-scroll UX 제공.
+[Status] 완료 (1/1)
+[Technical Note] 고정된 병상 수와 대형 디스플레이를 사용하는 특수 목적 대시보드의 경우, 스크롤바 노출을 최소화하여 정적인 '상황판' 느낌의 UI를 유지하는 것이 디자인적으로 유리함.
+- 현재 docs/memory.md 줄 수: 58/200
+
+### [2026-03-03] - eco.bat 초기 실행 구문 오류 및 인코딩 수정
+[Context] `eco.bat` 실행 시 `'s' is not recognized...` 등의 구문 오류가 발생하는 현상 해결 요청.
+[Action]
+- **eco.bat**: 
+  1. 인코딩을 **ANSI (CP949)**로 변경하여 CMD에서의 구문 해석 안정성 확보.
+  2. 줄 바꿈 형식을 **CRLF**로 표준화.
+  3. 거대했던 `powershell` 한 줄 명령어를 외부 스크립트 기반으로 전환하여 유지보수성 향상.
+- **scripts/Optimize-Network.ps1**: IPv6 비활성화 로직을 독립적인 PowerShell 스크립트로 분리 및 예외 처리 강화.
+[Status] 완료 (1/1)
+[Technical Note] Windows Batch 파일은 UTF-8보다 시스템 로케일(CP949) 인코딩에서 구문 오류가 적게 발생함. 특히 PowerShell 호출 시 쿼팅 이슈를 방지하기 위해 외부 스크립트(`.ps1`) 호출 방식을 권장함.
+- 현재 docs/memory.md 줄 수: 49/200
+
+### [2026-03-03] - Tauri 윈도우 조작 권한(show, setFocus) 추가
+[Context] `smartphone-preview` 창 중복 시 기존 창을 가져오는 과정에서 `core:window:allow-show` 권한 부족으로 인한 에러 발생.
+[Action]
+- **frontend/src-tauri/capabilities/default.json**: `core:window:allow-show` 및 `core:window:allow-set-focus` 권한 추가.
+[Status] 완료 (1/1)
+[Technical Note] Tauri v2의 강화된 보안 정책(ACL)에 따라 윈도우 생성 외에 `show()`, `setFocus()` 등 세부 조작 권한도 명시적으로 허용해야 함.
+- 현재 docs/memory.md 줄 수: 42/200
+
+### [2026-03-03] - Tauri 스마트폰 미리보기 창 중복 생성 오류 수정
+[Context] `smartphone-preview` 라벨 중복 시 Tauri window error `{}`가 발생하는 이슈.
+[Action]
+- **QrCodeModal.tsx**: `getByLabel`로 창 존재 확인 후 `show()`, `setFocus()` 처리하는 싱글톤 로직 구현.
+[Status] 완료
+[Technical Note] Tauri v2 API 기반 창 관리 SSOT 확보.
+- 현재 docs/memory.md 줄 수: 35/200
+
+### [2026-03-03] - wt.exe 환경 변수 비상속 구조 문제 근본 해결 (PSScriptRoot Self-Location 패턴)
+[Context] `eco.bat dev` 실행 시 백엔드/프런트엔드 패널이 `C:\Users\savio` (홈 디렉토리)에서 기동되는 현상이 반복됨. 이전의 Env-Delegation 패턴이 여전히 실패하는 원인 규명 필요.
+[RootCause] `wt.exe`는 기존 WindowsTerminal.exe 프로세스에 새 창 생성을 위임하는 구조임. 따라서 새 탭의 부모 프로세스는 `launch_wt_dev.ps1`이 아닌 `WindowsTerminal.exe`이며, `$env:ECO_BE_DIR` 등의 환경 변수는 이 프로세스 경계를 넘지 못함. 이는 `wt.exe`의 구조적 특성으로 패치 불가.
+[Action]
+- **scripts/Start-Backend.ps1, Start-Frontend.ps1**: 환경 변수 의존 로직을 완전 제거. `$PSScriptRoot`(항상 스크립트 자신의 경로)를 기반으로 `Split-Path -Parent`를 통해 프로젝트 루트를 자체 계산하는 **PSScriptRoot Self-Location 패턴** 적용.
+[Status] 완료 (1/1)
+[Technical Note] `$PSScriptRoot`는 Windows Terminal이 스크립트를 `-File`로 실행할 때 PowerShell 엔진이 직접 설정하는 자동 변수이므로 프로세스 상속에 무관하게 항상 정확한 값을 보장함. 환경 변수 위임(Env-Delegation)보다 우선 적용되어야 할 상위 패턴임.
+- 현재 docs/memory.md 줄 수: 133/200
+
+### [2026-03-03] - 보호자 대시보드 식단 신청 UI 복구 및 최적화
+[Context] 리팩토링 과정에서 식단 신청 UI가 드롭다운(Select)으로 변경되어 모바일 사용성이 저하되었다는 피드백 반영.
+[Action]
+- **MealRequestModal.tsx**: 선택 방식을 버튼 그룹으로 전면 교체하여 고밀도 UI 표준(h-12) 및 시각적 직관성 확보.
+[Status] 완료
+[Technical Note] 아웃오브포커스 이슈 방지를 위해 하위 컴포넌트 외부 추출 관리.

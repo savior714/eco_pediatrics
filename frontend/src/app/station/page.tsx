@@ -33,7 +33,7 @@ export default function Station() {
 
     return (
         <div className="flex h-screen bg-slate-100 overflow-hidden">
-            <main className="flex-1 p-2 overflow-y-auto flex flex-col">
+            <main className="flex-1 p-2 overflow-hidden flex flex-col">
                 <header className="flex justify-between items-center mb-2 px-1 shrink-0">
                     <div className="flex items-center gap-4">
                         <div className="relative h-14 w-32">
@@ -82,11 +82,10 @@ export default function Station() {
                                     key={p}
                                     type="button"
                                     onClick={() => setFilterPhysician(prev => prev === p ? null : p)}
-                                    className={`flex items-center justify-center w-8 h-8 rounded-xl font-bold text-sm border shadow-sm transition-colors ${
-                                        filterPhysician === p
+                                    className={`flex items-center justify-center w-8 h-8 rounded-xl font-bold text-sm border shadow-sm transition-colors ${filterPhysician === p
                                             ? 'bg-indigo-600 text-white border-indigo-600'
                                             : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                                    }`}
+                                        }`}
                                 >
                                     {p}
                                 </button>
@@ -99,7 +98,7 @@ export default function Station() {
                 </header >
 
                 {activeTab === 'patients' && (
-                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 pb-20">
+                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 pb-4">
                         <AnimatePresence mode="popLayout">
                             {displayBeds.map((bed: Bed) => {
                                 if (!bed.id) {

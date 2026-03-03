@@ -19,16 +19,24 @@ $logFile = Join-Path $logsDir "frontend.log"
 # 필수 디렉토리 생성
 if (!(Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
 
-# 2. 각 패널에서 실행할 커맨드 정의
-$beCmd  = "pwsh.exe -NoExit -Command `"Set-Location '$backendDir'\; uv run uvicorn main:app --reload --port 8000`""
-$feCmd  = "pwsh.exe -NoExit -Command `"Set-Location '$frontendDir'\; npm run tauri dev 2>&1 | Tee-Object -FilePath '$logFile'`""
+# 2. 각 패널에서 실행할 커맨드 정의 (Env-Delegation 패턴)
+# 쿼팅(Quoting) 지옥 및 작업 디렉토리 유실을 방지하기 위해 모든 경로는 환경 변수로 상속함.
+$env:ECO_BE_DIR = $backendDir
+$env:ECO_FE_DIR = $frontendDir
+$env:ECO_LOG_FILE = $logFile
+
+$beScript = Join-Path $PSScriptRoot "Start-Backend.ps1"
+$feScript = Join-Path $PSScriptRoot "Start-Frontend.ps1"
 
 # 3. Windows Terminal (wt.exe) 실행 인자 문자열 구성
-# [Standard Layout] 
-# Pane 1 (Left): Backend (uv run)
-# Pane 2 (Right): Frontend (npm run dev)
-$argStr = "--maximized -w 0 nt --title `"Eco-Backend`" -d `"$backendDir`" $beCmd ; " +
-          "split-pane -V --size 0.5 -d `"$frontendDir`" $feCmd"
+# 중요: 실행 파일(pwsh.exe)과 인자들을 절대 '전체 쿼팅'하지 않음.
+# 전용 스크립트(.ps1) 내부에서 환경 변수를 읽어 Set-Location을 직접 수행하므로 가장 안정적임.
+$argStr = "--maximized -w 0 nt --title `"Eco-Backend`" -d `"$backendDir`" pwsh.exe -NoExit -File `"$beScript`" ; " +
+          "split-pane -V --size 0.5 -d `"$frontendDir`" pwsh.exe -NoExit -File `"$feScript`""
+
+Write-Host "[DEBUG] Argument String: $argStr" -ForegroundColor Gray
+
+Write-Host "[DEBUG] Argument String: $argStr" -ForegroundColor Gray
 
 # 4. 프로세스 실행
 try {

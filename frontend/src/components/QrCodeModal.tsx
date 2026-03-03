@@ -35,6 +35,15 @@ export function QrCodeModal({ isOpen, onClose, patientName, roomNumber, token }:
         if (isTauri) {
             try {
                 const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+
+                // 기존 창이 있는지 확인
+                const existing = await WebviewWindow.getByLabel('smartphone-preview');
+                if (existing) {
+                    await existing.show();
+                    await existing.setFocus();
+                    return;
+                }
+
                 const webview = new WebviewWindow('smartphone-preview', {
                     url: dashboardUrl,
                     title: `스마트폰 미리보기 - ${patientName}`,
@@ -44,7 +53,8 @@ export function QrCodeModal({ isOpen, onClose, patientName, roomNumber, token }:
                 });
 
                 webview.once('tauri://error', (e) => {
-                    console.error('Tauri window error:', e);
+                    console.error('Tauri window error:', JSON.stringify(e));
+                    // 에러 발생 시 브라우저 팝업으로 폴백
                     window.open(dashboardUrl, 'SmartphonePreview', 'width=375,height=812');
                 });
                 return;

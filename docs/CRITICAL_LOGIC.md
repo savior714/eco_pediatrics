@@ -4,7 +4,7 @@
 
 **목차**
 1. [Immutable Core](#1-immutable-core-도메인-불변-원칙) — 도메인 불변 원칙 (시간대, 보안/QR)
-2. [Technical Architecture](#2-technical-architecture-기술-제약-및-패턴) — 레이어, 동기화, 모달 SSOT, DB 업데이트, 인코딩
+2. [Technical Architecture](#2-technical-architecture-기술-제약-및-패턴) — 레이어, 동기화, 모달 SSOT, DB 업데이트, 인코딩, CLI/Terminal 표준
 3. [Environment & Configuration](#3-environment--configuration) — DEV UI, 검증, 데이터 계약, 토큰 처리, 의존성, 빌드 환경
 4. [Business Workflows](#4-business-workflows-핵심-업무-프로세스) — 식단, 수액
 5. [Safety Guardrails](#5-safety-guardrails-수정-시-필수-점검-사항-checklist) — 수정 시 점검 체크리스트
@@ -56,10 +56,44 @@
 - **Supabase Client**: 레거시 내부 임포트(`supabase._async.client`)를 절대 사용하지 않으며, 반드시 메인 패키지(`from supabase import AsyncClient`)에서 임포트한다.
 - **Type Hinting**: Python 3.14 표준에 따라 제네릭 컬렉션은 `list[T]`, `dict[K, V]` 등 소문자 내장 타입을 사용하여 선언한다.
 
-### 2.6 Environment Maintenance (인코딩 원칙)
-- **배치 파일 (.bat, .cmd)**: 반드시 **ANSI(CP949/EUC-KR)** 인코딩을 유지한다. `cmd.exe`는 UTF-16/UTF-8 BOM을 잘못 해석하여 `'cho'`(echo), `'edelayedexpansion'`(EnableDelayedExpansion) 등 구문 파편화로 창이 즉시 닫힌다.
-- **표준 도구 (uv Standard)**: 백엔드뿐만 아니라 프론트엔드 도구(npm, node)도 uv run --with nodejs@24.12.0 ... 형식을 통해 호출함으로써 툴체인의 일관성을 확보한다.
 - **수정 시**: 배치만 IDE에서 Save with Encoding -> Korean (EUC-KR) 또는 Western (Windows 1252)로 저장. 에이전트는 배치 파일 수정 시 인코딩을 변경하지 않는다.
+
+### 2.7 Command Line & Terminal Standards (Windows Native)
+Windows 환경의 특수성과 `wt.exe`의 파싱 규칙으로 인해 발생하는 반복적 오류를 방지하기 위한 강제 표준입니다. **이 섹션의 규칙을 위반하면 동일한 오류가 반복됩니다. 반드시 준수하십시오.**
+
+#### 2.7.1 배치 파일 인코딩 (절대 규칙)
+- 반드시 **ANSI (CP949/EUC-KR)** 및 **CRLF** 형식을 유지한다.
+- UTF-8(No BOM)/LF 사용 시 CMD 환경 설정 오독으로 `eco.bat` 실행 즉시 창이 닫힌다.
+
+#### 2.7.2 wt.exe 쿼팅 규칙
+- **금지**: 명령어 전체를 큰따옴표로 감싸는 행위 (`wt.exe "pwsh.exe -Args..."`). `wt.exe`는 이를 하나의 **실행 파일 경로**로 오해하여 `0x80070002 파일 찾기 실패` 오류를 발생시킨다.
+- **허용**: 실행 파일(`pwsh.exe`)과 인자(`-Command`)는 분리된 토큰으로 전달하고, 공백이 포함된 **인자 구문**만 선택적으로 이중 쿼팅(`" "`) 처리한다.
+
+#### 2.7.3 [FINAL] PSScriptRoot Self-Location 패턴 (작업 디렉토리 최종 표준)
+
+> **이 패턴이 10회 이상의 시행착오 끝에 도달한 최종 표준이다. 절대로 이전 패턴으로 되돌리지 않는다.**
+
+**문제의 구조적 원인:**
+`wt.exe`는 이미 실행 중인 `WindowsTerminal.exe` 프로세스에 새 탭/창 생성을 **위임**한다. 따라서 `pwsh -File Start-Backend.ps1`로 열리는 새 탭의 **실제 부모 프로세스는 `WindowsTerminal.exe`**이며, `launch_wt_dev.ps1`이 설정한 `$env:ECO_BE_DIR` 등의 환경 변수는 이 프로세스 경계를 넘지 못한다. `wt.exe -d` 플래그 역시 특정 환경에서 무시되는 것이 확인됨.
+
+**폐기된 패턴 (절대 복원 금지):**
+- ~~`-d` 플래그 의존~~: `wt.exe`가 특정 환경에서 `-d`를 무시하고 홈 디렉토리로 폴백하는 현상 확인됨.
+- ~~Env-Delegation Pattern~~: `$env:ECO_BE_DIR`을 부모 프로세스에서 설정해도 `wt.exe`의 프로세스 위임 구조로 인해 자식에 상속되지 않음.
+
+**최종 표준: `$PSScriptRoot` 자체 계산**
+```powershell
+# Start-Backend.ps1 / Start-Frontend.ps1 공통 패턴
+# $PSScriptRoot = PowerShell 엔진이 직접 설정하는 스크립트 자신의 경로.
+# 프로세스 상속과 무관하게 항상 정확한 값을 보장함.
+$projectRoot = Split-Path $PSScriptRoot -Parent          # = c:\develop\eco_pediatrics
+$targetDir   = Join-Path $projectRoot "backend"          # 또는 "frontend"
+Set-Location -Path $targetDir
+```
+
+**규칙 요약:**
+- `Start-*.ps1` 스크립트는 경로 결정에 **환경 변수, 파라미터, `-d` 플래그를 사용하지 않는다.**
+- 오직 `$PSScriptRoot`만을 경로 계산의 기준으로 사용한다.
+- `launch_wt_dev.ps1`은 환경 변수 설정을 유지해도 되나(호환성), `Start-*.ps1`은 이를 무시한다.
 
 ---
 
