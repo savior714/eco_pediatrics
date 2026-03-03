@@ -199,9 +199,11 @@ export function useStation(): UseStationReturn {
                     };
 
                     setNotifications(prev => {
-                        const exists = prev.some(n => n.id === newMealId);
-                        if (exists) {
-                            return prev.map(n => n.id === newMealId ? newMealNotification : n);
+                        const idx = prev.findIndex(n => n.id === newMealId);
+                        if (idx !== -1) {
+                            const next = [...prev];
+                            next[idx] = newMealNotification as any;
+                            return next;
                         }
                         return [newMealNotification as any, ...prev];
                     });
@@ -245,9 +247,11 @@ export function useStation(): UseStationReturn {
                     };
 
                     setNotifications(prev => {
-                        const exists = prev.some(n => n.id === newDocId);
-                        if (exists) {
-                            return prev.map(n => n.id === newDocId ? newDocNotification : n);
+                        const idx = prev.findIndex(n => n.id === newDocId);
+                        if (idx !== -1) {
+                            const next = [...prev];
+                            next[idx] = newDocNotification as any;
+                            return next;
                         }
                         return [newDocNotification as any, ...prev];
                     });
