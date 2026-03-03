@@ -219,7 +219,7 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
     const handlePrint = async () => {
         setIsPrinting(true);
         try {
-            // Combine all meds for the backend (simplified for now)
+            // 모든 약물을 하나로 통합하여 전달
             const allMeds = [
                 rapidMeds.length > 0 ? `[Rapid] ${formatMeds(rapidMeds)}` : '',
                 maintMeds.length > 0 ? `[Maint] ${formatMeds(maintMeds)}` : '',
@@ -231,7 +231,7 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
                 name: bed.name,
                 room: `${bed.room}호`,
                 ageGender,
-                infusionRate: maintRate || rapidRate, // Most significant rate
+                infusionRate: rapidRate || maintRate, // 우선순위: 급속 > 유지
                 dropFactor: 60,
                 patientId,
                 manualName,
@@ -350,6 +350,64 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
                             presets={['Vitamin D']}
                         />
 
+                        {/* 6. AST & Lab Results */}
+                        <section className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 space-y-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1.5 h-4 bg-teal-600 rounded-full" />
+                                <h3 className="text-sm font-bold text-slate-800">AST 및 주요 검사 결과</h3>
+                            </div>
+
+                            <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                <span className="text-xs font-bold text-slate-500 min-w-[100px]">AST 결과:</span>
+                                <div className="flex gap-2">
+                                    {[
+                                        { id: 'NONE', label: '미시행', color: 'bg-slate-200' },
+                                        { id: 'NEG', label: 'Negative', color: 'bg-green-500' },
+                                        { id: 'POS', label: 'Positive', color: 'bg-red-500' }
+                                    ].map(opt => (
+                                        <button
+                                            key={opt.id}
+                                            onClick={() => setAstResult(opt.id as any)}
+                                            className={`px-4 py-2 rounded-lg text-[11px] font-black transition-all ${astResult === opt.id ? `${opt.color} text-white shadow-lg shadow-${opt.color}/20` : 'bg-white text-slate-400 border border-slate-100'}`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    { id: 'cbc', label: 'CBC' },
+                                    { id: 'lft', label: 'LFT' },
+                                    { id: 'electrolyte', label: 'Electrolyte' },
+                                    { id: 'ua', label: 'UA & U/Cx.' },
+                                    { id: 'bcx', label: 'B/Cx.' },
+                                    { id: 'stool', label: 'Stool PCR/Cx.' },
+                                    { id: 'resp', label: 'Resp. PCR (V/B)' }
+                                ].map(lab => (
+                                    <div key={lab.id} className="flex flex-col gap-1.5 p-3 bg-slate-50/50 rounded-xl border border-slate-100">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-[11px] font-black text-slate-700">{lab.label}</label>
+                                            <input
+                                                type="checkbox"
+                                                checked={labResults[lab.id]?.checked}
+                                                onChange={(e) => handleLabChange(lab.id, 'checked', e.target.checked)}
+                                                className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                            />
+                                        </div>
+                                        <input
+                                            value={labResults[lab.id]?.value}
+                                            onChange={(e) => handleLabChange(lab.id, 'value', e.target.value)}
+                                            disabled={!labResults[lab.id]?.checked}
+                                            className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500/20 disabled:opacity-50 transition-all"
+                                            placeholder="결과값 입력"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
                         <div className="h-10" />
                     </div>
 
@@ -358,114 +416,148 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
                         {/* 라벨 미리보기 시뮬레이터 (A6 감열지 느낌) */}
                         <div className="flex-1 bg-slate-200 rounded-3xl p-4 flex flex-col items-center justify-center relative overflow-hidden group">
                             <div className="absolute inset-0 bg-gradient-to-br from-slate-300/50 to-transparent" />
-                            <div className="w-[380px] h-[540px] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-sm p-8 flex flex-col relative z-10 border-t-[6px] border-[#2D4B3E]">
+                            <div className="w-[380px] h-[550px] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[4px] p-5 flex flex-col relative z-10 border border-slate-200">
                                 {/* 감열지 텍스처 효과 */}
                                 <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/paper.png')]" />
 
-                                {/* Header */}
-                                <div className="border-b-2 border-slate-900 pb-4 mb-6">
-                                    <div className="flex justify-between items-start">
+                                {/* 1. Header: Logo & Date */}
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-8 h-8 bg-[#2D4B3E] rounded-full flex items-center justify-center">
+                                            <div className="w-4 h-4 bg-white rounded-tl-full" />
+                                        </div>
                                         <div>
-                                            <h1 className="text-3xl font-black text-slate-900 tracking-tighter mb-1">IV FLUID</h1>
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{printDate}</p>
+                                            <h1 className="text-sm font-black text-[#2D4B3E] leading-none">에코소아청소년과</h1>
+                                            <p className="text-[7px] font-bold text-slate-400">ECO PEDIATRICS</p>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-xl font-black text-[#2D4B3E]">{bed.room}호</p>
-                                            <p className="text-[11px] font-bold text-slate-400">{bed.id}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Patient Info */}
-                                <div className="bg-slate-50 p-4 rounded-lg mb-6 border border-slate-100 flex justify-between items-center">
-                                    <div>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Patient Name</p>
-                                        <h2 className="text-2xl font-black text-slate-900">{manualName || bed.name}</h2>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Sex/Age</p>
-                                        <p className="text-lg font-black text-slate-700">{ageGender}</p>
+                                        <p className="text-[10px] font-bold text-slate-800">인쇄 일자: {printDate}</p>
                                     </div>
                                 </div>
 
-                                {/* Main Content (Meds/Fluids) */}
-                                <div className="flex-1 flex flex-col gap-4 min-h-0">
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex-1 h-[2px] bg-slate-200" />
-                                        <span className="text-[10px] font-black text-slate-400 uppercase">Prescription Info</span>
-                                        <div className="flex-1 h-[2px] bg-slate-200" />
-                                    </div>
-
-                                    <section className="flex-1 flex flex-col min-h-0 border-2 border-[#A8C3B8]/30 rounded-2xl p-3 overflow-hidden bg-white/50">
-                                        <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-1">
-                                            {/* Rapid */}
-                                            {(rapidRate > 0 || rapidMeds.length > 0 || rapidBaseFluid) && (
-                                                <div className="border-l-4 border-red-400 pl-2 py-0.5">
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="text-[10px] font-black text-red-700 uppercase">{rapidBaseFluid || 'RAPID INFUSION'}</span>
-                                                        <span className="text-[9px] font-black">{rapidRate} cc/hr</span>
-                                                    </div>
-                                                    <div className="text-[8px] font-bold text-slate-500 italic bg-red-50/50 p-1 rounded-md">
-                                                        {formatMeds(rapidMeds) || (rapidMeds.length === 0 ? 'Pure' : 'Mixed')}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Maint */}
-                                            {(maintRate > 0 || maintMeds.length > 0 || maintBaseFluid) && (
-                                                <div className="border-l-4 border-blue-400 pl-2 py-0.5">
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="text-[10px] font-black text-blue-700 uppercase">{maintBaseFluid || 'MAINTENANCE'}</span>
-                                                        <span className="text-[9px] font-black">{maintRate} cc/hr</span>
-                                                    </div>
-                                                    <div className="text-[8px] font-bold text-slate-500 italic bg-blue-50/50 p-1 rounded-md">
-                                                        {formatMeds(maintMeds) || (maintMeds.length === 0 ? 'Pure' : 'Mixed')}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Antibiotics */}
-                                            {antibioticMeds.length > 0 && (
-                                                <div className="border-l-4 border-purple-400 pl-2 py-0.5">
-                                                    <span className="text-[10px] font-black text-purple-700 block mb-1 uppercase">Antibiotics</span>
-                                                    <div className="text-[8px] font-bold text-slate-500 italic bg-purple-50/50 p-1 rounded-md">
-                                                        {formatMeds(antibioticMeds)}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Other */}
-                                            {otherMeds.length > 0 && (
-                                                <div className="border-l-4 border-amber-400 pl-2 py-0.5">
-                                                    <span className="text-[10px] font-black text-amber-700 block mb-1 uppercase">Other Meds</span>
-                                                    <div className="text-[8px] font-bold text-slate-500 italic bg-amber-50/50 p-1 rounded-md">
-                                                        {formatMeds(otherMeds)}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Lab Results (Small Tag style) */}
-                                            {Object.entries(labResults).some(([_, res]) => res.checked) && (
-                                                <div className="pt-2 border-t border-slate-100 flex flex-wrap gap-1">
-                                                    {Object.entries(labResults).map(([key, res]) => res.checked && (
-                                                        <span key={key} className="px-1.5 py-0.5 bg-slate-100 text-[7px] font-black text-slate-500 rounded uppercase">
-                                                            {key}: {res.value || '?'}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
+                                {/* 2. 환자 정보 (Patient Info) */}
+                                <div className="border border-[#2D4B3E]/40 rounded-lg p-2.5 mb-2.5 relative">
+                                    <div className="absolute -top-2.5 left-3 bg-white px-2 flex items-center gap-1">
+                                        <div className="w-4 h-4 rounded-full bg-[#E8F5E9] flex items-center justify-center">
+                                            <div className="w-2 h-2 rounded-full border border-[#2D4B3E]/40" />
                                         </div>
-                                    </section>
+                                        <span className="text-[10px] font-black text-[#2D4B3E]">환자 정보</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 mt-1">
+                                        <div className="flex items-end gap-1">
+                                            <span className="text-[10px] font-bold text-slate-500 min-w-8">병실:</span>
+                                            <span className="flex-1 border-b border-slate-300 text-xs font-black text-slate-800 pb-0.5">{bed.room}호</span>
+                                        </div>
+                                        <div className="flex items-end gap-1">
+                                            <span className="text-[10px] font-bold text-slate-500 min-w-14">환자번호:</span>
+                                            <span className="flex-1 border-b border-slate-300 text-xs font-bold text-slate-800 pb-0.5">{patientId || '______'}</span>
+                                        </div>
+                                        <div className="flex items-end gap-1">
+                                            <span className="text-[10px] font-bold text-slate-500 min-w-8">성명:</span>
+                                            <span className="flex-1 border-b border-slate-300 text-xs font-black text-slate-800 pb-0.5">{manualName || bed.name}</span>
+                                        </div>
+                                        <div className="flex items-end gap-1">
+                                            <span className="text-[10px] font-bold text-slate-500 min-w-14">성별/나이:</span>
+                                            <span className="flex-1 border-b border-slate-300 text-xs font-bold text-slate-800 pb-0.5">{ageGender}</span>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {/* Footer / Stamp */}
-                                <div className="mt-6 flex justify-between items-end">
-                                    <div className="text-[8px] font-bold text-slate-300">
-                                        ECO PEDIATRICS<br />Digital Healthcare Sys.
+                                {/* 3. 수액 처방 정보 (IV Info) */}
+                                <div className="border border-[#2D4B3E]/40 rounded-lg p-2.5 mb-2.5 relative flex-1 min-h-0 flex flex-col">
+                                    <div className="absolute -top-2.5 left-3 bg-white px-2 flex items-center gap-1">
+                                        <Syringe size={10} className="text-[#2D4B3E]" />
+                                        <span className="text-[10px] font-black text-[#2D4B3E]">수액 처방 정보</span>
                                     </div>
-                                    <div className="w-16 h-16 border-4 border-red-500/20 rounded-full flex items-center justify-center rotate-12">
-                                        <Printer size={32} className="text-red-500/20" />
+                                    <div className="space-y-2 mt-1">
+                                        <div className="flex items-center justify-between border-b border-[#2D4B3E]/10 pb-1">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className={`w-3 h-3 border border-slate-300 rounded-sm flex items-center justify-center ${rapidRate > 0 ? 'bg-[#2D4B3E]' : ''}`}>
+                                                    {rapidRate > 0 && <Check size={8} className="text-white" />}
+                                                </div>
+                                                <span className="text-[10px] font-bold text-slate-700">급속수액요법:</span>
+                                                <span className="text-xs font-black text-[#2D4B3E]">{rapidBaseFluid || '____'}</span>
+                                            </div>
+                                            <span className="text-[10px] font-bold text-slate-800 underline underline-offset-4 decoration-slate-300">
+                                                {rapidRate || '____'} (cc/hr)
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between border-b border-[#2D4B3E]/10 pb-1">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className={`w-3 h-3 border border-slate-300 rounded-sm flex items-center justify-center ${maintRate > 0 ? 'bg-[#2D4B3E]' : ''}`}>
+                                                    {maintRate > 0 && <Check size={8} className="text-white" />}
+                                                </div>
+                                                <span className="text-[10px] font-bold text-slate-700">유지용법:</span>
+                                                <span className="text-xs font-black text-[#2D4B3E]">{maintBaseFluid || '____'}</span>
+                                            </div>
+                                            <span className="text-[10px] font-bold text-slate-800 underline underline-offset-4 decoration-slate-300">
+                                                {maintRate || '____'} (cc/hr)
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-[10px] font-bold text-slate-700">Mix 약물:</span>
+                                            <div className="flex-1 bg-[#F1F5F9]/50 rounded p-1.5 min-h-[40px] text-[10px] font-bold text-slate-600 italic">
+                                                {[...rapidMeds, ...maintMeds, ...antibioticMeds, ...otherMeds].length > 0
+                                                    ? formatMeds([...rapidMeds, ...maintMeds, ...antibioticMeds, ...otherMeds])
+                                                    : '________________________________________________'
+                                                }
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-[10px] font-bold text-slate-700">AST(항생제 반응 검사):</span>
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-1">
+                                                    <div className={`w-3 h-3 border border-slate-300 rounded-sm flex items-center justify-center ${astResult === 'NEG' ? 'bg-[#2D4B3E]' : ''}`}>
+                                                        {astResult === 'NEG' && <Check size={8} className="text-white" />}
+                                                    </div>
+                                                    <span className="text-[9px] font-bold text-slate-600">Negative</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <div className={`w-3 h-3 border border-slate-300 rounded-sm flex items-center justify-center ${astResult === 'POS' ? 'bg-[#FF5252]' : ''}`}>
+                                                        {astResult === 'POS' && <Check size={8} className="text-white" />}
+                                                    </div>
+                                                    <span className="text-[9px] font-bold text-slate-600">Positive</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
+                                </div>
+
+                                {/* 4. 주요 검사 항목 결과 (Lab) */}
+                                <div className="border border-[#2D4B3E]/40 rounded-lg p-2.5 relative">
+                                    <div className="absolute -top-2.5 left-3 bg-white px-2 flex items-center gap-1">
+                                        <Beaker size={10} className="text-[#2D4B3E]" />
+                                        <span className="text-[10px] font-black text-[#2D4B3E]">주요 검사 항목 결과</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-1">
+                                        {[
+                                            { id: 'cbc', label: 'CBC' },
+                                            { id: 'lft', label: 'LFT' },
+                                            { id: 'electrolyte', label: 'Electrolyte' },
+                                            { id: 'ua', label: 'UA & U/Cx.' },
+                                            { id: 'bcx', label: 'B/Cx.' },
+                                            { id: 'stool', label: 'Stool PCR/Cx.' },
+                                            { id: 'resp', label: 'Resp. PCR (V/B)' }
+                                        ].map((lab) => (
+                                            <div key={lab.id} className="flex items-center gap-1.5">
+                                                <div className={`w-3 h-3 border border-slate-300 rounded-sm flex items-center justify-center flex-shrink-0 ${labResults[lab.id]?.checked ? 'bg-[#2D4B3E]' : ''}`}>
+                                                    {labResults[lab.id]?.checked && <Check size={8} className="text-white" />}
+                                                </div>
+                                                <span className="text-[9px] font-bold text-slate-600 min-w-[50px] leading-none">[ {lab.label} ]</span>
+                                                <span className="flex-1 border-b border-slate-300 text-[9px] font-bold text-slate-800 text-center pb-0.5">
+                                                    {labResults[lab.id]?.value || '____'}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Footer */}
+                                <div className="mt-4 text-center">
+                                    <p className="text-[10px] font-black text-[#2D4B3E] tracking-tight">
+                                        주의사항: "본 라벨은 의료진 확인용입니다."
+                                    </p>
                                 </div>
                             </div>
                         </div>
