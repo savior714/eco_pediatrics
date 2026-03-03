@@ -54,11 +54,16 @@ interface MedSectionProps {
     showFrequency?: boolean;
     baseFluid?: string;
     setBaseFluid?: (val: string) => void;
+    rateLabel?: string;
+    rateUnit?: string;
+    mixedMedPresets?: string[];
 }
 
 const MedSection = ({
     title, icon: Icon, meds, setter, color, showRate = false, rateVal, setRateVal,
-    presets = [], unit = 'amp', showFrequency = false, baseFluid, setBaseFluid
+    presets = [], unit = 'amp', showFrequency = false, baseFluid, setBaseFluid,
+    rateLabel = 'Infusion Rate', rateUnit = 'CC/HR',
+    mixedMedPresets = []
 }: MedSectionProps) => (
     <section className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/60 space-y-3">
         <div className="flex items-center justify-between">
@@ -75,100 +80,218 @@ const MedSection = ({
             </button>
         </div>
 
-        {showRate && (
-            <div className="grid grid-cols-12 gap-4 items-end">
-                {/* 메인 수액 선택 (Left 7) */}
-                <div className="col-span-12 lg:col-span-7 space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 ml-1 uppercase">Base Fluid</label>
-                    <div className="flex flex-wrap gap-2">
-                        {presets.map((name: string) => {
-                            const isSelected = baseFluid === name;
-                            return (
-                                <button
-                                    key={name}
-                                    onClick={() => setBaseFluid?.(isSelected ? '' : name)}
-                                    className={`px-3 py-1 h-12 border rounded-xl text-[10px] font-bold transition-all flex items-center gap-1.5 ${isSelected
-                                        ? 'bg-teal-600 border-teal-600 text-white shadow-sm shadow-teal-200'
-                                        : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-teal-50'}`}
-                                >
-                                    {isSelected && <Check size={12} />}
-                                    {name}
-                                </button>
-                            );
-                        })}
+        {showRate ? (
+            <div className="grid grid-cols-12 gap-6">
+                {/* [좌측] 주입 설정 (5/12) */}
+                <div className="col-span-12 lg:col-span-5 flex flex-col gap-4">
+                    {/* 메인 수액 선택 */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 ml-1 uppercase">Base Fluid</label>
+                        <div className="flex flex-wrap gap-2">
+                            {presets.map((name: string) => {
+                                const isSelected = baseFluid === name;
+                                return (
+                                    <button
+                                        key={name}
+                                        onClick={() => setBaseFluid?.(isSelected ? '' : name)}
+                                        className={`flex-1 px-3 py-1 h-12 border rounded-xl text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 ${isSelected
+                                            ? 'bg-teal-600 border-teal-600 text-white shadow-sm shadow-teal-200'
+                                            : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-teal-50'}`}
+                                    >
+                                        {isSelected && <Check size={12} />}
+                                        {name}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
 
-                {/* 주입 속도 입력 (Right 5) */}
-                <div className="col-span-12 lg:col-span-5 space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 ml-1 uppercase tracking-tighter">Infusion Rate</label>
-                    <div className="relative">
-                        <input
-                            type="number"
-                            value={rateVal || ''}
-                            onChange={(e) => setRateVal?.(Number(e.target.value))}
-                            className="w-full h-12 px-4 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none text-xs focus:ring-4 focus:ring-teal-500/10 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            placeholder="0"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] text-slate-400 font-black">CC/HR</span>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {!showRate && (
-            <div className="flex flex-wrap gap-2">
-                {presets.map((name: string) => (
-                    <button
-                        key={name}
-                        onClick={() => addMed(setter, name, unit)}
-                        className="px-3 py-1 bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-bold text-slate-500 hover:bg-teal-50 transition-all"
-                    >
-                        + {name}
-                    </button>
-                ))}
-            </div>
-        )}
-
-        <div className="space-y-2">
-            {meds.map((med: any) => (
-                <div key={med.id} className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-xl border border-slate-100">
-                    <div className="flex items-center gap-3">
-                        <input
-                            value={med.name}
-                            onChange={(e) => updateMed(setter, med.id, 'name', e.target.value)}
-                            className="flex-1 bg-transparent border-none outline-none text-xs font-bold text-slate-700"
-                            placeholder="약물명"
-                        />
-                        <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-slate-200">
+                    {/* 주입 속도/용량 입력 */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 ml-1 uppercase tracking-tighter">{rateLabel}</label>
+                        <div className="relative">
                             <input
                                 type="number"
-                                value={med.amount}
-                                onChange={(e) => updateMed(setter, med.id, 'amount', Number(e.target.value))}
-                                className="w-12 bg-transparent border-none outline-none text-xs font-black text-slate-700 text-center"
+                                value={rateVal || ''}
+                                onChange={(e) => setRateVal?.(Number(e.target.value))}
+                                className="w-full h-12 px-4 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none text-xs focus:ring-4 focus:ring-teal-500/10 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                placeholder="0"
                             />
-                            <span className="text-[9px] font-bold text-slate-400 uppercase">{unit}</span>
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] text-slate-400 font-black">{rateUnit}</span>
                         </div>
-                        <button onClick={() => removeMed(setter, med.id)} className="p-1 text-slate-300 hover:text-red-500">
-                            <Trash2 size={14} />
-                        </button>
                     </div>
-                    {showFrequency && (
-                        <div className="flex gap-1.5 pt-1 border-t border-slate-100/50">
-                            {(['QD', 'BID', 'TID'] as const).map(f => (
-                                <button
-                                    key={f}
-                                    onClick={() => updateMed(setter, med.id, 'frequency', f)}
-                                    className={`px-2 py-0.5 rounded-md text-[9px] font-black transition-all ${med.frequency === f ? 'bg-purple-500 text-white shadow-sm' : 'bg-white text-slate-400 border border-slate-100'}`}
-                                >
-                                    {f}
-                                </button>
-                            ))}
-                        </div>
-                    )}
                 </div>
-            ))}
-        </div>
+
+                {/* [우측] 믹스 약물 리스트 (7/12) */}
+                <div className="col-span-12 lg:col-span-7 flex flex-col gap-3 min-h-[120px]">
+                    <div className="flex items-center justify-between px-1">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Mixed Medications</label>
+                        <span className="text-[10px] font-bold text-slate-300">{meds.length} meds</span>
+                    </div>
+                    <div className="flex-1 space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar pr-1">
+                        {meds.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-slate-100 rounded-2xl py-8 grayscale opacity-50">
+                                <Beaker size={24} className="text-slate-300 mb-2" />
+                                <p className="text-[10px] font-bold text-slate-400 italic">No meds mixed yet</p>
+                            </div>
+                        ) : (
+                            meds.map((med: any) => {
+                                const isPreset = presets.includes(med.name);
+                                const hasPresets = presets.length > 0;
+                                const showSelect = hasPresets && (isPreset || med.name === '' || med.name === 'SELECT_MODE' || med.name === undefined);
+
+                                return (
+                                    <div key={med.id} className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-xl border border-slate-100 transition-all">
+                                        <div className="flex items-center gap-2">
+                                            {showSelect ? (
+                                                <div className="flex-1 min-w-0">
+                                                    <Select
+                                                        options={[
+                                                            ...mixedMedPresets.map(p => ({ label: p, value: p })),
+                                                            { label: '직접 입력...', value: 'CUSTOM' }
+                                                        ]}
+                                                        value={med.name && med.name !== 'SELECT_MODE' ? [med.name] : []}
+                                                        onValueChange={(val) => {
+                                                            if (val[0] === 'CUSTOM') {
+                                                                updateMed(setter, med.id, 'name', 'CUSTOM_MODE');
+                                                            } else {
+                                                                updateMed(setter, med.id, 'name', val[0]);
+                                                            }
+                                                        }}
+                                                        placeholder="약물 선택"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="flex-1 min-w-0 flex items-center gap-2">
+                                                    <input
+                                                        value={med.name === 'CUSTOM_MODE' ? '' : med.name}
+                                                        onChange={(e) => updateMed(setter, med.id, 'name', e.target.value)}
+                                                        autoFocus
+                                                        className="flex-1 min-w-0 h-11 px-4 bg-white border-2 border-teal-500/20 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-teal-500"
+                                                        placeholder="약물명 직접 입력"
+                                                    />
+                                                    {hasPresets && (
+                                                        <button
+                                                            onClick={() => updateMed(setter, med.id, 'name', 'SELECT_MODE')}
+                                                            className="flex-shrink-0 text-[10px] text-teal-600 font-black hover:underline px-2 h-11 bg-teal-50 rounded-xl whitespace-nowrap"
+                                                        >
+                                                            목록
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                            <div className="flex-shrink-0 flex items-center gap-2 bg-white px-2 py-1 h-11 rounded-xl border-2 border-slate-100">
+                                                <input
+                                                    type="number"
+                                                    value={med.amount}
+                                                    onChange={(e) => updateMed(setter, med.id, 'amount', Number(e.target.value))}
+                                                    className="w-10 bg-transparent border-none outline-none text-xs font-black text-slate-700 text-center"
+                                                />
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase">{unit}</span>
+                                            </div>
+                                            <button onClick={() => removeMed(setter, med.id)} className="flex-shrink-0 p-1 text-slate-300 hover:text-red-500 transition-colors">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+            </div>
+        ) : (
+            <>
+                <div className="flex flex-wrap gap-2">
+                    {presets.map((name: string) => (
+                        <button
+                            key={name}
+                            onClick={() => addMed(setter, name, unit)}
+                            className="px-3 py-1 bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-bold text-slate-500 hover:bg-teal-50 transition-all"
+                        >
+                            + {name}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="space-y-2">
+                    {meds.map((med: any) => {
+                        const isPreset = presets.includes(med.name);
+                        const hasPresets = presets.length > 0;
+                        const showSelect = hasPresets && (isPreset || med.name === '' || med.name === 'SELECT_MODE' || med.name === undefined);
+
+                        return (
+                            <div key={med.id} className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-xl border border-slate-100 transition-all">
+                                <div className="flex items-center gap-2">
+                                    {showSelect ? (
+                                        <div className="flex-1 min-w-0">
+                                            <Select
+                                                options={[
+                                                    ...mixedMedPresets.map(p => ({ label: p, value: p })),
+                                                    { label: '직접 입력...', value: 'CUSTOM' }
+                                                ]}
+                                                value={med.name && med.name !== 'SELECT_MODE' ? [med.name] : []}
+                                                onValueChange={(val) => {
+                                                    if (val[0] === 'CUSTOM') {
+                                                        updateMed(setter, med.id, 'name', 'CUSTOM_MODE');
+                                                    } else {
+                                                        updateMed(setter, med.id, 'name', val[0]);
+                                                    }
+                                                }}
+                                                placeholder="약물 선택"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="flex-1 min-w-0 flex items-center gap-2">
+                                            <input
+                                                value={med.name === 'CUSTOM_MODE' ? '' : med.name}
+                                                onChange={(e) => updateMed(setter, med.id, 'name', e.target.value)}
+                                                autoFocus
+                                                className="flex-1 min-w-0 h-11 px-4 bg-white border-2 border-teal-500/20 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-teal-500"
+                                                placeholder="약물명 직접 입력"
+                                            />
+                                            {hasPresets && (
+                                                <button
+                                                    onClick={() => updateMed(setter, med.id, 'name', 'SELECT_MODE')}
+                                                    className="flex-shrink-0 text-[10px] text-teal-600 font-black hover:underline px-2 h-11 bg-teal-50 rounded-xl whitespace-nowrap"
+                                                >
+                                                    목록
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="flex-shrink-0 flex items-center gap-2 bg-white px-2 py-1 h-11 rounded-xl border-2 border-slate-100">
+                                        <input
+                                            type="number"
+                                            value={med.amount}
+                                            onChange={(e) => updateMed(setter, med.id, 'amount', Number(e.target.value))}
+                                            className="w-12 bg-transparent border-none outline-none text-xs font-black text-slate-700 text-center"
+                                        />
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{unit}</span>
+                                    </div>
+                                    <button onClick={() => removeMed(setter, med.id)} className="flex-shrink-0 p-1 text-slate-300 hover:text-red-500">
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                                {showFrequency && (
+                                    <div className="flex gap-1.5 pt-2 border-t border-slate-200/50">
+                                        {(['QD', 'BID', 'TID'] as const).map(f => (
+                                            <button
+                                                key={f}
+                                                onClick={() => updateMed(setter, med.id, 'frequency', f)}
+                                                className={`px-3 py-1 rounded-lg text-[9px] font-black transition-all ${med.frequency === f ? 'bg-purple-500 text-white shadow-lg shadow-purple-200' : 'bg-white text-slate-400 border border-slate-100'}`}
+                                            >
+                                                {f}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </>
+        )}
     </section>
 );
 
@@ -204,7 +327,7 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
         resp: { checked: false, value: '' }
     });
 
-    const PRESET_MEDS = ['ambroxol', 'tiropramide', 'VitB complex', 'Ceftriaxone', 'K-contin'];
+    const PRESET_MEDS = ['ambroxol', 'tiropramide', 'dexamethasone', 'Vit B complex'];
 
     const ageGender = formatPatientDemographics(bed.dob, bed.gender);
     const printDate = getKSTNowString().split(' ')[0];
@@ -311,6 +434,9 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
                             presets={['NS', "HS(Lactated Ringer's)"]}
                             baseFluid={rapidBaseFluid}
                             setBaseFluid={setRapidBaseFluid}
+                            rateLabel="Volume"
+                            rateUnit="CC"
+                            mixedMedPresets={PRESET_MEDS}
                         />
 
                         {/* 3. 유지수액요법 */}
@@ -326,6 +452,7 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
                             presets={['5DS', '1:4']}
                             baseFluid={maintBaseFluid}
                             setBaseFluid={setMaintBaseFluid}
+                            mixedMedPresets={PRESET_MEDS}
                         />
 
                         {/* 4. 항생제 */}
@@ -336,6 +463,7 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
                             setter={setAntibioticMeds}
                             color="bg-purple-400"
                             presets={['ceftriaxone', 'cefotaxime', 'ampicillin + sulbactam']}
+                            mixedMedPresets={['ceftriaxone', 'cefotaxime', 'ampicillin + sulbactam']}
                             unit="mg"
                             showFrequency={true}
                         />
@@ -348,6 +476,7 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
                             setter={setOtherMeds}
                             color="bg-amber-400"
                             presets={['Vitamin D']}
+                            mixedMedPresets={['Vitamin D', ...PRESET_MEDS]}
                         />
 
                         {/* 6. AST & Lab Results */}
@@ -412,177 +541,157 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
                     </div>
 
                     {/* [우측] 미리보기 및 액션 영역 (5/12) */}
-                    <div className="col-span-12 lg:col-span-5 flex flex-col gap-5 h-full min-h-0">
-                        {/* 라벨 미리보기 시뮬레이터 (A6 감열지 느낌) */}
-                        <div className="flex-1 bg-slate-200 rounded-3xl p-4 flex flex-col items-center justify-center relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-gradient-to-br from-slate-300/50 to-transparent" />
-                            <div className="w-[380px] h-[550px] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[4px] p-5 flex flex-col relative z-10 border border-slate-200">
-                                {/* 감열지 텍스처 효과 */}
-                                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/paper.png')]" />
+                    <div className="col-span-12 lg:col-span-5 flex flex-col gap-5 h-full min-h-0 bg-slate-100 p-6 rounded-r-2xl border-l border-slate-200">
 
-                                {/* 1. Header: Logo & Date */}
-                                <div className="flex justify-between items-start mb-3">
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="w-8 h-8 bg-[#2D4B3E] rounded-full flex items-center justify-center">
-                                            <div className="w-4 h-4 bg-white rounded-tl-full" />
-                                        </div>
-                                        <div>
-                                            <h1 className="text-sm font-black text-[#2D4B3E] leading-none">에코소아청소년과</h1>
-                                            <p className="text-[7px] font-bold text-slate-400">ECO PEDIATRICS</p>
-                                        </div>
-                                    </div>
+                        {/* 라벨 미리보기 시뮬레이터 (A6 감열지 느낌 강화) */}
+                        <div className="flex-1 flex flex-col items-center justify-start overflow-y-auto custom-scrollbar py-4">
+                            <div className="w-[380px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)] rounded-[2px] p-6 flex flex-col relative border border-slate-300 ring-1 ring-black/5">
+
+                                {/* 1. Header: Clinic Identity */}
+                                <div className="flex justify-between items-center mb-4 border-b-2 border-[#2D4B3E] pt-4 pb-3">
+                                    <img src="/eco_logo.png" alt="에코소아과 로고" className="h-12 object-contain" />
                                     <div className="text-right">
                                         <p className="text-[10px] font-bold text-slate-800">인쇄 일자: {printDate}</p>
                                     </div>
                                 </div>
 
-                                {/* 2. 환자 정보 (Patient Info) */}
-                                <div className="border border-[#2D4B3E]/40 rounded-lg p-2.5 mb-2.5 relative">
-                                    <div className="absolute -top-2.5 left-3 bg-white px-2 flex items-center gap-1">
-                                        <div className="w-4 h-4 rounded-full bg-[#E8F5E9] flex items-center justify-center">
-                                            <div className="w-2 h-2 rounded-full border border-[#2D4B3E]/40" />
-                                        </div>
-                                        <span className="text-[10px] font-black text-[#2D4B3E]">환자 정보</span>
+                                {/* 2. 환자 정보 (Grid Box) */}
+                                <div className="border-2 border-[#2D4B3E] p-3 mb-4 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-3 bg-[#2D4B3E]" />
+                                        <h3 className="text-[11px] font-black text-[#2D4B3E]">환자 정보</h3>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 mt-1">
-                                        <div className="flex items-end gap-1">
-                                            <span className="text-[10px] font-bold text-slate-500 min-w-8">병실:</span>
-                                            <span className="flex-1 border-b border-slate-300 text-xs font-black text-slate-800 pb-0.5">{bed.room}호</span>
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
+                                        <div className="flex items-center">
+                                            <span className="font-bold mr-2 w-12 text-slate-600">병실:</span>
+                                            <span className="flex-1 border-b border-slate-300 font-black">{bed.room}호</span>
                                         </div>
-                                        <div className="flex items-end gap-1">
-                                            <span className="text-[10px] font-bold text-slate-500 min-w-14">환자번호:</span>
-                                            <span className="flex-1 border-b border-slate-300 text-xs font-bold text-slate-800 pb-0.5">{patientId || '______'}</span>
+                                        <div className="flex items-center">
+                                            <span className="font-bold mr-2 w-12 text-slate-600">환자번호:</span>
+                                            <span className="flex-1 border-b border-slate-300 font-black">{patientId || '________'}</span>
                                         </div>
-                                        <div className="flex items-end gap-1">
-                                            <span className="text-[10px] font-bold text-slate-500 min-w-8">성명:</span>
-                                            <span className="flex-1 border-b border-slate-300 text-xs font-black text-slate-800 pb-0.5">{manualName || bed.name}</span>
+                                        <div className="flex items-center">
+                                            <span className="font-bold mr-2 w-12 text-slate-600">성명:</span>
+                                            <span className="flex-1 border-b border-slate-300 font-black">{manualName || bed.name}</span>
                                         </div>
-                                        <div className="flex items-end gap-1">
-                                            <span className="text-[10px] font-bold text-slate-500 min-w-14">성별/나이:</span>
-                                            <span className="flex-1 border-b border-slate-300 text-xs font-bold text-slate-800 pb-0.5">{ageGender}</span>
+                                        <div className="flex items-center">
+                                            <span className="font-bold mr-2 w-14 text-slate-600">성별/나이:</span>
+                                            <span className="flex-1 border-b border-slate-300 font-black">{ageGender}</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* 3. 수액 처방 정보 (IV Info) */}
-                                <div className="border border-[#2D4B3E]/40 rounded-lg p-2.5 mb-2.5 relative flex-1 min-h-0 flex flex-col">
-                                    <div className="absolute -top-2.5 left-3 bg-white px-2 flex items-center gap-1">
-                                        <Syringe size={10} className="text-[#2D4B3E]" />
-                                        <span className="text-[10px] font-black text-[#2D4B3E]">수액 처방 정보</span>
+                                {/* 3. 수액 처방 정보 (Hierarchy Box) */}
+                                <div className="border-2 border-[#2D4B3E] p-3 mb-4 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-3 bg-[#2D4B3E]" />
+                                        <h3 className="text-[11px] font-black text-[#2D4B3E]">수액 처방 정보</h3>
                                     </div>
-                                    <div className="space-y-2 mt-1">
-                                        <div className="flex items-center justify-between border-b border-[#2D4B3E]/10 pb-1">
-                                            <div className="flex items-center gap-1.5">
-                                                <div className={`w-3 h-3 border border-slate-300 rounded-sm flex items-center justify-center ${rapidRate > 0 ? 'bg-[#2D4B3E]' : ''}`}>
-                                                    {rapidRate > 0 && <Check size={8} className="text-white" />}
-                                                </div>
-                                                <span className="text-[10px] font-bold text-slate-700">급속수액요법:</span>
-                                                <span className="text-xs font-black text-[#2D4B3E]">{rapidBaseFluid || '____'}</span>
+
+                                    {/* Rapid Section */}
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-3 h-3 border border-[#2D4B3E] flex items-center justify-center ${rapidRate > 0 ? 'bg-[#2D4B3E]' : ''}`}>
+                                                {rapidRate > 0 && <Check size={10} className="text-white" />}
                                             </div>
-                                            <span className="text-[10px] font-bold text-slate-800 underline underline-offset-4 decoration-slate-300">
-                                                {rapidRate || '____'} (cc/hr)
-                                            </span>
+                                            <span className="text-[10px] font-bold">급속수액요법:</span>
+                                            <span className="text-[10px] font-black text-[#2D4B3E] px-1.5 bg-slate-50 rounded border border-slate-100">{rapidBaseFluid || '____'}</span>
+                                            <span className="flex-1 border-b border-slate-300 text-right font-black px-2">{rapidRate || '____'}</span>
+                                            <span className="text-[9px] text-slate-400 font-bold">(CC)</span>
                                         </div>
-                                        <div className="flex items-center justify-between border-b border-[#2D4B3E]/10 pb-1">
-                                            <div className="flex items-center gap-1.5">
-                                                <div className={`w-3 h-3 border border-slate-300 rounded-sm flex items-center justify-center ${maintRate > 0 ? 'bg-[#2D4B3E]' : ''}`}>
-                                                    {maintRate > 0 && <Check size={8} className="text-white" />}
-                                                </div>
-                                                <span className="text-[10px] font-bold text-slate-700">유지용법:</span>
-                                                <span className="text-xs font-black text-[#2D4B3E]">{maintBaseFluid || '____'}</span>
+                                        {rapidMeds.length > 0 && (
+                                            <div className="ml-5 flex items-start gap-1">
+                                                <span className="text-[8px] font-bold text-slate-400">└ Mix:</span>
+                                                <span className="flex-1 border-b border-slate-200 text-[9px] font-black text-red-600 italic leading-tight">{formatMeds(rapidMeds)}</span>
                                             </div>
-                                            <span className="text-[10px] font-bold text-slate-800 underline underline-offset-4 decoration-slate-300">
-                                                {maintRate || '____'} (cc/hr)
-                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Maintenance Section */}
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-3 h-3 border border-[#2D4B3E] flex items-center justify-center ${maintRate > 0 ? 'bg-[#2D4B3E]' : ''}`}>
+                                                {maintRate > 0 && <Check size={10} className="text-white" />}
+                                            </div>
+                                            <span className="text-[10px] font-bold">유지용법:</span>
+                                            <span className="text-[10px] font-black text-[#2D4B3E] px-1.5 bg-slate-50 rounded border border-slate-100">{maintBaseFluid || '____'}</span>
+                                            <span className="flex-1 border-b border-slate-300 text-right font-black px-2">{maintRate || '____'}</span>
+                                            <span className="text-[9px] text-slate-400 font-bold">(cc/hr)</span>
                                         </div>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[10px] font-bold text-slate-700">Mix 약물:</span>
-                                            <div className="flex-1 bg-[#F1F5F9]/50 rounded p-1.5 min-h-[40px] text-[10px] font-bold text-slate-600 italic">
-                                                {[...rapidMeds, ...maintMeds, ...antibioticMeds, ...otherMeds].length > 0
-                                                    ? formatMeds([...rapidMeds, ...maintMeds, ...antibioticMeds, ...otherMeds])
-                                                    : '________________________________________________'
-                                                }
+                                        {maintMeds.length > 0 && (
+                                            <div className="ml-5 flex items-start gap-1">
+                                                <span className="text-[8px] font-bold text-slate-400">└ Mix:</span>
+                                                <span className="flex-1 border-b border-slate-200 text-[9px] font-black text-blue-600 italic leading-tight">{formatMeds(maintMeds)}</span>
                                             </div>
+                                        )}
+                                    </div>
+
+                                    {/* Antibiotics & Others & AST */}
+                                    <div className="pt-2 space-y-2 border-t border-dashed border-slate-200">
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-[10px] font-bold w-12 text-slate-600">항생제:</span>
+                                            <span className="flex-1 border-b border-slate-300 text-[10px] font-black text-purple-700 min-h-[1rem]">{antibioticMeds.length > 0 ? formatMeds(antibioticMeds) : ''}</span>
+                                        </div>
+                                        <div className="flex items-start gap-2">
+                                            <span className="text-[10px] font-bold w-12 text-slate-600">기타:</span>
+                                            <span className="flex-1 border-b border-slate-300 text-[10px] font-bold text-slate-600 min-h-[1rem]">{otherMeds.length > 0 ? formatMeds(otherMeds) : ''}</span>
                                         </div>
                                         <div className="flex items-center gap-4">
-                                            <span className="text-[10px] font-bold text-slate-700">AST(항생제 반응 검사):</span>
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex items-center gap-1">
-                                                    <div className={`w-3 h-3 border border-slate-300 rounded-sm flex items-center justify-center ${astResult === 'NEG' ? 'bg-[#2D4B3E]' : ''}`}>
-                                                        {astResult === 'NEG' && <Check size={8} className="text-white" />}
-                                                    </div>
-                                                    <span className="text-[9px] font-bold text-slate-600">Negative</span>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <div className={`w-3 h-3 border border-slate-300 rounded-sm flex items-center justify-center ${astResult === 'POS' ? 'bg-[#FF5252]' : ''}`}>
-                                                        {astResult === 'POS' && <Check size={8} className="text-white" />}
-                                                    </div>
-                                                    <span className="text-[9px] font-bold text-slate-600">Positive</span>
-                                                </div>
+                                            <span className="text-[10px] font-bold text-slate-600">AST(항생제 반응 검사):</span>
+                                            <div className="flex gap-3">
+                                                <label className="flex items-center gap-1 text-[10px] font-bold">
+                                                    <div className={`w-3 h-3 border border-[#2D4B3E] ${astResult === 'NEG' ? 'bg-[#2D4B3E]' : ''}`} /> Negative
+                                                </label>
+                                                <label className="flex items-center gap-1 text-[10px] font-bold">
+                                                    <div className={`w-3 h-3 border border-[#2D4B3E] ${astResult === 'POS' ? 'bg-red-500 border-red-500' : ''}`} /> Positive
+                                                </label>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* 4. 주요 검사 항목 결과 (Lab) */}
-                                <div className="border border-[#2D4B3E]/40 rounded-lg p-2.5 relative">
-                                    <div className="absolute -top-2.5 left-3 bg-white px-2 flex items-center gap-1">
-                                        <Beaker size={10} className="text-[#2D4B3E]" />
-                                        <span className="text-[10px] font-black text-[#2D4B3E]">주요 검사 항목 결과</span>
+                                {/* 4. 주요 검사 항목 결과 (2-Column Grid) */}
+                                <div className="border-2 border-[#2D4B3E] p-3 mb-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-1.5 h-3 bg-[#2D4B3E]" />
+                                        <h3 className="text-[11px] font-black text-[#2D4B3E]">주요 검사 항목 결과</h3>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-1">
+                                    <div className="grid grid-cols-2 border-t border-l border-[#2D4B3E]">
                                         {[
-                                            { id: 'cbc', label: 'CBC' },
-                                            { id: 'lft', label: 'LFT' },
-                                            { id: 'electrolyte', label: 'Electrolyte' },
-                                            { id: 'ua', label: 'UA & U/Cx.' },
-                                            { id: 'bcx', label: 'B/Cx.' },
-                                            { id: 'stool', label: 'Stool PCR/Cx.' },
+                                            { id: 'cbc', label: 'CBC' }, { id: 'lft', label: 'LFT' },
+                                            { id: 'electrolyte', label: 'Electrolyte' }, { id: 'ua', label: 'UA & U/Cx.' },
+                                            { id: 'bcx', label: 'B/Cx.' }, { id: 'stool', label: 'Stool PCR/Cx.' },
                                             { id: 'resp', label: 'Resp. PCR (V/B)' }
-                                        ].map((lab) => (
-                                            <div key={lab.id} className="flex items-center gap-1.5">
-                                                <div className={`w-3 h-3 border border-slate-300 rounded-sm flex items-center justify-center flex-shrink-0 ${labResults[lab.id]?.checked ? 'bg-[#2D4B3E]' : ''}`}>
-                                                    {labResults[lab.id]?.checked && <Check size={8} className="text-white" />}
-                                                </div>
-                                                <span className="text-[9px] font-bold text-slate-600 min-w-[50px] leading-none">[ {lab.label} ]</span>
-                                                <span className="flex-1 border-b border-slate-300 text-[9px] font-bold text-slate-800 text-center pb-0.5">
-                                                    {labResults[lab.id]?.value || '____'}
-                                                </span>
+                                        ].map((lab, idx) => (
+                                            <div key={lab.id} className={`flex items-center gap-1 p-1 border-b border-r border-[#2D4B3E] ${idx === 6 ? 'col-span-2' : ''}`}>
+                                                <div className={`w-2.5 h-2.5 border border-[#2D4B3E] flex-shrink-0 ${labResults[lab.id]?.checked ? 'bg-[#2D4B3E]' : ''}`} />
+                                                <span className="text-[9px] font-bold w-14 truncate text-slate-700">[{lab.label}]</span>
+                                                <span className="flex-1 text-[9px] font-black text-right pr-1">{labResults[lab.id]?.value || '___'}</span>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
 
-                                {/* Footer */}
-                                <div className="mt-4 text-center">
-                                    <p className="text-[10px] font-black text-[#2D4B3E] tracking-tight">
+                                {/* 5. Footer */}
+                                <div className="mt-auto text-center">
+                                    <p className="text-[10px] font-black text-[#2D4B3E] italic">
                                         주의사항: "본 라벨은 의료진 확인용입니다."
                                     </p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/60 flex gap-3">
-                            <button
-                                onClick={onClose}
-                                className="flex-1 h-14 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black rounded-2xl transition-all flex items-center justify-center gap-2"
-                            >
+                        {/* Action Buttons (Fixed at Bottom) */}
+                        <div className="flex gap-3">
+                            <button onClick={onClose} className="flex-1 h-12 bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 font-bold rounded-xl transition-all text-sm">
                                 취소
                             </button>
                             <button
                                 onClick={handlePrint}
                                 disabled={isPrinting}
-                                className="flex-[2] h-14 bg-[#2D4B3E] hover:bg-[#1E332A] disabled:opacity-50 text-white font-black rounded-2xl shadow-lg shadow-teal-900/20 transition-all flex items-center justify-center gap-2 group"
+                                className="flex-[2] h-12 bg-[#2D4B3E] hover:bg-[#1E332A] disabled:opacity-50 text-white font-bold rounded-xl shadow-lg shadow-teal-900/20 transition-all flex items-center justify-center gap-2 text-sm"
                             >
-                                {isPrinting ? (
-                                    <Loader2 className="animate-spin" />
-                                ) : (
-                                    <>
-                                        <Printer size={20} className="group-hover:scale-110 transition-transform" />
-                                        처방 및 라벨 인쇄
-                                    </>
-                                )}
+                                {isPrinting ? <Loader2 className="animate-spin" size={18} /> : <><Printer size={18} /> 처방 및 라벨 인쇄</>}
                             </button>
                         </div>
                     </div>
