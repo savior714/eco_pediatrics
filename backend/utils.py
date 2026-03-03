@@ -49,7 +49,7 @@ async def execute_with_retry_async(query_builder):
         - 4xx Client Errors (except 429)
     - Backoff: Exponential with jitter (base 0.5s, cap 3s)
     """
-    max_retries = 3
+    max_retries = 5
     
     for attempt in range(max_retries):
         try:
@@ -65,13 +65,14 @@ async def execute_with_retry_async(query_builder):
             # Categorize the error
             is_retryable = False
             error_status = None
+            error_msg = str(e).lower()
 
             if isinstance(e, APIError):
                 try:
                     error_status = int(e.code)
                 except (ValueError, TypeError):
                     # For non-numeric codes, only retry if it looks like a server/network error
-                    if any(term in str(e).lower() for term in ["network", "timeout", "connection", "getaddrinfo"]):
+                    if any(term in error_msg for term in ["network", "timeout", "connection", "getaddrinfo", "11001"]):
                         is_retryable = True
             
             elif isinstance(e, HTTPStatusError):
@@ -80,7 +81,7 @@ async def execute_with_retry_async(query_builder):
             elif isinstance(e, (asyncio.TimeoutError, ConnectionError)):
                 is_retryable = True
             
-            elif "httpx" in str(type(e)).lower() or any(term in str(e).lower() for term in ["network", "timeout", "connection", "getaddrinfo"]):
+            elif "httpx" in str(type(e)).lower() or any(term in error_msg for term in ["network", "timeout", "connection", "getaddrinfo", "11001"]):
                 is_retryable = True
 
             # Apply Policy: 429 and 5xx are retryable
@@ -100,9 +101,15 @@ async def execute_with_retry_async(query_builder):
                     logger.critical(f"DB failed after {max_retries} attempts: {str(e)}")
                 raise e
 
-            # Exponential backoff with small jitter
-            wait_time = min(3.0, (0.5 * (2 ** attempt)) + (random.uniform(0, 0.1)))
-            logger.warning(f"DB retryable error ({error_status if error_status else 'Network/DNS'}). Attempt {attempt+1} failed. Retrying in {wait_time:.1f}s...")
+            # DNS 에러(11001)의 경우 네트워크 안정화를 위해 더 긴 대기 시간 적용
+            is_dns_error = "getaddrinfo" in error_msg or "11001" in error_msg
+            base_wait = 1.0 if is_dns_error else 0.5
+            wait_time = min(5.0, (base_wait * (2 ** attempt)) + (random.uniform(0, 0.2)))
+            
+            logger.warning(
+                f"DB retryable error ({'DNS/11001' if is_dns_error else error_status if error_status else 'Network'}). "
+                f"Attempt {attempt+1}/{max_retries} failed. Retrying in {wait_time:.1f}s..."
+            )
             await asyncio.sleep(wait_time)
 
 async def broadcast_to_station_and_patient(manager, message_dict: dict, token: str = None):

@@ -39,6 +39,7 @@ goto menu
 
 :dev
 echo.
+call :opt_network
 echo [ECO] Starting Dev Mode and Closing Launcher...
 set "ROOT=%~dp0"
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
@@ -114,6 +115,11 @@ echo    setup    Install dependencies and setup environment
 echo    check    Run Environment Doctor ^& Security Audit
 echo.
 goto end
+
+:opt_network
+echo [ECO] Optimizing Network (DNS Stability)...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$adapters = Get-NetAdapterBinding -ComponentID ms_tcpip6 -ErrorAction SilentlyContinue; if ($adapters -and ($adapters.Enabled -contains $true)) { Write-Host '   - IPv6 detected. Attempting to disable for DNS stability...'; Disable-NetAdapterBinding -Name '*' -ComponentID ms_tcpip6 -ErrorAction SilentlyContinue; if ($?) { Write-Host '   - IPv6 disabled successfully.' -ForegroundColor Green } else { Write-Host '   - [INFO] Admin rights needed to disable IPv6. Run as Administrator if DNS errors persist.' -ForegroundColor Yellow } } else { Write-Host '   - IPv6 is already disabled or not found.' -ForegroundColor Cyan }"
+goto :eof
 
 :end
 echo.

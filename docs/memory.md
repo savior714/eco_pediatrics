@@ -145,3 +145,32 @@
 - flex-1 min-w-0 패턴은 자식 요소의 팽창을 억제하면서도 부모의 공간을 효율적으로 활용하는 시니어 아키텍처의 필수 기법임.
 - 입력 위젯 전환(Select ↔ Input) 시 포커스 및 상태 유지를 위해 상태 전이 로직을 정밀하게 설계함.
 - 현재 docs/memory.md 줄 수: 145/200
+
+### [2026-03-03] - 백엔드 DNS 에러(Errno 11001) 대응 로직 강화
+[Context] 백엔드에서 Supabase API 호출 시 [Errno 11001] getaddrinfo failed 에러 발생(DNS 확인 실패).
+[Action]
+- **backend/utils.py**: execute_with_retry_async의 max_retries를 3 -> 5로 상향하고, DNS 에러 시 대기 시간을 최대 5초로 늘려 네트워크 불안정성에 대비.
+- **frontend/src/lib/api.ts**: API 연결 실패 가이드에 DNS 및 인터넷 연결 확인 메시지 보충.
+[Status] 완료 (1/1)
+[Technical Note]
+- [Errno 11001]은 Windows 환경에서 IPv6 DNS 조회 이슈나 일시적 네트워크 단절 시 빈번히 발생함. Exponential Backoff를 DNS 에러 특성에 맞춰 조정하여 회복 탄력성을 높임.
+- 현재 docs/memory.md 줄 수: 158/200
+
+### [2026-03-03] - IPv6 관련 잠재적 이슈 차단 및 IPv4 통신 우선화
+[Context] IPv6 활성화로 인한 DNS 조회 지연 및 11001 에러 방지를 위해 IPv4 중심 환경으로 최적화.
+[Action]
+- **backend/.env**: ALLOWED_ORIGINS에서 127.0.0.1 주소를 localhost보다 앞쪽에 배치하여 브라우저/Tauri가 IPv4를 우선 사용하도록 유도.
+- **OS Guide**: PowerShell을 통한 IPv6 바인딩 해제 명령어(Disable-NetAdapterBinding) 안내.
+[Status] 완료 (1/1)
+[Technical Note]
+- Windows 11은 기본적으로 IPv6를 선호(Prefix Policy)하므로, localhost 사용 시 ::1 조회가 선행됩니다. 이를 127.0.0.1로 고정하거나 IPv6를 비활성화하는 것이 로컬 개발 서비스의 안정성에 직결됩니다.
+- 현재 docs/memory.md 줄 수: 167/200
+
+### [2026-03-03] - eco.bat에 네트워크 최적화(IPv6 비활성화) 자동화 추가
+[Context] 사용자가 매번 수동으로 IPv6를 끄지 않아도 되도록 실행 스크립트에 포함 요청.
+[Action]
+- **eco.bat**: :dev 모드 실행 시 자동으로 :opt_network를 호출하도록 수정. PowerShell을 통해 IPv6 활성 여부를 체크하고, 활성 시 비활성화를 시도함 (권한 부족 시 안내 메시지 출력 후 진행).
+[Status] 완료 (1/1)
+[Technical Note]
+- 배치 파일 내에서 powershell -Command를 활용하여 원포인트 최적화를 매 실행 시마다 수행하도록 설계함. 이를 통해 DNS 11001 에러의 근본 원인을 상시 억제함.
+- 현재 docs/memory.md 줄 수: 177/200

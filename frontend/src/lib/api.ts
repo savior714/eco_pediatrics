@@ -149,7 +149,7 @@ class ApiClient {
                     const guides = [
                         '1. 백엔드 서버(uvicorn)가 실행 중인지 확인하세요.',
                         `2. URL 접근성 확인: ${url}`,
-                        '3. 네트워크 연결 및 방화벽 설정을 확인하세요.',
+                        '3. 네트워크 연결(인터넷) 및 DNS 설정을 확인하세요. (Supabase 접속 불가 시 발생)',
                         '4. Windows Terminal에서 BE 패널의 로그에 에러가 없는지 확인하세요.'
                     ].join('\n');
 

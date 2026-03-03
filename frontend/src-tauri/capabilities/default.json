@@ -3,11 +3,14 @@
   "identifier": "default",
   "description": "enables the default permissions",
   "windows": [
-    "main"
+    "main",
+    "smartphone-preview"
   ],
   "permissions": [
     "core:default",
     "log:default",
+    "core:window:allow-create",
+    "core:webview:allow-create-webview-window",
     {
       "identifier": "http:default",
       "allow": [
