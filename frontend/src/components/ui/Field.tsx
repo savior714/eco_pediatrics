@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Field as ArkField } from '@ark-ui/react';
+import { Field as ArkField } from '@ark-ui/react/field';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

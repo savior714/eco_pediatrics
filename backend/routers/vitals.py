@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
-from supabase._async.client import AsyncClient
+from typing import Annotated
+from supabase import AsyncClient
 import json
 
 from dependencies import get_supabase
@@ -10,7 +11,7 @@ from websocket_manager import manager
 router = APIRouter()
 
 @router.post("", response_model=VitalSign)
-async def record_vital(vital: VitalSignCreate, db: AsyncClient = Depends(get_supabase)):
+async def record_vital(vital: VitalSignCreate, db: Annotated[AsyncClient, Depends(get_supabase)]):
     data = vital.dict()
     response = await execute_with_retry_async(db.table("vital_signs").insert(data))
     new_vital = response.data[0]

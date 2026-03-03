@@ -1,9 +1,9 @@
 import asyncio
 import os
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import HTTPException, UploadFile
-from supabase._async.client import AsyncClient
+from supabase import AsyncClient
 from websocket_manager import manager
 from logger import logger
 from utils import execute_with_retry_async, create_audit_log, broadcast_to_station_and_patient

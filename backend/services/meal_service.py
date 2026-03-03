@@ -1,7 +1,7 @@
 import asyncio
 from typing import List
 from datetime import date
-from supabase._async.client import AsyncClient
+from supabase import AsyncClient
 from websocket_manager import manager
 from logger import get_logger
 from utils import execute_with_retry_async, broadcast_to_station_and_patient, is_pgrst204_error

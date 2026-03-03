@@ -9,7 +9,7 @@ class ConnectionManager:
         self.active_connections: Dict[str, Set[WebSocket]] = {}
 
     async def connect(self, websocket: WebSocket, token: str):
-        await websocket.accept()
+        # [Strict Note] Accept is now handled by the endpoint caller after validation
         if token not in self.active_connections:
             self.active_connections[token] = set()
         self.active_connections[token].add(websocket)

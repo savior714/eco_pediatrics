@@ -81,3 +81,64 @@
 - 클라이언트의 시스템 시간에 의존하지 않는 KST 표준 시간대 준수 원칙 강화.
 - 반올림 오차 및 정합성 이슈 방지.
 - 현재 docs/memory.md 줄 수: 81/200
+
+[2026-03-03]
+[Context] WebSocket 무한 재연결 루프 및 DB 부하 이슈 해결.
+[Action] 
+- useWebSocket.ts: useEffect 의존성 최적화(url, enabled만 남김) 및 클린업 시 모든 핸들러 null 처리하여 좀비 연결 및 루프 차단.
+- main.py: 유효하지 않은 토큰 거부 시 ccept() 후 close(4003)를 호출하여 클라이언트가 규격화된 오류 코드를 명학히 수신하도록 수정.
+[Status] 완료 (2/2)
+[Technical Note] 
+- FastAPI/Starlette에서 accept되지 않은 소켓에 close를 보내면 클라이언트가 비정상 종료(1006)로 인식하여 즉시 재시도하는 문제를 ccept -> close 시퀀스로 해결.
+- 프론트엔드 클린업 시 onclose = null 뿐만 아니라 onopen, onmessage, onerror를 모두 무효화하여 리렌더링 시의 부수효과를 완전히 차단함.
+- 현재 docs/memory.md 줄 수: 88/200
+
+[2026-03-03]
+[Context] eco.bat 실행 실패(터미널 즉시 종료) 및 docs/prompts/prompt_for_gemini.md 내 대량의 DB 연결 오류 발생 조사.
+[Action]
+- eco.bat: help 명령어 내 이중 이스케이프가 필요한 '&' 기호 수정(^&). 파일 인코딩을 CP949로 강제 변환.
+- backend/utils.py: execute_with_retry_async 함수가 httpx.ConnectError(DNS/네트워크 오류) 발생 시 Fail-fast 하지 않고 재시도(Retry)하도록 로직 보완.
+- plugins/error_monitor: --cleanup 옵션 실행 시 즉시 종료되도록 수정. 비정상적으로 커진 prompt_for_gemini.md 리포트 초기화.
+[Status] 완료 (3/3)
+[Technical Note]
+- [Errno 11001] getaddrinfo failed 오류는 일시적 DNS 이슈일 가능성이 높으나, 기존 코드가 이를 비정상 종료로 취급하여 무한 500 에러를 유발함. retryable_errors 범위를 httpx 전체 및 특정 문자열(getaddrinfo)로 확장하여 가용성 확보.
+- 현재 docs/memory.md 줄 수: 89/200
+
+[2026-03-03]
+[Context] eco.bat [1] Start Dev Mode 실행 시 크래시(터미널 즉시 종료 등) 발생 신고 대응.
+[Action]
+- eco.bat: Windows PowerShell(v5.1) 호출을 PowerShell 7(pwsh.exe)로 변경하여 유저 규칙(Standard) 준수 및 실행 안정성 확보.
+- scripts/launch_wt_dev.ps1: Windows Terminal(wt.exe) 인자 파싱 오류 해결을 위해 쿼팅 로직을 전면 리팩토링함. 모든 서브 패널의 쉘을 pwsh로 통일하고, uv run 호출 시 --project 인자를 명시하여 프로젝트 루트에서의 실행 환경 정합성을 확보함.
+[Status] 완료 (2/2)
+[Technical Note]
+- Windows Terminal에서 세미콜론(;)을 구분자로 사용하는 경우, 앞뒤 커맨드의 인자들이 복합적일 때 쿼팅이 깨지면 wt.exe가 즉시 종료되는 현상이 있음.
+- Start-Process의 ArgumentList(문자열 조합) 방식을 최적화하고 명시적으로 pwsh를 사용하여 환경 변수 및 PATH 상속 문제를 해결함.
+- 현재 docs/memory.md 줄 수: 119/200
+
+[Context] backend/main.py에서 WebSocket 타임아웃 처리를 위한 asyncio.wait_for 사용 중 NameError: name 'asyncio' is not defined 발생.
+[Action] backend/main.py 상단에 import asyncio 및 import uuid 추가, 인라인 import uuid 제거.
+[Status] 수정 완료 및 py_compile을 통한 구문 검사 통과.
+[Technical Note] 표준 라이브러리(asyncio, uuid) 임포트 누락 수정 및 구조 정리.
+
+
+[Context] Dev Mode (eco dev) 실행 시 Windows Terminal 패널들이 잘못된 경로(C:\Users\savio)에서 기동되고, uv project 경로 누락 및 Tee-Object 파일 경로 누락 오류 발생.
+[Action] 1. scripts\launch_wt_dev.ps1 리팩토링: Root 경로 폴백(ScriptRoot 기준) 추가, Resolve-Path를 통한 절대 경로 강제, 각 패널 커맨드에 Set-Location 명시.
+2. plugins\__init__.py 및 plugins\error_monitor\__init__.py 생성하여 모듈 로드 보장.
+[Status] 수정 완료. 이제  명시되지 않아도 정상 기동되며, 쿼팅 및 경로 이슈 해결됨.
+[Technical Note] wt.exe의 -d 옵션 외에 내부 쉘(pwsh)에서도 Set-Location을 호출하여 이중으로 경로를 보장함.
+
+[Context] Windows Terminal에서 세미콜론(;)이 명령 구분자로 오인되어 4개의 패널로 쪼개지는 현상 발생.
+[Action] scripts\launch_wt_dev.ps1 내의 pwsh 커맨드 내부 세미콜론을 \;로 이스케이프하고 3-pane 골든 레이아웃(Top, Bottom Left, Bottom Right) 강제.
+[Status] 수정 완료. 이제 의도한 대로 3개의 구역만 생성됨.
+[Technical Note] wt.exe는 인자 내 세미콜론을 무모하게 파싱하므로 백슬래시 이스케이프가 필수임.
+
+[Context] 사용자의 요청에 따라 특정 스킬 삭제 처리.
+[Action] plugins\tech-stack-organizer 디렉토리를 재귀적으로 강제 삭제(Remove-Item -Recurse -Force).
+[Status] 삭제 완료.
+[Technical Note] 프로젝트 구성 요소 정리의 일환으로 미사용 스킬 제거.
+
+[Context] Full Project Audit & Optimization
+[Action] Reviewed and standardized all layers: Backend, Frontend, Models, Schemas, Utils.
+[Status] Task Comprehensive Optimization Completed.
+[Technical Note] Python 3.14 type hinting and v2 SDK standards enforced.
+

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { createToaster, Toaster, Toast } from '@ark-ui/react';
+import { Toast, Toaster, createToaster } from '@ark-ui/react/toast';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 
 /**

@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException
 from typing import Optional
-from supabase._async.client import AsyncClient
+from supabase import AsyncClient
 
 # --- Dependency ---
 async def get_supabase(request: Request) -> AsyncClient:

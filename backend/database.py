@@ -1,5 +1,5 @@
 import os
-from supabase._async.client import create_client, AsyncClient
+from supabase import create_async_client, AsyncClient
 from dotenv import load_dotenv
 
 # Load .env from backend directory when run as module (e.g. uvicorn main:app)
@@ -26,5 +26,5 @@ supabase: AsyncClient = None
 async def init_supabase():
     global supabase
     if not supabase:
-        supabase = await create_client(url, key)
+        supabase = await create_async_client(url, key)
     return supabase

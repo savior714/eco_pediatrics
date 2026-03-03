@@ -1,4 +1,4 @@
-from supabase._async.client import AsyncClient
+from supabase import AsyncClient
 import asyncio
 import json
 import random
@@ -71,11 +71,17 @@ async def execute_with_retry_async(query_builder):
                     error_status = int(e.code)
                 except (ValueError, TypeError):
                     # For non-numeric codes, only retry if it looks like a server/network error
-                    if any(term in str(e).lower() for term in ["network", "timeout", "connection"]):
+                    if any(term in str(e).lower() for term in ["network", "timeout", "connection", "getaddrinfo"]):
                         is_retryable = True
             
             elif isinstance(e, HTTPStatusError):
                 error_status = e.response.status_code
+            
+            elif isinstance(e, (asyncio.TimeoutError, ConnectionError)):
+                is_retryable = True
+            
+            elif "httpx" in str(type(e)).lower() or any(term in str(e).lower() for term in ["network", "timeout", "connection", "getaddrinfo"]):
+                is_retryable = True
 
             # Apply Policy: 429 and 5xx are retryable
             if error_status:
@@ -96,7 +102,7 @@ async def execute_with_retry_async(query_builder):
 
             # Exponential backoff with small jitter
             wait_time = min(3.0, (0.5 * (2 ** attempt)) + (random.uniform(0, 0.1)))
-            logger.warning(f"DB retryable error ({error_status if error_status else 'Network'}). Attempt {attempt+1} failed. Retrying in {wait_time:.1f}s...")
+            logger.warning(f"DB retryable error ({error_status if error_status else 'Network/DNS'}). Attempt {attempt+1} failed. Retrying in {wait_time:.1f}s...")
             await asyncio.sleep(wait_time)
 
 async def broadcast_to_station_and_patient(manager, message_dict: dict, token: str = None):

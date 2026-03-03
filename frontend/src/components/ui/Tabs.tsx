@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Tabs as ArkTabs } from '@ark-ui/react';
+import { Tabs as ArkTabs } from '@ark-ui/react/tabs';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

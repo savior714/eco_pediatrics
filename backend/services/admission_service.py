@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from fastapi import HTTPException
-from supabase._async.client import AsyncClient
+from supabase import AsyncClient
 from websocket_manager import manager
 
 from logger import logger

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Select as ArkSelect, Portal, createListCollection } from '@ark-ui/react';
+import { Select as ArkSelect, createListCollection } from '@ark-ui/react/select';
+import { Portal } from '@ark-ui/react/portal';
 import { Check, ChevronDown } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -59,20 +60,20 @@ export function Select({ label, options, value, onValueChange, placeholder, clas
             <Portal>
                 <ArkSelect.Positioner className="z-dropdown" style={{ zIndex: 4000 }}>
                     <ArkSelect.Content className="bg-white rounded-xl shadow-xl border border-slate-100 p-1.5 min-w-[200px] animate-in fade-in zoom-in-95 duration-200">
-                    <ArkSelect.ItemGroup>
-                        {options.map((item) => (
-                            <ArkSelect.Item
-                                key={item.value}
-                                item={item}
-                                className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold text-slate-600 cursor-pointer transition-colors hover:bg-slate-50 data-[highlighted]:bg-slate-50 data-[state=selected]:text-teal-600 data-[state=selected]:bg-teal-50"
-                            >
-                                <ArkSelect.ItemText>{item.label}</ArkSelect.ItemText>
-                                <ArkSelect.ItemIndicator>
-                                    <Check size={14} />
-                                </ArkSelect.ItemIndicator>
-                            </ArkSelect.Item>
-                        ))}
-                    </ArkSelect.ItemGroup>
+                        <ArkSelect.ItemGroup>
+                            {options.map((item) => (
+                                <ArkSelect.Item
+                                    key={item.value}
+                                    item={item}
+                                    className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold text-slate-600 cursor-pointer transition-colors hover:bg-slate-50 data-[highlighted]:bg-slate-50 data-[state=selected]:text-teal-600 data-[state=selected]:bg-teal-50"
+                                >
+                                    <ArkSelect.ItemText>{item.label}</ArkSelect.ItemText>
+                                    <ArkSelect.ItemIndicator>
+                                        <Check size={14} />
+                                    </ArkSelect.ItemIndicator>
+                                </ArkSelect.Item>
+                            ))}
+                        </ArkSelect.ItemGroup>
                     </ArkSelect.Content>
                 </ArkSelect.Positioner>
             </Portal>

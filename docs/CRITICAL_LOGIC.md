@@ -51,7 +51,12 @@
 - 예시: `await db.table("requests").update({"status": "done"}).eq("id", id).execute()` → `await db.table("requests").select("*").eq("id", id).single().execute()`
 - **목적**: 네트워크 왕복은 2회 발생하나, 라이브러리 호환성과 에러 방지가 우선. 상세 사례는 `docs/TROUBLESHOOTING.md` §11 참고.
 
-### 2.5 Environment Maintenance (인코딩 원칙)
+### 2.5 Modern Backend Standards (FastAPI & Supabase v2)
+- **Dependency Injection**: 모든 FastAPI 핸들러는 `Annotated[T, Depends()]` 패턴을 사용하여 의존성을 주입한다.
+- **Supabase Client**: 레거시 내부 임포트(`supabase._async.client`)를 절대 사용하지 않으며, 반드시 메인 패키지(`from supabase import AsyncClient`)에서 임포트한다.
+- **Type Hinting**: Python 3.14 표준에 따라 제네릭 컬렉션은 `list[T]`, `dict[K, V]` 등 소문자 내장 타입을 사용하여 선언한다.
+
+### 2.6 Environment Maintenance (인코딩 원칙)
 - **배치 파일 (.bat, .cmd)**: 반드시 **ANSI(CP949/EUC-KR)** 인코딩을 유지한다. `cmd.exe`는 UTF-16/UTF-8 BOM을 잘못 해석하여 `'cho'`(echo), `'edelayedexpansion'`(EnableDelayedExpansion) 등 구문 파편화로 창이 즉시 닫힌다.
 - **표준 도구 (uv Standard)**: 백엔드뿐만 아니라 프론트엔드 도구(npm, node)도 uv run --with nodejs@24.12.0 ... 형식을 통해 호출함으로써 툴체인의 일관성을 확보한다.
 - **수정 시**: 배치만 IDE에서 Save with Encoding -> Korean (EUC-KR) 또는 Western (Windows 1252)로 저장. 에이전트는 배치 파일 수정 시 인코딩을 변경하지 않는다.

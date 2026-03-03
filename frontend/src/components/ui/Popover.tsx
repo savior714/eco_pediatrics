@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Popover as ArkPopover, Portal, Presence } from '@ark-ui/react';
+import { Popover as ArkPopover } from '@ark-ui/react/popover';
+import { Portal } from '@ark-ui/react/portal';
+import { Presence } from '@ark-ui/react/presence';
 import { X } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';

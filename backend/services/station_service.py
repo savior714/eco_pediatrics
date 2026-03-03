@@ -1,4 +1,4 @@
-from supabase._async.client import AsyncClient
+from supabase import AsyncClient
 from datetime import date
 from utils import execute_with_retry_async
 from typing import List, Dict

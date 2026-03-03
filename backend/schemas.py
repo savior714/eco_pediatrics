@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional
 from datetime import datetime, date
 from uuid import UUID
 from enum import Enum
@@ -52,8 +52,8 @@ class AdmissionResponse(BaseModel):
 
 class DashboardResponse(BaseModel):
     admission: AdmissionResponse
-    vitals: List[VitalSign]
-    iv_records: List[IVRecord]
-    meals: List[MealRequest]
-    exam_schedules: List[ExamSchedule]
-    document_requests: List[DocumentRequest]
+    vitals: list[VitalSign]
+    iv_records: list[IVRecord]
+    meals: list[MealRequest]
+    exam_schedules: list[ExamSchedule]
+    document_requests: list[DocumentRequest]

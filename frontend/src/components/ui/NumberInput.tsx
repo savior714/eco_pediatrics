@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { NumberInput as ArkNumberInput, Field as ArkField } from '@ark-ui/react';
+import { NumberInput as ArkNumberInput } from '@ark-ui/react/number-input';
+import { Field as ArkField } from '@ark-ui/react/field';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { ChevronUp, ChevronDown } from 'lucide-react';

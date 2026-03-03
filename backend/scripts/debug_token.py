@@ -13,7 +13,7 @@ if str(_BACKEND_DIR) not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(_BACKEND_DIR / ".env")
 
-from supabase._async.client import create_client
+from supabase import create_async_client as create_client
 from logger import logger
 
 

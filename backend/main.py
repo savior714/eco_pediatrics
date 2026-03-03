@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, WebSocketException, status
+from typing import Annotated
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
@@ -6,6 +7,8 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import os
 import traceback
+import asyncio
+import uuid
 from contextlib import asynccontextmanager
 
 from database import init_supabase
@@ -128,49 +131,45 @@ else:
     logger.info(f"Dev router disabled (ENABLE_DEV_ROUTES={ENABLE_DEV}, ENV={ENV})")
 
 # WS Token Validation
-async def verify_ws_token(token: str):
+async def get_valid_ws_token(websocket: WebSocket, token: str) -> str:
     # 1. Check for Station Auth via Env Variable
-    # Default to 'STATION' if not set, following the .env.example guidance
     station_token = os.getenv("STATION_WS_TOKEN", "STATION")
     if token == station_token:
-        return True
+        return token
         
     # 2. Check for Patient Auth (Admission Token) - Must be a valid UUID string
-    import uuid
     try:
         uuid.UUID(token)
     except ValueError:
-        # Not a UUID, and didn't match station_token, so reject early to avoid DB error 22P02
-        return False
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
-    if not hasattr(app.state, "supabase") or not app.state.supabase:
-        return False # DB not ready
+    supabase = getattr(websocket.app.state, "supabase", None)
+    if not supabase:
+        raise WebSocketException(code=status.WS_1011_INTERNAL_ERROR)
         
     try:
         # Enforce status == 'IN_PROGRESS' or 'OBSERVATION'
-        res = await app.state.supabase.table("admissions") \
+        res = await supabase.table("admissions") \
             .select("id") \
             .eq("access_token", token) \
             .in_("status", ["IN_PROGRESS", "OBSERVATION"]) \
             .execute()
             
         if res.data:
-            return True
+            return token
     except Exception as e:
         logger.error(f"WS Token Validation Error: {e}")
     
-    return False
+    raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
 WS_RECEIVE_TIMEOUT = 120  # 120초간 메시지 없으면 좀비 연결로 간주
 
 @app.websocket("/ws/{token}")
-async def websocket_endpoint(websocket: WebSocket, token: str):
-    # Validate Token
-    is_valid = await verify_ws_token(token)
-    if not is_valid:
-        logger.warning(f"Connection rejected for invalid or inactive token: {token}")
-        await websocket.close(code=4003) # Forbidden
-        return
+async def websocket_endpoint(
+    websocket: WebSocket, 
+    token: Annotated[str, Depends(get_valid_ws_token)]
+):
+    await websocket.accept()
 
     logger.info(f"WebSocket connected for token: {token}")
     await manager.connect(websocket, token)

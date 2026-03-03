@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
-from typing import Optional, List
-from supabase._async.client import AsyncClient
+from typing import Optional, List, Annotated
+from supabase import AsyncClient
 from datetime import datetime
 import json
 
@@ -18,8 +18,8 @@ router = APIRouter()
 @router.get("/dashboard/{token}", response_model=DashboardResponse)
 async def get_dashboard_data_by_token(
     token: str, 
-    db: AsyncClient = Depends(get_supabase),
-    header_token: Optional[str] = Depends(get_admission_token_optional)
+    db: Annotated[AsyncClient, Depends(get_supabase)],
+    header_token: Annotated[Optional[str], Depends(get_admission_token_optional)] = None
 ):
     """
     Fetch dashboard data using an access_token (Guardian view)
@@ -43,7 +43,7 @@ async def get_dashboard_data_by_token(
     return await fetch_dashboard_data(db, admission_id)
     
 @router.get("/station/pending-requests")
-async def get_pending_requests(db: AsyncClient = Depends(get_supabase)):
+async def get_pending_requests(db: Annotated[AsyncClient, Depends(get_supabase)]):
     """Fetch all pending notifications for the station sidebar"""
     return await fetch_pending_requests(db)
 
@@ -52,8 +52,8 @@ async def get_pending_requests(db: AsyncClient = Depends(get_supabase)):
 @router.post("/documents/requests", response_model=DocumentRequest)
 async def request_document(
     request: DocumentRequestCreate, 
-    db: AsyncClient = Depends(get_supabase),
-    token: str = Depends(verify_admission_token)
+    db: Annotated[AsyncClient, Depends(get_supabase)],
+    token: Annotated[str, Depends(verify_admission_token)]
 ):
     # Verify admission is active AND token matches (Security Boundary)
     adm_res = await execute_with_retry_async(
@@ -113,7 +113,7 @@ async def request_document(
 async def update_document_request_status(
     request_id: int,
     status: str,
-    db: AsyncClient = Depends(get_supabase)
+    db: Annotated[AsyncClient, Depends(get_supabase)]
 ):
     """Update document request status (e.g., PENDING -> COMPLETED)"""
     # 1. Update 실행 및 RLS 조용한 실패(Silent Failure) 엄격한 검증
@@ -158,7 +158,7 @@ async def update_document_request_status(
 async def update_meal_request_status(
     request_id: int,
     status: str,
-    db: AsyncClient = Depends(get_supabase)
+    db: Annotated[AsyncClient, Depends(get_supabase)]
 ):
     """Update meal request status and finalize types if COMPLETED"""
     update_payload = {"status": status}

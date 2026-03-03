@@ -27,7 +27,7 @@ def main() -> None:
             cleaned = True
         if not cleaned:
             print("[!] 초기화할 파일이 없습니다.")
-            sys.exit(0)
+        sys.exit(0)
 
     service = ErrorMonitorService()
     try:

@@ -1,6 +1,6 @@
 import asyncio
 from fastapi import HTTPException
-from supabase._async.client import AsyncClient
+from supabase import AsyncClient
 from utils import execute_with_retry_async, create_audit_log
 
 async def fetch_dashboard_data(db: AsyncClient, admission_id: str):

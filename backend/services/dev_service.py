@@ -2,7 +2,7 @@ import random
 import asyncio
 import json
 from datetime import datetime, date, timedelta, timezone
-from supabase._async.client import AsyncClient
+from supabase import AsyncClient
 from websocket_manager import manager
 from utils import execute_with_retry_async, broadcast_to_station_and_patient, normalize_rpc_result, mask_name
 from logger import logger

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
-from supabase._async.client import AsyncClient
-from typing import List
+from typing import List, Annotated
+from supabase import AsyncClient
 import json
 
 from dependencies import get_supabase
@@ -12,12 +12,12 @@ from websocket_manager import manager
 router = APIRouter()
 
 @router.get("/admissions/{admission_id}/exam-schedules", response_model=List[ExamSchedule])
-async def list_exam_schedules(admission_id: str, db: AsyncClient = Depends(get_supabase)):
+async def list_exam_schedules(admission_id: str, db: Annotated[AsyncClient, Depends(get_supabase)]):
     response = await execute_with_retry_async(db.table("exam_schedules").select("*").eq("admission_id", admission_id).order("scheduled_at"))
     return response.data or []
 
 @router.post("/exam-schedules", response_model=ExamSchedule)
-async def create_exam_schedule(schedule: ExamScheduleCreate, db: AsyncClient = Depends(get_supabase)):
+async def create_exam_schedule(schedule: ExamScheduleCreate, db: Annotated[AsyncClient, Depends(get_supabase)]):
     data = jsonable_encoder(schedule)
     response = await execute_with_retry_async(db.table("exam_schedules").insert(data))
     new_schedule = response.data[0]
@@ -46,7 +46,7 @@ async def create_exam_schedule(schedule: ExamScheduleCreate, db: AsyncClient = D
     return new_schedule
 
 @router.delete("/exam-schedules/{schedule_id}")
-async def delete_exam_schedule(schedule_id: int, db: AsyncClient = Depends(get_supabase)):
+async def delete_exam_schedule(schedule_id: int, db: Annotated[AsyncClient, Depends(get_supabase)]):
     # 1. Get schedule info before deleting (to find admission_id for broadcast)
     res = await execute_with_retry_async(db.table("exam_schedules").select("*").eq("id", schedule_id))
     

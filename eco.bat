@@ -43,8 +43,8 @@ echo [ECO] Starting Dev Mode and Closing Launcher...
 set "ROOT=%~dp0"
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 
-:: Run PowerShell in same console; script starts WT then returns, then launcher exits
-"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\launch_wt_dev.ps1" -Root "%ROOT%"
+:: [Fix] User rules에 따라 pwsh.exe 사용. 경로 공백 대응을 위해 쿼팅 유지.
+pwsh.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\launch_wt_dev.ps1" -Root "%ROOT%"
 exit
 
 :backend
@@ -111,7 +111,7 @@ echo.
 echo  Commands:
 echo    dev      Start both Backend and Frontend servers
 echo    setup    Install dependencies and setup environment
-echo    check    Run Environment Doctor & Security Audit
+echo    check    Run Environment Doctor ^& Security Audit
 echo.
 goto end
 

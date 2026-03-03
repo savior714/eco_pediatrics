@@ -77,15 +77,19 @@ export function useWebSocket({ url, enabled = true, onMessage, onOpen, onClose }
         connect();
 
         return () => {
-            if (wsRef.current) {
-                wsRef.current.onclose = null;
-                wsRef.current.close();
-            }
             if (reconnectTimeoutRef.current) {
                 clearTimeout(reconnectTimeoutRef.current);
             }
+            if (wsRef.current) {
+                wsRef.current.onopen = null;
+                wsRef.current.onmessage = null;
+                wsRef.current.onclose = null;
+                wsRef.current.onerror = null;
+                wsRef.current.close();
+                wsRef.current = null;
+            }
         };
-    }, [connect]);
+    }, [url, enabled]);
 
     return { isConnected };
 }

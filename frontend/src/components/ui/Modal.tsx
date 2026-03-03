@@ -4,7 +4,9 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Dialog, Portal, Presence } from '@ark-ui/react';
+import { Dialog } from '@ark-ui/react/dialog';
+import { Portal } from '@ark-ui/react/portal';
+import { Presence } from '@ark-ui/react/presence';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
