@@ -39,9 +39,10 @@ export function QrCodeModal({ isOpen, onClose, patientName, roomNumber, token }:
                 // 기존 창이 있는지 확인
                 const existing = await WebviewWindow.getByLabel('smartphone-preview');
                 if (existing) {
-                    await existing.show();
-                    await existing.setFocus();
-                    return;
+                    // [Refactor] 기존 창이 있으면 닫고 새로 생성하여 100% 갱신 보장
+                    await existing.close();
+                    // 레이블 해제를 위해 아주 잠시 대기
+                    await new Promise(r => setTimeout(r, 200));
                 }
 
                 const webview = new WebviewWindow('smartphone-preview', {

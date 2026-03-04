@@ -123,3 +123,22 @@
 - **MealRequestModal.tsx**: 선택 방식을 버튼 그룹으로 전면 교체하여 고밀도 UI 표준(h-12) 및 시각적 직관성 확보.
 [Status] 완료
 [Technical Note] 아웃오브포커스 이슈 방지를 위해 하위 컴포넌트 외부 추출 관리.
+
+### [2026-03-03] - Tauri 스마트폰 미리보기 데이터 미갱신 오류 수정 (Singleton Re-instance 패턴)
+[Context] 스마트폰 미리보기 창이 열린 상태에서 다른 환자의 QR 코드를 누를 경우, 창은 포커스되지만 이전 환자의 데이터가 그대로 유지되는 현상 발생.
+[Action]
+- **QrCodeModal.tsx**: 기존 `smartphone-preview` 레이블의 창이 존재할 경우, 단순 `show()` 호출 대신 `close()` 후 200ms 대기하여 창을 완전히 파괴하고 새로운 환자의 `token`을 담은 URL로 재생성하도록 로직 강화.
+- **default.json**: 윈도우 닫기(`core:window:allow-close`) 권한 추가.
+[Status] 완료
+[Technical Note] Tauri v2의 윈도우 레이블은 전역 유일해야 함. 단순 포커스가 아닌 데이터 갱신을 동반하는 경우, `eval` 권한에 의존하기보다 창을 폐기 후 재성성(Re-instantiate)하는 것이 React 상태 및 리소스 초기화 관점에서 가장 확실한 방법임.
+
+### [2026-03-04] - 병동 스테이션 대시보드 그리드 체온 누락 오류 수정 (View Filtering Issue)
+[Context] 환자 그리드에서 체온이 '-'로 표시되나 상세 모달에서는 정상 노출되는 현상 발생.
+[RootCause] `view_station_dashboard` SQL View 내부의 CTE에서 `recorded_at > (NOW() - INTERVAL '5 days')` 필터가 적용되어 있어, 오래된 기록이 있는 환자의 데이터가 누락됨.
+[Action]
+- **backend/migrations/**: `consolidated_fix_pgrst205.sql`, `optimize_architecture.sql`, `20260223_attending_physician.sql` 파일들에서 체온(5일), 수액(7일), 식사(3일)에 대한 시간 제한 필터를 모두 제거. PostgreSQL의 `CREATE OR REPLACE VIEW` 제약 사항(컬럼 순서 변경 불가)을 우회하기 위해 `DROP VIEW ... CASCADE` 구문 추가.
+- **backend/migrations/fix_dashboard_view_v2.sql**: 즉시 적용 가능한 수정용 SQL 스크립트 생성 (DROP VIEW 포함).
+- **SSOT**: 상세 뷰와 동일하게 '시간 제한 없는 최신 데이터'를 그리드에서도 보여주도록 아키텍처 정렬.
+- **IVLabelPreviewModal.tsx**: Mixed Medications 입력 시 프리셋 약물을 선택해도 드롭다운 형태가 유지되도록 로직 개선. 직접 입력(Custom) 모드 시에도 드롭다운과 유사한 스타일의 입력창을 제공하고 '목록' 버튼을 아이콘으로 교체하여 UI 일관성 확보.
+[Status] 완료
+- 현재 docs/memory.md 줄 수: 156/200

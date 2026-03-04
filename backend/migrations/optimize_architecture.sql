@@ -128,23 +128,21 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 
 -- 4. view_station_dashboard (N+1 Fetching Optimization & Order)
-CREATE OR REPLACE VIEW view_station_dashboard AS
+DROP VIEW IF EXISTS view_station_dashboard CASCADE;
+CREATE VIEW view_station_dashboard AS
 WITH latest_vitals AS (
     SELECT DISTINCT ON (admission_id) *
     FROM vital_signs
-    WHERE recorded_at > (NOW() - INTERVAL '5 days')
     ORDER BY admission_id, recorded_at DESC
 ),
 latest_iv AS (
     SELECT DISTINCT ON (admission_id) *
     FROM iv_records
-    WHERE created_at > (NOW() - INTERVAL '7 days')
     ORDER BY admission_id, created_at DESC
 ),
 latest_meal AS (
     SELECT DISTINCT ON (admission_id) *
     FROM meal_requests
-    WHERE created_at > (NOW() - INTERVAL '3 days')
     ORDER BY admission_id, created_at DESC
 )
 SELECT
@@ -155,6 +153,7 @@ SELECT
     a.dob,
     a.gender,
     a.check_in_at,
+    a.attending_physician,
     v.temperature as latest_temp,
     v.recorded_at as last_vital_at,
     CASE

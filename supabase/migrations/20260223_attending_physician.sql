@@ -5,23 +5,21 @@
 ALTER TABLE admissions ADD COLUMN IF NOT EXISTS attending_physician TEXT;
 
 -- 2. view_station_dashboard 뷰 재생성 (SELECT에 attending_physician 포함)
-CREATE OR REPLACE VIEW view_station_dashboard AS
+DROP VIEW IF EXISTS view_station_dashboard CASCADE;
+CREATE VIEW view_station_dashboard AS
 WITH latest_vitals AS (
     SELECT DISTINCT ON (admission_id) *
     FROM vital_signs
-    WHERE recorded_at > (NOW() - INTERVAL '5 days')
     ORDER BY admission_id, recorded_at DESC
 ),
 latest_iv AS (
     SELECT DISTINCT ON (admission_id) *
     FROM iv_records
-    WHERE created_at > (NOW() - INTERVAL '7 days')
     ORDER BY admission_id, created_at DESC
 ),
 latest_meal AS (
     SELECT DISTINCT ON (admission_id) *
     FROM meal_requests
-    WHERE created_at > (NOW() - INTERVAL '3 days')
     ORDER BY admission_id, created_at DESC
 )
 SELECT

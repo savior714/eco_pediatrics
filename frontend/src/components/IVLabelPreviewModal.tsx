@@ -3,7 +3,7 @@ import { Modal } from './ui/Modal';
 import { IVLabelService, IVLabelData } from '@/services/IVLabelService';
 import { Bed } from '@/types/domain';
 import { formatPatientDemographics, getKSTNowString } from '@/utils/dateUtils';
-import { Printer, Loader2, Check, Plus, Trash2, Syringe, Beaker, ShieldCheck } from 'lucide-react';
+import { Printer, Loader2, Check, Plus, Trash2, Syringe, Beaker, ShieldCheck, ChevronDown } from 'lucide-react';
 import { toaster } from './ui/Toast';
 import { Field } from './ui/Field';
 import { Select } from './ui/Select';
@@ -136,9 +136,7 @@ const MedSection = ({
                             </div>
                         ) : (
                             meds.map((med: any) => {
-                                const isPreset = presets.includes(med.name);
-                                const hasPresets = presets.length > 0;
-                                const showSelect = hasPresets && (isPreset || med.name === '' || med.name === 'SELECT_MODE' || med.name === undefined);
+                                const showSelect = mixedMedPresets.length > 0 && (mixedMedPresets.includes(med.name) || !med.name || med.name === 'SELECT_MODE' || med.name === '');
 
                                 return (
                                     <div key={med.id} className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-xl border border-slate-100 transition-all">
@@ -163,21 +161,24 @@ const MedSection = ({
                                                 </div>
                                             ) : (
                                                 <div className="flex-1 min-w-0 flex items-center gap-2">
-                                                    <input
-                                                        value={med.name === 'CUSTOM_MODE' ? '' : med.name}
-                                                        onChange={(e) => updateMed(setter, med.id, 'name', e.target.value)}
-                                                        autoFocus
-                                                        className="flex-1 min-w-0 h-11 px-4 bg-white border-2 border-teal-500/20 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-teal-500"
-                                                        placeholder="약물명 직접 입력"
-                                                    />
-                                                    {hasPresets && (
-                                                        <button
-                                                            onClick={() => updateMed(setter, med.id, 'name', 'SELECT_MODE')}
-                                                            className="flex-shrink-0 text-[10px] text-teal-600 font-black hover:underline px-2 h-11 bg-teal-50 rounded-xl whitespace-nowrap"
-                                                        >
-                                                            목록
-                                                        </button>
-                                                    )}
+                                                    <div className="relative flex-1 group">
+                                                        <input
+                                                            value={med.name === 'CUSTOM_MODE' ? '' : med.name}
+                                                            onChange={(e) => updateMed(setter, med.id, 'name', e.target.value)}
+                                                            autoFocus
+                                                            className="w-full h-11 pl-4 pr-10 bg-white border-2 border-teal-500/30 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-teal-500 shadow-sm"
+                                                            placeholder="약물명 직접 입력"
+                                                        />
+                                                        {mixedMedPresets.length > 0 && (
+                                                            <button
+                                                                onClick={() => updateMed(setter, med.id, 'name', 'SELECT_MODE')}
+                                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-300 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
+                                                                title="목록에서 선택"
+                                                            >
+                                                                <ChevronDown size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
                                             <div className="flex-shrink-0 flex items-center gap-2 bg-white px-2 py-1 h-11 rounded-xl border-2 border-slate-100">
@@ -216,14 +217,10 @@ const MedSection = ({
 
                 <div className="space-y-2">
                     {meds.map((med: any) => {
-                        const isPreset = presets.includes(med.name);
-                        const hasPresets = presets.length > 0;
-                        const showSelect = hasPresets && (isPreset || med.name === '' || med.name === 'SELECT_MODE' || med.name === undefined);
-
                         return (
                             <div key={med.id} className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-xl border border-slate-100 transition-all">
                                 <div className="flex items-center gap-2">
-                                    {showSelect ? (
+                                    {(mixedMedPresets.length > 0 && (mixedMedPresets.includes(med.name) || !med.name || med.name === 'SELECT_MODE' || med.name === '')) ? (
                                         <div className="flex-1 min-w-0">
                                             <Select
                                                 options={[
@@ -243,21 +240,24 @@ const MedSection = ({
                                         </div>
                                     ) : (
                                         <div className="flex-1 min-w-0 flex items-center gap-2">
-                                            <input
-                                                value={med.name === 'CUSTOM_MODE' ? '' : med.name}
-                                                onChange={(e) => updateMed(setter, med.id, 'name', e.target.value)}
-                                                autoFocus
-                                                className="flex-1 min-w-0 h-11 px-4 bg-white border-2 border-teal-500/20 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-teal-500"
-                                                placeholder="약물명 직접 입력"
-                                            />
-                                            {hasPresets && (
-                                                <button
-                                                    onClick={() => updateMed(setter, med.id, 'name', 'SELECT_MODE')}
-                                                    className="flex-shrink-0 text-[10px] text-teal-600 font-black hover:underline px-2 h-11 bg-teal-50 rounded-xl whitespace-nowrap"
-                                                >
-                                                    목록
-                                                </button>
-                                            )}
+                                            <div className="relative flex-1 group">
+                                                <input
+                                                    value={med.name === 'CUSTOM_MODE' ? '' : med.name}
+                                                    onChange={(e) => updateMed(setter, med.id, 'name', e.target.value)}
+                                                    autoFocus
+                                                    className="w-full h-11 pl-4 pr-10 bg-white border-2 border-teal-500/30 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-teal-500 shadow-sm"
+                                                    placeholder="약물명 직접 입력"
+                                                />
+                                                {mixedMedPresets.length > 0 && (
+                                                    <button
+                                                        onClick={() => updateMed(setter, med.id, 'name', 'SELECT_MODE')}
+                                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-300 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
+                                                        title="목록에서 선택"
+                                                    >
+                                                        <ChevronDown size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                     <div className="flex-shrink-0 flex items-center gap-2 bg-white px-2 py-1 h-11 rounded-xl border-2 border-slate-100">
