@@ -1,6 +1,6 @@
+@chcp 65001 > nul
 @echo off
-REM PC-only fast launcher: Optimized for local development. save as ANSI(CP949).
-chcp 65001 >nul
+REM PC-only fast launcher: Optimized for local development. save as UTF-8 (no BOM).
 setlocal
 title Eco-Pediatrics Backend (uv)
 
