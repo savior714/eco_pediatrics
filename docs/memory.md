@@ -142,3 +142,20 @@
 - **IVLabelPreviewModal.tsx**: Mixed Medications 입력 시 프리셋 약물을 선택해도 드롭다운 형태가 유지되도록 로직 개선. 직접 입력(Custom) 모드 시에도 드롭다운과 유사한 스타일의 입력창을 제공하고 '목록' 버튼을 아이콘으로 교체하여 UI 일관성 확보.
 [Status] 완료
 - 현재 docs/memory.md 줄 수: 156/200
+
+### [2026-03-06] - Windows Terminal launch crash fix (Option 1)
+[Context] Choosing option 1 in eco.bat caused immediate terminal closure (crash).
+[RootCause] Suspected use of '-w 0' (attach to current window) while running from a non-Windows Terminal environment (conhost), causing 'wt.exe' execution failure. Also lack of error trapping in the batch file led to silent exits.
+[Action]
+- **scripts/launch_wt_dev.ps1**: Changed '-w 0' to '-w -1' for more robust new window spawning. Added explicit check for 'wt.exe' existence. Improved error reporting with detailed catch block and 10s wait on failure.
+- **eco.bat**: Added ERRORLEVEL check and 'pause' after PowerShell execution to prevent instant window closure on error.
+[Status] Fixed (Pending Verification)
+[Technical Note] Windows Terminal's '-w 0' refers to the *current* WT window. If the parent process is a standard legacy console, this flag can cause external launch failures. '-w -1' (new window) is the architecture-safe fallback for hybrid shell environments.
+
+### [2026-03-06] - PowerShell Engine Fallback (pwsh -> powershell)
+[Context] User reported 'pwsh.exe' not recognized error. Environment lacks PowerShell 7.
+[Action]
+- **eco.bat**: Added shell detection logic to check for 'pwsh.exe' and fallback to 'powershell.exe' (PS5.1) if missing. Replaced '::' comments with 'REM' and removed Korean comments to prevent encoding/parser issues.
+- **scripts/launch_wt_dev.ps1**: Added engine detection for child panes launched via 'wt.exe'. Now dynamically uses 'pwsh.exe' or 'powershell.exe'.
+[Status] Resolved
+[Technical Note] While the architect standard prioritizes 'pwsh' (PS7), production/user environments may only have 'powershell' (PS5.1). Robust scripts must handle this fallback to ensure execution continuity.

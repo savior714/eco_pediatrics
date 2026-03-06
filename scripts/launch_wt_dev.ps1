@@ -28,18 +28,28 @@ $env:ECO_LOG_FILE = $logFile
 $beScript = Join-Path $PSScriptRoot "Start-Backend.ps1"
 $feScript = Join-Path $PSScriptRoot "Start-Frontend.ps1"
 
+# [Architect Fix] 실행 엔진 감지 (pwsh vs powershell)
+$engine = "pwsh.exe"
+if (!(Get-Command $engine -ErrorAction SilentlyContinue)) {
+    $engine = "powershell.exe"
+}
+
 # 3. Windows Terminal (wt.exe) 실행 인자 문자열 구성
-# 중요: 실행 파일(pwsh.exe)과 인자들을 절대 '전체 쿼팅'하지 않음.
-# 전용 스크립트(.ps1) 내부에서 환경 변수를 읽어 Set-Location을 직접 수행하므로 가장 안정적임.
-$argStr = "--maximized -w 0 nt --title `"Eco-Backend`" -d `"$backendDir`" pwsh.exe -NoExit -File `"$beScript`" ; " +
-          "split-pane -V --size 0.5 -d `"$frontendDir`" pwsh.exe -NoExit -File `"$feScript`""
+# 중요: 실행 파일($engine)과 인자들을 절대 '전체 쿼팅'하지 않음.
+# -w -1: 새 창에서 실행 (기존 창에 종속되지 않아 가장 안정적)
+$argStr = "--maximized -w -1 nt --title `"Eco-Backend`" -d `"$backendDir`" $engine -NoExit -File `"$beScript`" ; " +
+          "split-pane -V --size 0.5 -d `"$frontendDir`" $engine -NoExit -File `"$feScript`""
 
-Write-Host "[DEBUG] Argument String: $argStr" -ForegroundColor Gray
-
+Write-Host "[DEBUG] Using Shell Engine: $engine" -ForegroundColor Gray
 Write-Host "[DEBUG] Argument String: $argStr" -ForegroundColor Gray
 
 # 4. 프로세스 실행
 try {
+    # wt.exe 존재 여부 선제적 확인
+    if (!(Get-Command wt.exe -ErrorAction SilentlyContinue)) {
+        throw "Windows Terminal (wt.exe)을 찾을 수 없습니다. Microsoft Store에서 'Windows Terminal'을 설치하거나 설정을 확인해 주세요."
+    }
+
     Write-Host "[ECO] Starting Windows Terminal Dev Stack (pwsh)..." -ForegroundColor Cyan
     Write-Host "      Root: $Root"
     
@@ -51,9 +61,17 @@ try {
     $proc = [System.Diagnostics.Process]::Start($psi)
     
     if ($null -eq $proc) {
-        Write-Error "[CRITICAL] Windows Terminal을 시작할 수 없습니다. wt.exe가 설치되어 있는지 확인하십시오."
+        throw "Windows Terminal 시작 시도 후 프로세스 핸들을 가져오지 못했습니다."
     }
+
+    # 성공 시 약간 대기하여 팝업 여부 확인 (옵션)
+    Start-Sleep -Milliseconds 500
 } catch {
-    Write-Error "[CRITICAL] Dev Mode 실행 중 오류 발생: $($_.Exception.Message)"
-    Start-Sleep -Seconds 5
+    Write-Host ""
+    Write-Host " [CRITICAL ERROR] " -BackgroundColor DarkRed -ForegroundColor White
+    Write-Host "$($_.Exception.Message)" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "잠시 후 복구를 시도하거나 관리자에게 문의하십시오."
+    Start-Sleep -Seconds 10
+    exit 1
 }
