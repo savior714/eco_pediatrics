@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useVitals } from './useVitals';
 import { DOC_MAP } from '@/constants/mappings';
@@ -34,33 +34,40 @@ export function useDashboardStats() {
         }
     }, []);
 
-    const setViewModeAndStore = (mode: ViewMode) => {
+    const setViewModeAndStore = useCallback((mode: ViewMode) => {
         setViewMode(mode);
         try { localStorage.setItem(STORAGE_KEY, mode); } catch (_) { }
-    };
+    }, []);
 
-    const latestIv = vitalsData.ivRecords.length > 0 ? vitalsData.ivRecords[0] : null;
+    const latestIv = useMemo(() => vitalsData.ivRecords.length > 0 ? vitalsData.ivRecords[0] : null, [vitalsData.ivRecords]);
 
-    const currentMeal = vitalsData.meals.length > 0 ? vitalsData.meals[0] : null;
-    const currentMealLabel = currentMeal
-        ? (currentMeal.request_type === 'STATION_UPDATE'
-            ? (currentMeal.pediatric_meal_type || '일반식')
-            : (MEAL_LABEL_MAP[currentMeal.request_type] ?? currentMeal.request_type))
-        : null;
+    const currentMealLabel = useMemo(() => {
+        const currentMeal = vitalsData.meals.length > 0 ? vitalsData.meals[0] : null;
+        return currentMeal
+            ? (currentMeal.request_type === 'STATION_UPDATE'
+                ? (currentMeal.pediatric_meal_type || '일반식')
+                : (MEAL_LABEL_MAP[currentMeal.request_type] ?? currentMeal.request_type))
+            : null;
+    }, [vitalsData.meals]);
 
-    // Aggregated list of all doc items currently in system
-    const allDocItems = vitalsData.documentRequests
-        .filter(req => req.status !== 'CANCELED')
-        .flatMap(req => req.request_items);
+    const { requestedDocItems, currentDocLabels } = useMemo(() => {
+        const activeRequests = vitalsData.documentRequests.filter(req => req.status !== 'CANCELED');
+        const items = activeRequests.flatMap(req => req.request_items);
+        const labels = Array.from(new Set(items)).map((id: string) => DOC_MAP[id] || id);
+        return { requestedDocItems: items, currentDocLabels: labels };
+    }, [vitalsData.documentRequests]);
 
-    // List of ALL non-canceled requested items to disable them in the modal
-    const requestedDocItems = vitalsData.documentRequests
-        .filter(req => req.status !== 'CANCELED')
-        .flatMap(req => req.request_items);
+    const modalState = useMemo(() => ({
+        isMealModalOpen,
+        isDocModalOpen
+    }), [isMealModalOpen, isDocModalOpen]);
 
-    // Remove duplicates and map to labels (한글, DOC_MAP 단일 소스)
-    const currentDocLabels = Array.from(new Set(allDocItems))
-        .map((id: string) => DOC_MAP[id] || id);
+    const actions = useMemo(() => ({
+        setIsMealModalOpen,
+        setIsDocModalOpen,
+        setViewModeAndStore,
+        refetch: vitalsData.refetchDashboard
+    }), [setViewModeAndStore, vitalsData.refetchDashboard]);
 
     return {
         token,
@@ -70,15 +77,7 @@ export function useDashboardStats() {
         currentDocLabels,
         requestedDocItems,
         viewMode,
-        modalState: {
-            isMealModalOpen,
-            isDocModalOpen
-        },
-        actions: {
-            setIsMealModalOpen,
-            setIsDocModalOpen,
-            setViewModeAndStore,
-            refetch: vitalsData.refetchDashboard
-        }
+        modalState,
+        actions
     };
 }
