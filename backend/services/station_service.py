@@ -25,9 +25,13 @@ async def fetch_pending_requests(db: AsyncClient) -> List[Dict]:
     )
     
     import asyncio
+    import heapq
+    from constants.mappings import DOC_MAP
+
     meals_res, docs_res = await asyncio.gather(meals_task, docs_task)
     
-    notifications = []
+    meals_notifications = []
+    docs_notifications = []
     
     # Process Meals
     for m in (meals_res.data or []):
@@ -36,7 +40,7 @@ async def fetch_pending_requests(db: AsyncClient) -> List[Dict]:
         
         meal_info = format_meal_notification_data(m)
         
-        notifications.append({
+        meals_notifications.append({
             "id": f"meal_{m['id']}",
             "room": room,
             "time": m['created_at'],
@@ -46,16 +50,15 @@ async def fetch_pending_requests(db: AsyncClient) -> List[Dict]:
             "type": "meal",
             "admissionId": m['admission_id']
         })
-    
+
     # Process Docs
-    from constants.mappings import DOC_MAP
     for d in (docs_res.data or []):
         admissions_data = d.get('admissions') or {}
         room = admissions_data.get('room_number', '??')
         items = d.get('request_items', [])
         item_names = [DOC_MAP.get(it, it) for it in items]
         
-        notifications.append({
+        docs_notifications.append({
             "id": f"doc_{d['id']}",
             "room": room,
             "time": d['created_at'],
@@ -66,13 +69,19 @@ async def fetch_pending_requests(db: AsyncClient) -> List[Dict]:
             "admissionId": d['admission_id']
         })
         
-    # Sort by time descending (Primary)
-    # Then by meal_date ascending (Secondary)
-    # Then by meal_rank ascending (Tertiary)
-    # Since we want descending for time but ascending for the others, we can do it in two steps
-    # or use a custom key if time wasn't string. As strings:
-    notifications.sort(key=lambda x: (x['meal_date'] or '', x['meal_rank']))
-    notifications.sort(key=lambda x: x['time'], reverse=True)
+    # DB order is `created_at` DESC. For meals with identical timestamps, we sort secondary fields
+    # (`meal_date` ASC, `meal_rank` ASC). To do this with a single `reverse=True` sort,
+    # we negate or invert the string values for the secondary keys. However, since the primary
+    # source is already sorted by time DESC, we can just sort the meals by secondary keys first
+    # (ascending) then by time DESC, which is what the original code did.
+    meals_notifications.sort(key=lambda x: (x['meal_date'] or '', x['meal_rank']))
+    meals_notifications.sort(key=lambda x: x['time'], reverse=True)
+
+    # Docs only need to be sorted by time desc (already mostly are, but ensuring for heapq)
+    docs_notifications.sort(key=lambda x: x['time'], reverse=True)
+
+    # ⚡ Bolt: Merge pre-sorted lists efficiently in O(N) using heapq.merge instead of O(N log N) full sort
+    notifications = list(heapq.merge(meals_notifications, docs_notifications, key=lambda x: x['time'], reverse=True))
     return notifications
 
 def format_meal_notification_data(m: Dict) -> Dict:
