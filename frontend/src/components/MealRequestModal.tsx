@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
-
+import { MealRequest } from '@/types/domain';
 import { Utensils, CheckCircle, AlertCircle, Check } from 'lucide-react';
 import { getNextThreeMealSlots } from '@/utils/dateUtils';
 import { clsx, type ClassValue } from 'clsx';
@@ -14,7 +14,7 @@ interface MealRequestModalProps {
     isOpen: boolean;
     onClose: () => void;
     admissionId: string | null;
-    currentMeals?: any[]; // Existing meals from props
+    currentMeals?: MealRequest[];
     onSuccess?: () => void;
 }
 

@@ -12,12 +12,17 @@ let cachedTauriLog: any = null;
 
 // GET 중복 요청 시 진행 중인 Promise 공유 (가짜 {} 반환 제거, Strict Mode 이중 호출 시 시퀀스 가드 교란 방지)
 const pendingGetPromises = new Map<string, Promise<unknown>>();
+// POST/PATCH/PUT 중복 요청 방지: 동일 엔드포인트+바디로의 연속 호출을 단일 Promise로 수렴
+const pendingMutationPromises = new Map<string, Promise<unknown>>();
 const PENDING_GET_TIMEOUT_MS = 30_000;
 // stale pending 엔트리 주기적 정리 (네트워크 hang 등으로 finally 미실행 시 누수 방지)
 setInterval(() => {
     // Map 크기가 일정 이상이면 전체 비움 (정상 운영 중에는 항상 0~수개)
     if (pendingGetPromises.size > 20) {
         pendingGetPromises.clear();
+    }
+    if (pendingMutationPromises.size > 20) {
+        pendingMutationPromises.clear();
     }
 }, PENDING_GET_TIMEOUT_MS);
 
@@ -81,6 +86,13 @@ class ApiClient {
         // GET만 진행 중인 Promise 공유 (Strict Mode 이중 호출 시 가짜 {} 반환 제거, 시퀀스 가드 정상 동작)
         if (method === 'GET' && retryCount === 0 && pendingGetPromises.has(requestKey)) {
             return pendingGetPromises.get(requestKey) as Promise<T>;
+        }
+
+        // POST/PATCH/PUT 중복 요청 방지: 동일 키의 요청이 이미 진행 중이면 같은 Promise 반환
+        const isMutation = (method === 'POST' || method === 'PATCH' || method === 'PUT') && retryCount === 0;
+        const mutationKey = isMutation ? `${method}:${url}:${options?.body ?? ''}` : '';
+        if (isMutation && pendingMutationPromises.has(mutationKey)) {
+            return pendingMutationPromises.get(mutationKey) as Promise<T>;
         }
 
         const run = async (): Promise<T> => {
@@ -165,12 +177,18 @@ class ApiClient {
                 if (method === 'GET' && retryCount === 0) {
                     pendingGetPromises.delete(requestKey);
                 }
+                if (isMutation) {
+                    pendingMutationPromises.delete(mutationKey);
+                }
             }
         };
 
         const promise = execute();
         if (method === 'GET' && retryCount === 0) {
             pendingGetPromises.set(requestKey, promise);
+        }
+        if (isMutation) {
+            pendingMutationPromises.set(mutationKey, promise);
         }
         return promise;
     }
@@ -179,7 +197,7 @@ class ApiClient {
         return this.request<T>(endpoint, { ...options, method: 'GET' });
     }
 
-    post<T>(endpoint: string, body: any, options?: RequestInit): Promise<T> {
+    post<T>(endpoint: string, body: unknown, options?: RequestInit): Promise<T> {
         return this.request<T>(endpoint, {
             ...options,
             method: 'POST',
@@ -187,7 +205,7 @@ class ApiClient {
         });
     }
 
-    put<T>(endpoint: string, body: any, options?: RequestInit): Promise<T> {
+    put<T>(endpoint: string, body: unknown, options?: RequestInit): Promise<T> {
         return this.request<T>(endpoint, {
             ...options,
             method: 'PUT',
@@ -195,7 +213,7 @@ class ApiClient {
         });
     }
 
-    patch<T>(endpoint: string, body: any, options?: RequestInit): Promise<T> {
+    patch<T>(endpoint: string, body: unknown, options?: RequestInit): Promise<T> {
         return this.request<T>(endpoint, {
             ...options,
             method: 'PATCH',

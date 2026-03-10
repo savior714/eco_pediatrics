@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useWebSocket } from './useWebSocket';
 import { api, appLog } from '@/lib/api';
 import { VitalData, Bed, WsMessage, IVRecord, MealRequest, DocumentRequest, ExamScheduleItem, VitalDataResponse } from '@/types/domain';
@@ -18,7 +19,7 @@ interface UseVitalsReturn {
     isConnected: boolean;
     isRefreshing: boolean;
     refetchDashboard: () => Promise<void>;
-    fetchDashboardData: (opts?: { force?: boolean }) => Promise<void>; // force: bypass 500ms debounce
+    fetchDashboardData: (opts?: { force?: boolean }) => Promise<void>;
     addOptimisticVital: (temp: number, recordedAt: string) => { tempId: string; rollback: () => void };
     addOptimisticExam: (examData: { name: string; date: string; timeOfDay: string }) => { tempId: string; rollback: () => void };
     deleteOptimisticExam: (examId: number) => { rollback: () => void };
@@ -34,166 +35,109 @@ interface DashboardResponse {
     exam_schedules: ExamScheduleItem[];
 }
 
+/** React Query queryKey 생성 헬퍼 */
+export const dashboardQueryKey = (token: string) => ['dashboard', token] as const;
+
+function formatVitals(raw: VitalDataResponse[]): VitalData[] {
+    return raw.map(v => ({
+        time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        temperature: v.temperature,
+        has_medication: v.has_medication,
+        medication_type: v.medication_type,
+        recorded_at: v.recorded_at
+    }));
+}
+
 export function useVitals(token: string | null | undefined, enabled: boolean = true, onDischarge?: () => void): UseVitalsReturn {
-    const [vitals, setVitals] = useState<VitalData[]>([]);
-    const [checkInAt, setCheckInAt] = useState<string | null>(null);
-    const [meals, setMeals] = useState<MealRequest[]>([]);
-    const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
-    const [ivRecords, setIvRecords] = useState<IVRecord[]>([]);
-    const [examSchedules, setExamSchedules] = useState<ExamScheduleItem[]>([]);
+    const queryClient = useQueryClient();
 
-    const [admissionId, setAdmissionId] = useState<string | null>(null);
-    const [patientName, setPatientName] = useState<string | null>(null);
-    const [roomNumber, setRoomNumber] = useState<string | null>(null);
-    const [dob, setDob] = useState<string | null>(null);
-    const [gender, setGender] = useState<string | null>(null);
-
-    const [isRefreshing, setIsRefreshing] = useState(false);
-
-    const requestRef = useRef(0);
-    const isMountedRef = useRef(true);
-    // [Optimization] Prevent double-fetch on mount
-    const lastFetchRef = useRef<number>(0);
-    // 404/403 시 이후 모든 fetch 차단 (폴링/재호출로 인한 무한 404 방지)
+    // 404/403 시 이후 모든 fetch 차단
     const tokenInvalidatedRef = useRef(false);
-    // 초기 fetch는 token/enabled당 1회만 실행 (부모 리렌더 시 fetchDashboardData 참조 변경으로 인한 연쇄 호출 방지)
-    const initialFetchDoneRef = useRef(false);
-    const initialLoadDoneRef = useRef(false);
 
-    const fetchDashboardData = useCallback(async (opts?: { force?: boolean }) => {
-        if (!token) return;
-        if (tokenInvalidatedRef.current) return;
-
-        const now = Date.now();
-        if (!opts?.force && now - lastFetchRef.current < 500) return;
-        lastFetchRef.current = now;
-
-        const currentRequestId = ++requestRef.current;
-        setIsRefreshing(true);
-        appLog('info', `[DEBUG] fetchDashboardData 호출됨. force: ${opts?.force}, currentRequestId: ${currentRequestId}`);
-        // [Fix] force 시 cache-busting param으로 api.ts 100ms dedup 우회. 완료 버튼 클릭 후 리프레시가 실제 요청 수행되도록 함.
-        const cacheBust = opts?.force ? `?_t=${Date.now()}` : '';
-        try {
-            const data = await api.get<DashboardResponse>(`/api/v1/dashboard/${token}${cacheBust}`, {
-                headers: {
-                    'X-Admission-Token': token
-                }
+    // [React Query] 대시보드 서버 상태 캐시
+    const { data: dashboardData, isFetching, refetch } = useQuery({
+        queryKey: token ? dashboardQueryKey(token) : ['dashboard', '__disabled__'],
+        enabled: !!token && enabled && !tokenInvalidatedRef.current,
+        staleTime: 30_000,
+        queryFn: async () => {
+            if (!token) throw new Error('token required');
+            const data = await api.get<DashboardResponse>(`/api/v1/dashboard/${token}`, {
+                headers: { 'X-Admission-Token': token }
             });
-
-            // 1. 빈 응답 방어 (api.ts 100ms dedup 우회 실패 시)
             if (!data || Object.keys(data).length === 0) {
-                appLog('error', '[useVitals DEBUG] API로부터 빈 응답({}) 수신. 기존 상태 유지.');
-                return;
+                throw new Error('empty response');
             }
-
-            appLog('info', '[DEBUG] dashboard response document_requests:', data?.document_requests);
-
-            // 2. Force 응답 우선권 (Race condition 방어): 오래된 요청이면 force가 아닐 때만 무시
-            if (currentRequestId !== requestRef.current && !opts?.force) {
-                appLog('warn', `[useVitals DEBUG] 오래된 요청 무시됨. reqId: ${currentRequestId}, currentRef: ${requestRef.current}`);
-                return;
+            return data;
+        },
+        retry: (failureCount, error) => {
+            const msg = error instanceof Error ? error.message : String(error);
+            // 토큰 만료/권한 에러는 재시도 하지 않음
+            if (msg.includes('403') || msg.includes('404') || msg.includes('Invalid or inactive')) {
+                return false;
             }
-            if (!isMountedRef.current) return;
+            return failureCount < 1;
+        },
+    });
 
-            // 3. 상태 업데이트
-            if (data.admission) {
-                setAdmissionId(data.admission.id);
-                setPatientName(data.admission.display_name || data.admission.patient_name_masked || '환자');
-                setRoomNumber(data.admission.room_number);
-                setCheckInAt(data.admission.check_in_at);
-                setDob(data.admission.dob || null);
-                setGender(data.admission.gender || null);
-            }
+    // React Query 에러 처리 (토큰 만료 등)
+    const { error: queryError } = useQuery({
+        queryKey: token ? dashboardQueryKey(token) : ['dashboard', '__disabled__'],
+        enabled: false, // 위 useQuery와 공유, 여기선 에러만 읽음
+    });
 
-            if (data.vitals && Array.isArray(data.vitals)) {
-                const formattedVitals = data.vitals.map((v: VitalDataResponse) => ({
-                    time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    temperature: v.temperature,
-                    has_medication: v.has_medication,
-                    medication_type: v.medication_type,
-                    recorded_at: v.recorded_at
-                }));
-                setVitals(formattedVitals);
-            }
-
-            if (data.meals != null) setMeals(data.meals);
-            if (data.document_requests !== undefined) {
-                setDocumentRequests(data.document_requests || []);
-                appLog('info', '[DEBUG] setDocumentRequests 업데이트 완료');
-            }
-            if (data.iv_records != null) setIvRecords(data.iv_records);
-            if (data.exam_schedules != null) setExamSchedules(data.exam_schedules);
-            initialLoadDoneRef.current = true;
-        } catch (err: any) {
-            if (currentRequestId !== requestRef.current && !opts?.force) return;
-
-            const errorMessage = String(err?.message || '');
-
-            // 예상된 토큰 만료 에러: 로깅을 생략하고 조용히 종료하여 화면 에러/오버레이 방지
-            if (errorMessage.includes('Invalid or inactive admission token')) {
-                tokenInvalidatedRef.current = true;
-                console.warn('[useVitals] 만료된 토큰에 의한 데이터 패치 중단.');
-                if (onDischarge) {
-                    onDischarge();
-                } else {
-                    alert('이미 종료되었거나 유효하지 않은 페이지입니다. 병원으로 문의해 주세요.');
-                    if (typeof window !== 'undefined') {
-                        window.close();
-                        setTimeout(() => { window.location.href = '/403'; }, 500);
-                    }
+    // 토큰 만료 에러 처리
+    useEffect(() => {
+        if (!queryError) return;
+        const msg = queryError instanceof Error ? queryError.message : String(queryError);
+        if (msg.includes('403') || msg.includes('404') || msg.includes('Invalid or inactive')) {
+            tokenInvalidatedRef.current = true;
+            if (onDischarge) {
+                onDischarge();
+            } else {
+                alert('이미 종료되었거나 유효하지 않은 페이지입니다. 병원으로 문의해 주세요.');
+                if (typeof window !== 'undefined') {
+                    window.close();
+                    setTimeout(() => { window.location.href = '/403'; }, 500);
                 }
-                return;
-            }
-
-            if (errorMessage.includes('403') || errorMessage.includes('404')) {
-                tokenInvalidatedRef.current = true;
-                console.warn('Invalid token detected. Stopping further dashboard fetches.');
-                if (onDischarge) {
-                    onDischarge();
-                } else {
-                    alert('이미 종료되었거나 유효하지 않은 페이지입니다. 병원으로 문의해 주세요.');
-                    if (typeof window !== 'undefined') {
-                        window.close();
-                        setTimeout(() => { window.location.href = '/403'; }, 500);
-                    }
-                }
-                return;
-            }
-
-            appLog('error', '[useVitals DEBUG] fetchDashboardData 에러:', err);
-        } finally {
-            if (currentRequestId === requestRef.current && isMountedRef.current) {
-                setIsRefreshing(false);
             }
         }
-    }, [token, onDischarge]);
+    }, [queryError, onDischarge]);
 
+    // token 변경 시 ref 초기화
+    useEffect(() => {
+        tokenInvalidatedRef.current = false;
+    }, [token]);
+
+    // dashboardData에서 개별 상태 추출 (React Query 캐시가 SSOT)
+    const vitals: VitalData[] = dashboardData?.vitals ? formatVitals(dashboardData.vitals) : [];
+    const checkInAt: string | null = dashboardData?.admission?.check_in_at ?? null;
+    const meals: MealRequest[] = dashboardData?.meals ?? [];
+    const documentRequests: DocumentRequest[] = dashboardData?.document_requests ?? [];
+    const ivRecords: IVRecord[] = dashboardData?.iv_records ?? [];
+    const examSchedules: ExamScheduleItem[] = (dashboardData?.exam_schedules ?? []).sort(
+        (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+    );
+    const admissionId: string | null = dashboardData?.admission?.id ?? null;
+    const patientName: string | null = dashboardData?.admission
+        ? (dashboardData.admission.display_name || dashboardData.admission.patient_name_masked || '환자')
+        : null;
+    const roomNumber: string | null = dashboardData?.admission?.room_number ?? null;
+    const dob: string | null = dashboardData?.admission?.dob ?? null;
+    const gender: string | null = dashboardData?.admission?.gender ?? null;
+
+    // admissionId ref (WS 핸들러 내에서 클로저 없이 접근)
+    const admissionIdRef = useRef<string | null>(null);
+    useEffect(() => { admissionIdRef.current = admissionId; }, [admissionId]);
+
+    // 마운트 여부 추적 (언마운트 후 상태 업데이트 방지)
+    const isMountedRef = useRef(true);
     useEffect(() => {
         isMountedRef.current = true;
         return () => { isMountedRef.current = false; };
     }, []);
 
-    // token 변경 시 ref 초기화 + 대시보드 상태 즉시 비움 (PatientDetailModal 환자 전환 시 잔상 방지)
-    useEffect(() => {
-        tokenInvalidatedRef.current = false;
-        initialFetchDoneRef.current = false;
-        initialLoadDoneRef.current = false;
-        setVitals([]);
-        setCheckInAt(null);
-        setMeals([]);
-        setDocumentRequests([]);
-        setIvRecords([]);
-        setExamSchedules([]);
-        setAdmissionId(null);
-        setPatientName(null);
-        setRoomNumber(null);
-        setDob(null);
-        setGender(null);
-        setIsRefreshing(false);
-    }, [token]);
-
+    // debounce 타이머
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
-
     useEffect(() => {
         return () => {
             if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -201,55 +145,81 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
     }, []);
 
     const debouncedRefetch = useCallback(() => {
-        if (debounceTimer.current) {
-            clearTimeout(debounceTimer.current);
-        }
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
         debounceTimer.current = setTimeout(() => {
-            fetchDashboardData();
-        }, 300); // 300ms debounce
-    }, [fetchDashboardData]);
+            if (token && !tokenInvalidatedRef.current) {
+                void queryClient.invalidateQueries({ queryKey: dashboardQueryKey(token) });
+            }
+        }, 300);
+    }, [queryClient, token]);
 
-    const admissionIdRef = useRef<string | null>(null);
+    // force fetch: cache-busting param으로 React Query staleTime 우회
+    const fetchDashboardData = useCallback(async (opts?: { force?: boolean }) => {
+        if (!token || tokenInvalidatedRef.current) return;
+        if (opts?.force) {
+            // staleTime 무시하고 즉시 재fetch
+            await refetch();
+        } else {
+            void queryClient.invalidateQueries({ queryKey: dashboardQueryKey(token) });
+        }
+    }, [token, refetch, queryClient]);
 
-    // Update ref when state changes
-    useEffect(() => {
-        admissionIdRef.current = admissionId;
-    }, [admissionId]);
-
-    // WebSocket Implementation using shared hook
+    // WS 메시지 핸들러: setQueryData로 캐시 직접 패치 (네트워크 요청 없음)
     const handleMessage = useCallback((event: MessageEvent) => {
+        if (!token) return;
         try {
             const message = JSON.parse(event.data) as WsMessage;
+            const key = dashboardQueryKey(token);
+
             switch (message.type) {
                 case 'NEW_VITAL': {
                     const v = message.data;
-                    const formattedV = {
+                    const formattedV: VitalData = {
                         time: new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                         temperature: v.temperature,
                         has_medication: v.has_medication,
                         medication_type: v.medication_type,
                         recorded_at: v.recorded_at
                     };
-                    setVitals(prev => {
-                        // Reconciliation: Check for matching optimistic item (within 2s)
-                        const optimisticIndex = prev.findIndex(existing =>
+                    queryClient.setQueryData<DashboardResponse>(key, prev => {
+                        if (!prev) return prev;
+                        const prevVitals = formatVitals(prev.vitals ?? []);
+
+                        // Optimistic reconciliation: 2초 내 일치하는 임시 항목 교체
+                        const optimisticIndex = prevVitals.findIndex(existing =>
                             existing.isOptimistic &&
                             Math.abs(new Date(existing.recorded_at).getTime() - new Date(v.recorded_at).getTime()) < 2000
                         );
 
+                        let nextVitalsFormatted: VitalData[];
                         if (optimisticIndex !== -1) {
-                            const nextVitals = [...prev];
-                            nextVitals[optimisticIndex] = { ...formattedV, isOptimistic: false };
-                            return nextVitals;
+                            nextVitalsFormatted = [...prevVitals];
+                            nextVitalsFormatted[optimisticIndex] = { ...formattedV, isOptimistic: false };
+                        } else if (prevVitals.some(e => e.recorded_at === v.recorded_at)) {
+                            nextVitalsFormatted = prevVitals;
+                        } else {
+                            nextVitalsFormatted = [formattedV, ...prevVitals];
                         }
 
-                        if (prev.some(existing => existing.recorded_at === v.recorded_at)) return prev;
-                        return [formattedV, ...prev];
+                        // VitalData → VitalDataResponse 역변환 (캐시 타입 유지)
+                        return {
+                            ...prev,
+                            vitals: nextVitalsFormatted.map(vd => ({
+                                recorded_at: vd.recorded_at,
+                                temperature: vd.temperature,
+                                has_medication: vd.has_medication ?? false,
+                                medication_type: vd.medication_type,
+                                isOptimistic: vd.isOptimistic,
+                                tempId: vd.tempId,
+                            } as VitalDataResponse))
+                        };
                     });
                     break;
                 }
                 case 'NEW_IV':
-                    setIvRecords(prev => [message.data as any, ...prev]);
+                    queryClient.setQueryData<DashboardResponse>(key, prev =>
+                        prev ? { ...prev, iv_records: [message.data as IVRecord, ...(prev.iv_records ?? [])] } : prev
+                    );
                     break;
                 case 'IV_PHOTO_UPLOADED':
                     debouncedRefetch();
@@ -259,29 +229,32 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     debouncedRefetch();
                     break;
                 case 'NEW_EXAM_SCHEDULE': {
-                    const newExam = message.data;
-                    setExamSchedules(prev => {
-                        // Reconciliation: Match by name and date
-                        const optimisticIndex = prev.findIndex(ex =>
+                    const newExam = message.data as ExamScheduleItem;
+                    queryClient.setQueryData<DashboardResponse>(key, prev => {
+                        if (!prev) return prev;
+                        const prevExams = prev.exam_schedules ?? [];
+                        const optimisticIndex = prevExams.findIndex(ex =>
                             ex.isOptimistic &&
                             ex.name === newExam.name &&
                             ex.scheduled_at.split('T')[0] === newExam.scheduled_at.split('T')[0]
                         );
-
+                        let next: ExamScheduleItem[];
                         if (optimisticIndex !== -1) {
-                            const next = [...prev];
+                            next = [...prevExams];
                             next[optimisticIndex] = { ...newExam, isOptimistic: false };
-                            return next.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+                        } else {
+                            next = [...prevExams, newExam];
                         }
-
-                        return [...prev, newExam].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+                        return { ...prev, exam_schedules: next.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()) };
                     });
                     break;
                 }
                 case 'DELETE_EXAM_SCHEDULE':
-                    setExamSchedules(prev => prev.filter(ex => ex.id !== (message.data as any).id));
-                    // debouncedRefetch 제거: optimistic 삭제로 로컬 상태 이미 동기화됨
-                    // refetch 시 DB 반영 전 데이터가 로드되어 삭제 항목이 복원되는 버그 방지
+                    queryClient.setQueryData<DashboardResponse>(key, prev =>
+                        prev
+                            ? { ...prev, exam_schedules: (prev.exam_schedules ?? []).filter(ex => ex.id !== (message.data as unknown as ExamScheduleItem).id) }
+                            : prev
+                    );
                     break;
                 case 'ADMISSION_TRANSFERRED':
                     debouncedRefetch();
@@ -290,34 +263,36 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
                     if (onDischarge) {
                         onDischarge();
                     } else {
-                        // 기본 동작: 퇴원 안내 후 안전하게 페이지 이탈
                         alert('환자가 퇴원 처리되었습니다.');
                         if (typeof window !== 'undefined') {
                             window.close();
-                            // window.close()가 작동하지 않을 경우(일반 브라우저 탭 등)에만 403 페이지로 이동
-                            setTimeout(() => {
-                                window.location.href = '/403';
-                            }, 500);
+                            setTimeout(() => { window.location.href = '/403'; }, 500);
                         }
                     }
                     break;
                 case 'NEW_MEAL_REQUEST':
                     if (admissionIdRef.current && message.data.admission_id === admissionIdRef.current) {
-                        const data = { ...(message.data as any), isOptimistic: false };
-                        setMeals(prev => {
-                            const idx = prev.findIndex(m => m.id === data.id);
-                            if (idx !== -1) return prev.map(m => m.id === data.id ? data : m);
-                            return [...prev, data];
+                        const data = { ...(message.data as unknown as MealRequest), isOptimistic: false };
+                        queryClient.setQueryData<DashboardResponse>(key, prev => {
+                            if (!prev) return prev;
+                            const idx = (prev.meals ?? []).findIndex(m => m.id === data.id);
+                            const nextMeals = idx !== -1
+                                ? prev.meals.map(m => m.id === data.id ? data : m)
+                                : [...(prev.meals ?? []), data];
+                            return { ...prev, meals: nextMeals };
                         });
                     }
                     break;
                 case 'MEAL_UPDATED':
-                    if (admissionIdRef.current && (message.data as any).admission_id === admissionIdRef.current) {
-                        const data = { ...(message.data as any), isOptimistic: false };
-                        setMeals(prev => {
-                            const idx = prev.findIndex(m => m.id === data.id);
-                            if (idx !== -1) return prev.map(m => m.id === data.id ? data : m);
-                            return [...prev, data];
+                    if (admissionIdRef.current && (message.data as unknown as MealRequest).admission_id === admissionIdRef.current) {
+                        const data = { ...(message.data as unknown as MealRequest), isOptimistic: false };
+                        queryClient.setQueryData<DashboardResponse>(key, prev => {
+                            if (!prev) return prev;
+                            const idx = (prev.meals ?? []).findIndex(m => m.id === data.id);
+                            const nextMeals = idx !== -1
+                                ? prev.meals.map(m => m.id === data.id ? data : m)
+                                : [...(prev.meals ?? []), data];
+                            return { ...prev, meals: nextMeals };
                         });
                     }
                     break;
@@ -328,95 +303,138 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
         } catch (e) {
             console.error('WS Parse Error', e);
         }
-    }, [debouncedRefetch, setVitals, setIvRecords, setDocumentRequests, setExamSchedules]);
+    }, [queryClient, token, debouncedRefetch, onDischarge]);
+
+    const initialLoadDoneRef = useRef(false);
+    useEffect(() => {
+        if (dashboardData) initialLoadDoneRef.current = true;
+    }, [dashboardData]);
 
     const { isConnected } = useWebSocket({
         url: token ? `${api.getBaseUrl().replace(/^http/, 'ws')}/ws/${token}` : '',
         enabled: !!token && enabled,
         onOpen: () => {
-            if (initialLoadDoneRef.current) fetchDashboardData();
+            // WS 재연결 후 최신 데이터 동기화 (초기 로드 이후에만)
+            if (initialLoadDoneRef.current && token) {
+                void queryClient.invalidateQueries({ queryKey: dashboardQueryKey(token) });
+            }
         },
         onMessage: handleMessage
     });
 
-    // Initial Fetch (Source of Truth) — token/enabled당 1회만 실행. fetchDashboardData 의존성 제외로 부모 리렌더 시 연쇄 GET 방지.
-    useEffect(() => {
-        if (!token || !enabled) {
-            initialFetchDoneRef.current = false;
-            return;
-        }
-        if (initialFetchDoneRef.current) return;
-        initialFetchDoneRef.current = true;
-        fetchDashboardData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchDashboardData 제외 시 부모 리렌더로 인한 7연속 GET 방지
-    }, [token, enabled]);
+    // --- Optimistic Update 헬퍼 (queryClient.setQueryData 기반) ---
 
     const addOptimisticVital = useCallback((temp: number, recordedAt: string) => {
+        if (!token) return { tempId: '', rollback: () => {} };
         const tempId = `temp-vital-${Date.now()}`;
-        const newVital: VitalData = {
-            tempId,
-            temperature: temp,
+        const key = dashboardQueryKey(token);
+        const optimisticVital: VitalDataResponse = {
             recorded_at: recordedAt,
-            time: new Date(recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            temperature: temp,
             has_medication: false,
-            isOptimistic: true
+            medication_type: undefined,
+            isOptimistic: true,
+            tempId,
         };
-        setVitals(prev => [newVital, ...prev]);
-        return { tempId, rollback: () => setVitals(prev => prev.filter(v => v.tempId !== tempId)) };
-    }, []);
+        queryClient.setQueryData<DashboardResponse>(key, prev =>
+            prev ? { ...prev, vitals: [optimisticVital, ...(prev.vitals ?? [])] } : prev
+        );
+        return {
+            tempId,
+            rollback: () => {
+                queryClient.setQueryData<DashboardResponse>(key, prev =>
+                    prev ? { ...prev, vitals: (prev.vitals ?? []).filter(v => v.tempId !== tempId) } : prev
+                );
+            }
+        };
+    }, [queryClient, token]);
 
     const addOptimisticExam = useCallback((examData: { name: string; date: string; timeOfDay: string }) => {
+        if (!token) return { tempId: '', rollback: () => {} };
         const tempId = `temp-exam-${Date.now()}`;
+        const key = dashboardQueryKey(token);
         const newExam: ExamScheduleItem = {
-            id: -1, // Temporary id
+            id: -1,
             tempId,
             admission_id: admissionIdRef.current || '',
             name: examData.name,
             scheduled_at: `${examData.date}T${examData.timeOfDay === 'am' ? '09:00:00' : '14:00:00'}`,
             isOptimistic: true
         };
-
-        setExamSchedules(prev => [...prev, newExam].sort((a, b) =>
-            new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
-        ));
-
-        return { tempId, rollback: () => setExamSchedules(prev => prev.filter(ex => ex.tempId !== tempId)) };
-    }, []);
+        queryClient.setQueryData<DashboardResponse>(key, prev =>
+            prev
+                ? {
+                    ...prev,
+                    exam_schedules: [...(prev.exam_schedules ?? []), newExam].sort(
+                        (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+                    )
+                }
+                : prev
+        );
+        return {
+            tempId,
+            rollback: () => {
+                queryClient.setQueryData<DashboardResponse>(key, prev =>
+                    prev ? { ...prev, exam_schedules: (prev.exam_schedules ?? []).filter(ex => ex.tempId !== tempId) } : prev
+                );
+            }
+        };
+    }, [queryClient, token]);
 
     const deleteOptimisticExam = useCallback((examId: number) => {
+        if (!token) return { rollback: () => {} };
+        const key = dashboardQueryKey(token);
         let deletedItem: ExamScheduleItem | undefined;
-        setExamSchedules(prev => {
-            deletedItem = prev.find(ex => ex.id === examId);
-            return prev.filter(ex => ex.id !== examId);
+        queryClient.setQueryData<DashboardResponse>(key, prev => {
+            if (!prev) return prev;
+            deletedItem = prev.exam_schedules?.find(ex => ex.id === examId);
+            return { ...prev, exam_schedules: (prev.exam_schedules ?? []).filter(ex => ex.id !== examId) };
         });
         return {
             rollback: () => {
                 if (deletedItem) {
-                    setExamSchedules(prev => [...prev, deletedItem!].sort((a, b) =>
-                        new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
-                    ));
+                    queryClient.setQueryData<DashboardResponse>(key, prev =>
+                        prev
+                            ? {
+                                ...prev,
+                                exam_schedules: [...(prev.exam_schedules ?? []), deletedItem!].sort(
+                                    (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+                                )
+                            }
+                            : prev
+                    );
                 }
             }
         };
-    }, []);
+    }, [queryClient, token]);
 
     const updateOptimisticMeal = useCallback((mealId: number, pediatric: string, guardian: string) => {
+        if (!token) return { rollback: () => {} };
+        const key = dashboardQueryKey(token);
         let originalMeal: MealRequest | undefined;
-        setMeals(prev => prev.map(m => {
-            if (m.id === mealId) {
-                originalMeal = { ...m };
-                return { ...m, pediatric_meal_type: pediatric, guardian_meal_type: guardian, isOptimistic: true };
-            }
-            return m;
-        }));
+        queryClient.setQueryData<DashboardResponse>(key, prev => {
+            if (!prev) return prev;
+            const nextMeals = prev.meals?.map(m => {
+                if (m.id === mealId) {
+                    originalMeal = { ...m };
+                    return { ...m, pediatric_meal_type: pediatric, guardian_meal_type: guardian, isOptimistic: true };
+                }
+                return m;
+            }) ?? [];
+            return { ...prev, meals: nextMeals };
+        });
         return {
             rollback: () => {
                 if (originalMeal) {
-                    setMeals(prev => prev.map(m => m.id === mealId ? originalMeal! : m));
+                    queryClient.setQueryData<DashboardResponse>(key, prev =>
+                        prev
+                            ? { ...prev, meals: prev.meals?.map(m => m.id === mealId ? originalMeal! : m) ?? [] }
+                            : prev
+                    );
                 }
             }
         };
-    }, []);
+    }, [queryClient, token]);
 
     return {
         vitals,
@@ -431,9 +449,9 @@ export function useVitals(token: string | null | undefined, enabled: boolean = t
         dob,
         gender,
         isConnected,
-        isRefreshing,
+        isRefreshing: isFetching,
         refetchDashboard: fetchDashboardData,
-        fetchDashboardData, // Alias
+        fetchDashboardData,
         addOptimisticVital,
         addOptimisticExam,
         deleteOptimisticExam,

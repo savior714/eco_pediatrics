@@ -20,18 +20,6 @@ def print_status(check_name, status, message=""):
     symbol = "[OK]" if status else "[FAIL]"
     print(f"{symbol:<6} {check_name:<30} {message}")
 
-def check_uv():
-    uv_path = shutil.which(REQUIRED_UV_CMD)
-    if uv_path:
-        try:
-            output = subprocess.check_output([REQUIRED_UV_CMD, "--version"], text=True).strip()
-            print_status("UV Package Manager", True, output)
-            return True
-        except subprocess.CalledProcessError:
-            pass
-    print_status("UV Package Manager", False, "uv not found. Install from https://github.com/astral-sh/uv")
-    return False
-
 def check_python():
     current_ver = sys.version_info[:2]
     is_valid = current_ver == REQUIRED_PYTHON_VERSION
@@ -107,11 +95,23 @@ def check_msvc():
 
 def check_cargo():
     """Rust/cargo required for Tauri desktop app (npm run tauri dev)."""
+    # shutil.which uses the inherited PATH; on Windows the user PATH may be missing.
+    # Fall back to the default rustup install location explicitly.
     cargo_path = shutil.which(REQUIRED_CARGO_CMD)
+    if not cargo_path:
+        userprofile = Path(os.environ.get("USERPROFILE", ""))
+        fallbacks = [
+            userprofile / ".cargo" / "bin" / "cargo.exe",
+            userprofile / ".rustup" / "toolchains" / "stable-x86_64-pc-windows-msvc" / "bin" / "cargo.exe",
+        ]
+        for fb in fallbacks:
+            if fb.exists():
+                cargo_path = str(fb)
+                break
     if cargo_path:
         try:
             output = subprocess.check_output(
-                [REQUIRED_CARGO_CMD, "--version"], text=True
+                [cargo_path, "--version"], text=True
             ).strip()
             print_status("Rust (cargo)", True, output)
             return True
@@ -169,7 +169,6 @@ def main():
         check_python(),
         check_node(),
         check_git(),
-        check_uv(),
         check_msvc(),
         check_cargo(),
         check_project_structure(),

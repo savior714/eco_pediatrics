@@ -12,6 +12,7 @@ import { getNextThreeMealSlots, formatPatientDemographics, formatKSTDate, format
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { NoticeItem } from '@/components/dashboard/NoticeItem';
 import { ExamScheduleItem } from '@/components/dashboard/ExamScheduleItem';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 function DashboardContent() {
     const {
@@ -256,8 +257,10 @@ function DashboardContent() {
 
 export default function Dashboard() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center">Loading...</div>}>
-            <DashboardContent />
-        </Suspense>
+        <ErrorBoundary context="Dashboard">
+            <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center">Loading...</div>}>
+                <DashboardContent />
+            </Suspense>
+        </ErrorBoundary>
     );
 }

@@ -39,7 +39,7 @@ export interface VitalData extends OptimisticStatus {
     recorded_at: string;
 }
 
-export interface VitalDataResponse {
+export interface VitalDataResponse extends OptimisticStatus {
     recorded_at: string;
     temperature: number;
     has_medication: boolean;
@@ -81,7 +81,7 @@ export type WsMessageType = 'NEW_MEAL_REQUEST' | 'NEW_DOC_REQUEST' | 'DOC_REQUES
 export type WsMessage =
     | { type: 'NEW_MEAL_REQUEST'; data: { id: number; room: string; request_type: string; admission_id: string; meal_date: string; meal_time: string; pediatric_meal_type?: string; guardian_meal_type?: string; requested_pediatric_meal_type?: string; requested_guardian_meal_type?: string; content?: string } }
     | { type: 'NEW_DOC_REQUEST'; data: { id: number; admission_id: string; room: string; request_items: string[]; created_at?: string; content?: string } }
-    | { type: 'DOC_REQUEST_UPDATED'; data: { id: number; status: string; room?: string } }
+    | { type: 'DOC_REQUEST_UPDATED'; data: { id: number; status: DocumentStatus; room?: string } }
     | { type: 'IV_PHOTO_UPLOADED'; data: { admission_id: string; room_number: string; photo_url: string } }
     | { type: 'NEW_IV'; data: { id: number; infusion_rate: number; room: string | null; admission_id: string; photo_url?: string; created_at?: string } }
     | { type: 'NEW_VITAL'; data: { id: number; admission_id: string; temperature: number; has_medication: boolean; medication_type?: string; recorded_at: string; room?: string } }
@@ -100,18 +100,23 @@ export interface IVRecord {
     created_at: string;
 }
 
+export type MealRequestType = 'STATION_UPDATE' | 'GENERAL' | 'SOFT';
+export type MealStatus = 'PENDING' | 'FULFILLED';
+export type DocumentStatus = 'PENDING' | 'FULFILLED' | 'CANCELED';
+export type MealTime = 'BREAKFAST' | 'LUNCH' | 'DINNER';
+
 export interface MealRequest extends OptimisticStatus {
     id?: number;
     admission_id: string;
-    request_type: string;
+    request_type: MealRequestType;
     pediatric_meal_type?: string;
     guardian_meal_type?: string;
     requested_pediatric_meal_type?: string;
     requested_guardian_meal_type?: string;
     room_note?: string;
     meal_date: string;
-    meal_time: string;
-    status: string;
+    meal_time: MealTime;
+    status: MealStatus;
     created_at?: string;
 }
 
@@ -119,6 +124,6 @@ export interface DocumentRequest {
     id: number;
     admission_id: string;
     request_items: string[];
-    status: string;
+    status: DocumentStatus;
     created_at: string;
 }

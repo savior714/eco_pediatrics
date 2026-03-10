@@ -12,4 +12,15 @@ Set-Location -Path $targetDir
 Write-Host "[ECO] Frontend running in: $((Get-Location).Path)" -ForegroundColor Green
 Write-Host "[ECO] Logging to: $logPath" -ForegroundColor Gray
 
+# wt.exe는 독립 프로세스로 열려 사용자 PATH가 누락됨 - cargo/rustup 경로 명시 주입
+$userPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
+if ($userPath -and $env:PATH -notlike "*$userPath*") {
+    $env:PATH = $userPath + ";" + $env:PATH
+}
+# rustup 기본 경로 폴백
+$cargoBin = "$env:USERPROFILE\.cargo\bin"
+if ((Test-Path $cargoBin) -and $env:PATH -notlike "*\.cargo\bin*") {
+    $env:PATH = $cargoBin + ";" + $env:PATH
+}
+
 npm run tauri dev 2>&1 | Tee-Object -FilePath $logPath

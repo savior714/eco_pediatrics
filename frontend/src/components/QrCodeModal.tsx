@@ -34,30 +34,23 @@ export function QrCodeModal({ isOpen, onClose, patientName, roomNumber, token }:
 
         if (isTauri) {
             try {
+                const { WindowManager } = await import('@/utils/tauriWindowManager');
                 const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
 
-                // 기존 창이 있는지 확인
                 const existing = await WebviewWindow.getByLabel('smartphone-preview');
                 if (existing) {
-                    // [Refactor] 기존 창이 있으면 닫고 새로 생성하여 100% 갱신 보장
-                    await existing.close();
-                    // 레이블 해제를 위해 아주 잠시 대기
-                    await new Promise(r => setTimeout(r, 200));
+                    // 창이 이미 존재: IPC 이벤트로 데이터만 갱신 (창 재생성 없음)
+                    await WindowManager.sendEvent('update-preview-patient', { token });
+                    await WindowManager.focusWindow('smartphone-preview');
+                } else {
+                    // 최초 생성
+                    await WindowManager.getOrCreate('smartphone-preview', dashboardUrl, {
+                        title: `스마트폰 미리보기 - ${patientName}`,
+                        width: 375,
+                        height: 812,
+                        resizable: true,
+                    });
                 }
-
-                const webview = new WebviewWindow('smartphone-preview', {
-                    url: dashboardUrl,
-                    title: `스마트폰 미리보기 - ${patientName}`,
-                    width: 375,
-                    height: 812,
-                    resizable: true,
-                });
-
-                webview.once('tauri://error', (e) => {
-                    console.error('Tauri window error:', JSON.stringify(e));
-                    // 에러 발생 시 브라우저 팝업으로 폴백
-                    window.open(dashboardUrl, 'SmartphonePreview', 'width=375,height=812');
-                });
                 return;
             } catch (err) {
                 console.error('Failed to load Tauri API:', err);

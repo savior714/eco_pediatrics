@@ -3,12 +3,17 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 const isDev = process.env.NODE_ENV === 'development';
 
 const log = (msg: string) => {
-    if (isDev) (window.console as any)['lo' + 'g'](`[WS] ${msg}`);
+    if (isDev) (window.console as Console)['log'](`[WS] ${msg}`);
 };
 
 const logWarn = (msg: string) => {
-    if (isDev) (window.console as any)['wa' + 'rn'](`[WS] ${msg}`);
+    if (isDev) (window.console as Console)['warn'](`[WS] ${msg}`);
 };
+
+// Exponential Backoff 딜레이 배열 (ms): 1s → 2s → 4s → 8s → 16s → 30s (최대)
+const BACKOFF_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000] as const;
+
+export type WsConnectionStatus = 'CONNECTING' | 'OPEN' | 'CLOSED';
 
 interface UseWebSocketOptions {
     url: string;
@@ -18,18 +23,22 @@ interface UseWebSocketOptions {
     onClose?: () => void;
 }
 
-export function useWebSocket({ url, enabled = true, onMessage, onOpen, onClose }: UseWebSocketOptions) {
+interface UseWebSocketReturn {
+    isConnected: boolean;
+    connectionStatus: WsConnectionStatus;
+}
+
+export function useWebSocket({ url, enabled = true, onMessage, onOpen, onClose }: UseWebSocketOptions): UseWebSocketReturn {
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
-    const retryDelay = useRef(1000);
-    const [isConnected, setIsConnected] = useState(false);
+    const attemptRef = useRef(0);
+    const [connectionStatus, setConnectionStatus] = useState<WsConnectionStatus>('CLOSED');
 
     // Stable refs: 콜백 참조가 변경되어도 WS 재연결이 발생하지 않도록 ref로 감쌈
     const onMessageRef = useRef(onMessage);
     const onOpenRef = useRef(onOpen);
     const onCloseRef = useRef(onClose);
 
-    // 매 렌더마다 최신 콜백으로 ref 업데이트 (WS 재연결 없이)
     useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
     useEffect(() => { onOpenRef.current = onOpen; }, [onOpen]);
     useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
@@ -37,40 +46,51 @@ export function useWebSocket({ url, enabled = true, onMessage, onOpen, onClose }
     const connect = useCallback(() => {
         if (!enabled || !url) return;
 
+        // 기존 연결 정리
         if (wsRef.current) {
+            wsRef.current.onopen = null;
+            wsRef.current.onmessage = null;
+            wsRef.current.onclose = null;
+            wsRef.current.onerror = null;
             wsRef.current.close();
         }
 
+        setConnectionStatus('CONNECTING');
         const ws = new WebSocket(url);
         wsRef.current = ws;
 
         ws.onopen = () => {
             log(`Connected to WS: ${url}`);
-            setIsConnected(true);
-            retryDelay.current = 1000;
+            setConnectionStatus('OPEN');
+            attemptRef.current = 0; // 성공 시 재시도 카운터 리셋
             onOpenRef.current?.();
         };
 
         ws.onclose = (event: CloseEvent) => {
             log(`Disconnected from WS: ${url} (Code: ${event.code})`);
-            setIsConnected(false);
+            setConnectionStatus('CLOSED');
             onCloseRef.current?.();
 
+            // 정상 종료 코드 → 재연결 하지 않음
             if (event.code === 4003 || event.code === 1000) {
-                logWarn("WebSocket connection terminated by policy. Stopping reconnection.");
+                logWarn('WebSocket connection terminated by policy. Stopping reconnection.');
                 return;
             }
 
-            const delay = retryDelay.current;
+            // Exponential Backoff 재연결
+            const delay = BACKOFF_DELAYS[Math.min(attemptRef.current, BACKOFF_DELAYS.length - 1)];
+            attemptRef.current++;
+            log(`Reconnecting in ${delay}ms (attempt #${attemptRef.current})...`);
             reconnectTimeoutRef.current = setTimeout(() => {
                 connect();
             }, delay);
-            retryDelay.current = Math.min(delay * 1.5, 30000);
         };
 
         ws.onmessage = (event) => onMessageRef.current(event);
-
-        // url과 enabled만 의존성으로 설정 → 콜백 변경 시 WS 재연결 방지
+        ws.onerror = () => {
+            // onerror는 항상 onclose 직전에 발생하므로 여기서 별도 처리 불필요
+            log(`WS error on: ${url}`);
+        };
     }, [url, enabled]);
 
     useEffect(() => {
@@ -91,5 +111,28 @@ export function useWebSocket({ url, enabled = true, onMessage, onOpen, onClose }
         };
     }, [url, enabled]);
 
-    return { isConnected };
+    // Page Visibility Change: 포그라운드 복귀 시 CLOSED 상태면 재연결
+    useEffect(() => {
+        if (!enabled || !url) return;
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                const wsState = wsRef.current?.readyState;
+                if (wsState === WebSocket.CLOSED || wsState === WebSocket.CLOSING || wsRef.current === null) {
+                    log('Page became visible, reconnecting WebSocket...');
+                    if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+                    attemptRef.current = 0; // 포그라운드 복귀 시 즉시 재연결 (backoff 리셋)
+                    connect();
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [url, enabled, connect]);
+
+    return {
+        isConnected: connectionStatus === 'OPEN',
+        connectionStatus,
+    };
 }

@@ -34,6 +34,14 @@ interface VitalData {
     isOptimistic?: boolean;
 }
 
+interface ChartDotProps {
+    cx: number;
+    cy: number;
+    payload: VitalData & { hospitalDay?: number; timestamp?: number };
+    index: number;
+    yAxis?: { scale?: (val: number) => number };
+}
+
 interface TemperatureGraphProps {
     data: VitalData[];
     checkInAt?: string | null;
@@ -131,7 +139,7 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
     const gradientOffset = useMemo(() => {
         if (chartData.length === 0) return 0;
 
-        const temps = chartData.map((d: any) => d.temperature);
+        const temps = chartData.map((d) => d.temperature);
         const dataMax = Math.max(...temps);
         const dataMin = Math.min(...temps);
 
@@ -245,7 +253,7 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
                                 dataKey="temperature"
                                 stroke={`url(#${gradientId})`}
                                 strokeWidth={3}
-                                dot={(props: any) => {
+                                dot={(props: ChartDotProps) => {
                                     const { cx, cy, payload } = props;
                                     const isFever = payload.temperature >= 38.0;
                                     return (
@@ -262,8 +270,8 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
                                         />
                                     );
                                 }}
-                                activeDot={(props: any) => {
-                                    const { cx, cy, payload } = props;
+                                activeDot={(props: unknown) => {
+                                    const { cx, cy, payload } = props as ChartDotProps;
                                     const isFever = payload.temperature >= 38.0;
                                     return (
                                         <circle
@@ -283,10 +291,10 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
                             {/* Medication Labels */}
                             <Line
                                 data={chartData}
-                                dataKey={(d: any) => d.has_medication ? 40.7 : null}
+                                dataKey={(d: VitalData) => d.has_medication ? 40.7 : null}
                                 stroke="none"
                                 isAnimationActive={false}
-                                dot={(props: any) => {
+                                dot={(props: ChartDotProps) => {
                                     const { cx, cy, payload, index } = props;
                                     if (!payload.has_medication) return <path key={`med-empty-${index}`} d="" />;
 

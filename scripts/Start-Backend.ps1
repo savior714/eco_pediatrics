@@ -6,4 +6,11 @@ $targetDir = Join-Path $projectRoot "backend"
 
 Set-Location -Path $targetDir
 Write-Host "[ECO] Backend running in: $((Get-Location).Path)" -ForegroundColor Green
+
+# wt.exe는 독립 프로세스로 열려 사용자 PATH가 누락됨 - 사용자 PATH 명시 주입
+$userPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
+if ($userPath -and $env:PATH -notlike "*$userPath*") {
+    $env:PATH = $userPath + ";" + $env:PATH
+}
+
 uv run uvicorn main:app --reload --port 8000

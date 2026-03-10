@@ -29,7 +29,7 @@ const addMed = (setter: React.Dispatch<React.SetStateAction<MixedMed[]>>, name: 
     setter(prev => [...prev, { id: crypto.randomUUID(), name, amount: 1, unit }]);
 };
 
-const updateMed = (setter: React.Dispatch<React.SetStateAction<MixedMed[]>>, id: string, field: keyof MixedMed, val: any) => {
+const updateMed = (setter: React.Dispatch<React.SetStateAction<MixedMed[]>>, id: string, field: keyof MixedMed, val: MixedMed[keyof MixedMed]) => {
     setter(prev => prev.map(m => m.id === id ? { ...m, [field]: val } : m));
 };
 
@@ -42,7 +42,7 @@ const formatMeds = (meds: MixedMed[]) => meds.map(m => `${m.name} ${m.amount}${m
 // --- Sub-components (Defined Outside to prevent losing focus) ---
 interface MedSectionProps {
     title: string;
-    icon: any;
+    icon: React.ComponentType<{ size?: number | string; className?: string }>;
     meds: MixedMed[];
     setter: React.Dispatch<React.SetStateAction<MixedMed[]>>;
     color: string;
@@ -135,7 +135,7 @@ const MedSection = ({
                                 <p className="text-[10px] font-bold text-slate-400 italic">No meds mixed yet</p>
                             </div>
                         ) : (
-                            meds.map((med: any) => {
+                            meds.map((med) => {
                                 const showSelect = mixedMedPresets.length > 0 && (mixedMedPresets.includes(med.name) || !med.name || med.name === 'SELECT_MODE' || med.name === '');
 
                                 return (
@@ -216,7 +216,7 @@ const MedSection = ({
                 </div>
 
                 <div className="space-y-2">
-                    {meds.map((med: any) => {
+                    {meds.map((med) => {
                         return (
                             <div key={med.id} className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-xl border border-slate-100 transition-all">
                                 <div className="flex items-center gap-2">
@@ -332,7 +332,7 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
     const ageGender = formatPatientDemographics(bed.dob, bed.gender);
     const printDate = getKSTNowString().split(' ')[0];
 
-    const handleLabChange = (id: string, field: 'checked' | 'value', val: any) => {
+    const handleLabChange = (id: string, field: 'checked' | 'value', val: boolean | string) => {
         setLabResults(prev => ({
             ...prev,
             [id]: { ...prev[id], [field]: val }

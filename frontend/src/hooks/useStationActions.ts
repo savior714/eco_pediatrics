@@ -1,21 +1,18 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Bed, Notification } from '@/types/domain';
 import { api } from '@/lib/api';
+import { toaster } from '@/components/ui/Toast';
 import { useStation } from './useStation';
+import { useStationContext } from '@/contexts/StationContext';
 
 export function useStationActions() {
     const stationData = useStation();
     const { beds, setBeds, notifications, removeNotification, fetchAdmissions } = stationData;
 
-    const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
-    const [qrBed, setQrBed] = useState<Bed | null>(null);
-    const [admitRoom, setAdmitRoom] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'patients' | 'meals'>('patients');
+    // selectedRoom / qrBed / admitRoom → StationContext에서 관리
+    const { selectedRoom, setSelectedRoom, selectedBed, qrBed, setQrBed, admitRoom, setAdmitRoom } = useStationContext();
 
-    const selectedBed = useMemo(() => {
-        if (!selectedRoom) return null;
-        return beds.find(b => String(b.room) === selectedRoom) || null;
-    }, [beds, selectedRoom]);
+    const [activeTab, setActiveTab] = useState<'patients' | 'meals'>('patients');
 
     const handleAdmit = useCallback(async (name: string, birthday: string, gender: string, attendingPhysician: string) => {
         if (!admitRoom) return;
@@ -29,9 +26,8 @@ export function useStationActions() {
             const birthDate = new Date(formattedBirthday);
             const today = new Date();
 
-            // Defensive Check: Future date validation
             if (birthDate > today) {
-                alert('생년월일은 오늘 이후 날짜일 수 없습니다.');
+                toaster.create({ type: 'error', title: '입력 오류', description: '생년월일은 오늘 이후 날짜일 수 없습니다.' });
                 return;
             }
             let age = today.getFullYear() - birthDate.getFullYear();
@@ -41,7 +37,7 @@ export function useStationActions() {
             }
 
             if (age >= 19) {
-                alert('만 19세 이상 성인은 입원이 불가능합니다.');
+                toaster.create({ type: 'error', title: '입력 오류', description: '만 19세 이상 성인은 입원이 불가능합니다.' });
                 return;
             }
 
@@ -53,14 +49,15 @@ export function useStationActions() {
                 attending_physician: attendingPhysician
             });
 
-            alert('입원 수속이 완료되었습니다.');
+            toaster.create({ type: 'success', title: '입원 완료', description: '입원 수속이 완료되었습니다.' });
             setAdmitRoom(null);
-            fetchAdmissions(); // Replace reload with state refresh
-        } catch (e: any) {
+            fetchAdmissions();
+        } catch (e: unknown) {
             console.error(e);
-            alert(`입원 처리 실패: ${e.message || '알 수 없는 오류'}`);
+            const msg = e instanceof Error ? e.message : '알 수 없는 오류';
+            toaster.create({ type: 'error', title: '입원 처리 실패', description: msg });
         }
-    }, [admitRoom, fetchAdmissions]);
+    }, [admitRoom, fetchAdmissions, setAdmitRoom]);
 
     const handleNotificationClick = useCallback((notif: Notification) => {
         const bed = beds.find(b => b.room === notif.room);
@@ -71,48 +68,45 @@ export function useStationActions() {
                 removeNotification(notif.id);
             }
         }
-    }, [beds, removeNotification]);
+    }, [beds, removeNotification, setSelectedRoom]);
 
     const handleDischargeAll = useCallback(async () => {
         if (!confirm('경고: DEV 모드 전용입니다.\n모든 환자를 퇴원 처리하시겠습니까?')) return;
         try {
-            // 1. 백엔드 처리 대기
             await api.post('/api/v1/dev/discharge-all', {});
-
-            // 2. 브로드캐스트가 동작하지만, 즉각적인 피드백을 위해 수동 갱신 병행
             await fetchAdmissions();
-
-            alert('모든 환자가 퇴원 처리되었습니다.');
+            toaster.create({ type: 'success', title: '퇴원 완료', description: '모든 환자가 퇴원 처리되었습니다.' });
         } catch (e) {
             console.error('Discharge Error:', e);
-            alert('퇴원 처리 중 오류가 발생했습니다.');
+            toaster.create({ type: 'error', title: '퇴원 실패', description: '퇴원 처리 중 오류가 발생했습니다.' });
         }
     }, [fetchAdmissions]);
 
     const handleSeedSingle = useCallback(async () => {
         try {
-            const res = await api.post('/api/v1/dev/seed-single', {}) as any;
+            const res = await api.post<{ error?: string; message?: string }>('/api/v1/dev/seed-single', {});
             if (res.error) {
-                alert(`생성 실패: ${res.error}`);
+                toaster.create({ type: 'error', title: '생성 실패', description: res.error });
             } else {
                 await fetchAdmissions();
-                alert(res.message || '더미 환자가 생성되었습니다.');
+                toaster.create({ type: 'success', title: '더미 생성', description: res.message ?? '더미 환자가 생성되었습니다.' });
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error('Seed Error:', e);
-            alert(`더미 생성 중 오류가 발생했습니다: ${e.message}`);
+            const msg = e instanceof Error ? e.message : '알 수 없는 오류';
+            toaster.create({ type: 'error', title: '더미 생성 실패', description: `더미 생성 중 오류가 발생했습니다: ${msg}` });
         }
     }, [fetchAdmissions]);
 
     const handleCardClick = useCallback((room: string) => {
         setSelectedRoom(room);
-    }, []);
+    }, [setSelectedRoom]);
 
     const handleQrClick = useCallback((e: React.MouseEvent, bed: Bed) => {
         e.stopPropagation();
         if (bed.token) setQrBed(bed);
-        else alert('토큰 없음');
-    }, []);
+        else toaster.create({ type: 'error', title: '오류', description: '해당 환자의 토큰이 없습니다.' });
+    }, [setQrBed]);
 
     return {
         stationData,

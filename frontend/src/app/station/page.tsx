@@ -12,10 +12,35 @@ import { Bed, Notification } from '@/types/domain';
 import { useStationActions } from '@/hooks/useStationActions';
 import { MealGrid } from '@/components/MealGrid';
 import { NotificationItem } from '@/components/NotificationItem';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { WsStatusIndicator } from '@/components/ui/WsStatusIndicator';
+import { StationProvider } from '@/contexts/StationContext';
+import { useStation } from '@/hooks/useStation';
 
 const PHYSICIAN_INITIALS = ['조', '김', '원', '이'] as const;
 
+/**
+ * Station 진입점: beds를 가져와 StationProvider에 전달.
+ * useStation()은 React Query 캐시를 공유하므로 StationInner 내부의
+ * useStationActions() → useStation() 호출과 네트워크 요청이 중복되지 않음.
+ */
 export default function Station() {
+    const { beds, connectionStatus } = useStation();
+
+    return (
+        <ErrorBoundary context="Station">
+            <StationProvider beds={beds}>
+                <StationInner connectionStatus={connectionStatus} />
+            </StationProvider>
+        </ErrorBoundary>
+    );
+}
+
+interface StationInnerProps {
+    connectionStatus: 'CONNECTING' | 'OPEN' | 'CLOSED';
+}
+
+function StationInner({ connectionStatus }: StationInnerProps) {
     const {
         stationData,
         state,
@@ -76,6 +101,7 @@ export default function Station() {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
+                        <WsStatusIndicator status={connectionStatus} />
                         <div className="flex items-center gap-1.5">
                             {PHYSICIAN_INITIALS.map((p) => (
                                 <button
@@ -219,5 +245,3 @@ export default function Station() {
         </div>
     );
 }
-
-

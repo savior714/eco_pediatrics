@@ -13,10 +13,14 @@ $ScriptDir = $PSScriptRoot
 
 function Log-Message {
     param([string]$Msg)
-    $line = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Msg"
+    $line = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Msg`r`n"
     if (-not (Test-Path (Split-Path $SetupLog))) { New-Item -ItemType Directory -Path (Split-Path $SetupLog) -Force | Out-Null }
-    Add-Content -Path $SetupLog -Value $line -Encoding UTF8
+    [System.IO.File]::AppendAllText($SetupLog, $line, (New-Object System.Text.UTF8Encoding($false)))
 }
+
+# PowerShell 엔진 탐지: pwsh(PS7) 우선, 없으면 powershell(PS5) 폴백
+$PsEngine = "pwsh"
+try { $null = Get-Command pwsh -ErrorAction Stop } catch { $PsEngine = "powershell" }
 
 # 0. Log start
 Log-Message "--- Setup started ---"
@@ -64,14 +68,14 @@ if (-not (Test-Path ".venv")) {
 
 Write-Host "   - Configuring Build Environment (SDK Discovery)..."
 try {
-    & pwsh -NoProfile -ExecutionPolicy Bypass -File "$ScriptDir\Refresh-BuildEnv.ps1"
+    & $PsEngine -NoProfile -ExecutionPolicy Bypass -File "$ScriptDir\Refresh-BuildEnv.ps1"
 } catch {
     Write-Host "   - Refresh-BuildEnv: $($_.Exception.Message) (continuing)"
 }
-& pwsh -NoProfile -ExecutionPolicy Bypass -File "$ScriptDir\Get-SdkVersion.ps1" -OutFile "$ProjectRoot\logs\sdk_ver.txt"
+& $PsEngine -NoProfile -ExecutionPolicy Bypass -File "$ScriptDir\Get-SdkVersion.ps1" -OutFile "$ProjectRoot\logs\sdk_ver.txt"
 $sdkVerPath = "$ProjectRoot\logs\sdk_ver.txt"
 if (Test-Path $sdkVerPath) {
-    $SdkVer = (Get-Content $sdkVerPath -Raw).Trim()
+    $SdkVer = ([System.IO.File]::ReadAllText($sdkVerPath, [System.Text.Encoding]::UTF8)).Trim()
     if ($SdkVer) {
         $PF86 = ${env:ProgramFiles(x86)}
         $env:INCLUDE = "$PF86\Windows Kits\10\Include\$SdkVer\ucrt;$PF86\Windows Kits\10\Include\$SdkVer\shared;$PF86\Windows Kits\10\Include\$SdkVer\um;$PF86\Windows Kits\10\Include\$SdkVer\winrt;$env:INCLUDE"

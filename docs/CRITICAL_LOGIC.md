@@ -35,9 +35,13 @@
 - **Backend**: `Router` (진입/DTO) -> `Service` (Business Logic) -> `Utils/Repo` (Infra) 순서를 엄격히 준수한다.
 - **Frontend**: 비즈니스 로직은 최대한 커스텀 훅(`hooks/`)으로 추출하여 컴포넌트(`components/`)의 순수성을 유지한다.
 
-### 2.2 실시간 동기화 프로토콜 (Sync Strategy)
-- **Hybrid Sync**: WebSocket 브로드캐스트는 '트리거' 역할만 수행하며, 실제 데이터 업데이트는 클라이언트에서의 명시적 Refetch를 통해 정합성을 확보한다.
-- **Throttling**: 중복 fetch 방지를 위해 모든 API 호출 훅에는 최소 **500ms의 `lastFetchRef` 가드**를 적용해야 한다.
+### 2.2 실시간 동기화 프로토콜 (Sync Strategy — React Query 기반)
+- **서버 상태 캐시 SSOT**: 모든 서버 데이터는 `@tanstack/react-query` 캐시를 유일한 진실의 원천으로 관리한다. 컴포넌트 로컬 `useState`로 서버 데이터를 보유하는 것을 금지한다.
+- **WS 이벤트 처리 분기 (필수 준수)**:
+  - `setQueryData(즉시 패치)` — WS로 완전한 데이터가 전달되는 경우 (NEW_VITAL, NEW_IV, NEW_MEAL_REQUEST, NEW_EXAM_SCHEDULE). 네트워크 요청 없이 캐시를 직접 수술한다.
+  - `invalidateQueries(재fetch)` — 그리드 구조 전체가 바뀌는 경우 (ADMISSION_DISCHARGED, ADMISSION_TRANSFERRED, REFRESH_DASHBOARD). 캐시를 무효화하여 React Query가 자동 재호출한다.
+- **Optimistic Update**: 사용자 입력 즉시 캐시에 임시 데이터(`isOptimistic: true`)를 추가하고, WS 수신 시 실제 데이터로 교체. 실패 시 `rollback()`으로 되돌린다. `queryClient.setQueryData()`를 통해 구현한다.
+- **중복 fetch 방지**: React Query의 `staleTime` 및 캐시 키 관리로 처리. 수동 `lastFetchRef` 가드는 React Query 마이그레이션 완료 이후 불필요하다.
 
 ### 2.3 상세 모달 데이터 소스 (Patient Detail Modal SSOT)
 - **SSOT**: 환자 상세 모달(PatientDetailModal)의 데이터 소스는 자체 Hook(`useVitals`)의 상태를 최우선으로 사용한다.
@@ -94,6 +98,29 @@ Set-Location -Path $targetDir
 - `Start-*.ps1` 스크립트는 경로 결정에 **환경 변수, 파라미터, `-d` 플래그를 사용하지 않는다.**
 - 오직 `$PSScriptRoot`만을 경로 계산의 기준으로 사용한다.
 - `launch_wt_dev.ps1`은 환경 변수 설정을 유지해도 되나(호환성), `Start-*.ps1`은 이를 무시한다.
+
+### 2.8 Tauri IPC 창 간 통신 표준 (Window Communication)
+Tauri 멀티 윈도우 환경에서 창 간 데이터 교환 시 적용하는 필수 패턴입니다.
+
+**금지 패턴 (Re-instantiation):**
+```
+기존 창 close() → setTimeout(200ms) → new WebviewWindow()  ← UX 지연 + Race Condition
+```
+
+**표준 패턴 (IPC Event):**
+```
+창 존재 확인 → emit('event-name', payload) → focusWindow()  ← 즉시 + Race-free
+창 없을 시   → getOrCreate()로 최초 생성만
+수신 측      → listen('event-name', handler) → React 상태 갱신 → 자동 리렌더
+```
+
+**구현 표준:**
+- 모든 Tauri 창 관리는 `src/utils/tauriWindowManager.ts`의 `WindowManager`를 통해서만 수행한다.
+  - `getOrCreate(label, url, options)` — 없으면 생성, 있으면 show/focus만
+  - `sendEvent(event, payload)` — emit() 래퍼 (전역 브로드캐스트)
+  - `focusWindow(label)` — show + setFocus
+- 수신 측 컴포넌트는 `listen()` 구독으로 `ipcToken` 상태를 갱신하며, `ipcToken ?? urlToken` 패턴으로 URL 파라미터를 오버라이드한다.
+- `capabilities/default.json`에 `core:event:default` 권한 필수 (emit, listen, unlisten, emit-to 4개 포함).
 
 ---
 

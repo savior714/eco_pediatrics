@@ -20,6 +20,7 @@ export const viewport: Viewport = {
 };
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { Providers } from "@/components/Providers";
 
 export default function RootLayout({
     children,
@@ -29,8 +30,10 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={inter.className}>
-                {children}
-                <ToastProvider />
+                <Providers>
+                    {children}
+                    <ToastProvider />
+                </Providers>
             </body>
         </html>
     );
