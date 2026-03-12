@@ -10,8 +10,8 @@ if not _load_env:
 else:
     load_dotenv()
 
-url: str = os.environ.get("SUPABASE_URL")
-key: str = os.environ.get("SUPABASE_KEY")
+url: str | None = os.environ.get("SUPABASE_URL")
+key: str | None = os.environ.get("SUPABASE_KEY")
 
 if not url or not key:
     raise ValueError(
@@ -21,7 +21,7 @@ if not url or not key:
     )
 
 # Global client placeholder
-supabase: AsyncClient = None
+supabase: AsyncClient | None = None
 
 async def init_supabase():
     global supabase

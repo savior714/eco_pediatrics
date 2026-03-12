@@ -7,10 +7,22 @@ from models import IVRecord, IVRecordCreate
 
 router = APIRouter()
 
-@router.post("/iv-records", response_model=IVRecord)
-async def record_iv(iv: IVRecordCreate, db: Annotated[AsyncClient, Depends(get_supabase)]):
+
+@router.post(
+    "/iv-records", response_model=IVRecord, status_code=201, summary="IV 기록 생성"
+)
+async def record_iv(
+    iv: IVRecordCreate, db: Annotated[AsyncClient, Depends(get_supabase)]
+):
     return await iv_service.record_iv(db, iv)
 
-@router.post("/upload/image")
-async def upload_image(db: Annotated[AsyncClient, Depends(get_supabase)], file: UploadFile = File(...), token: str = None):
+
+@router.post(
+    "/upload/image", response_model=dict, status_code=201, summary="IV 이미지 업로드"
+)
+async def upload_image(
+    db: Annotated[AsyncClient, Depends(get_supabase)],
+    file: UploadFile = File(...),
+    token: str | None = None,
+):
     return await iv_service.upload_iv_photo(db, file, token)

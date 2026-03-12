@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any, cast
 from fastapi import HTTPException
 from supabase import AsyncClient
 from utils import execute_with_retry_async, create_audit_log
@@ -64,7 +65,9 @@ async def fetch_dashboard_data(db: AsyncClient, admission_id: str):
         if isinstance(res, Exception):
             raise res
 
-    adm_res, vitals_res, iv_records_res, meals_res, exam_schedules_res, doc_res = results
+    adm_res, vitals_res, iv_records_res, meals_res, exam_schedules_res, doc_res = cast(
+        tuple[Any, Any, Any, Any, Any, Any], results
+    )
 
     # 1. Info
     if not adm_res.data:

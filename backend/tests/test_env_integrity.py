@@ -2,7 +2,6 @@
 [회귀 테스트] 환경 설정 무결성 검증.
 협업/환경 이전 시 .env.local 누락으로 인한 DEV UI 비노출을 방지합니다.
 """
-import pytest
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent

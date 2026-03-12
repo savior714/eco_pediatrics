@@ -2,7 +2,6 @@
 import sys
 import os
 from datetime import datetime
-import asyncio
 
 # Add backend path to sys.path
 sys.path.append(os.path.join(os.getcwd(), 'backend'))
@@ -46,7 +45,7 @@ def test_dashboard_response_schema():
     try:
         model = DashboardResponse(**mock_data)
         logger.info("SUCCESS: Data validated against DashboardResponse")
-        logger.info(f"Serialized: {model.dict()}")
+        logger.info(f"Serialized: {model.model_dump()}")
         
         # Verify patient_name_masked is present
         assert model.admission.patient_name_masked == "김*수"

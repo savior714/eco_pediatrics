@@ -1,12 +1,9 @@
-import asyncio
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional
 from fastapi import HTTPException
 from supabase import AsyncClient
 from websocket_manager import manager
 
 from logger import logger
-from utils import execute_with_retry_async, mask_name, create_audit_log, broadcast_to_station_and_patient, normalize_rpc_result
+from utils import execute_with_retry_async, mask_name, broadcast_to_station_and_patient, normalize_rpc_result
 from models import AdmissionCreate, TransferRequest
 
 async def transfer_patient(db: AsyncClient, admission_id: str, req: TransferRequest, ip_address: str = "127.0.0.1"):

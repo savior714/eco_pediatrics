@@ -5,13 +5,11 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, UploadFile
 from supabase import AsyncClient
 from websocket_manager import manager
-from logger import logger
 from utils import execute_with_retry_async, create_audit_log, broadcast_to_station_and_patient
 from models import IVRecordCreate
 
 async def record_iv(db: AsyncClient, iv: IVRecordCreate):
-    from datetime import timezone
-    data = iv.dict()
+    data = iv.model_dump()
     data['created_at'] = datetime.now(timezone.utc).isoformat()
     response = await execute_with_retry_async(db.table("iv_records").insert(data))
     if not response.data:
@@ -43,7 +41,7 @@ async def record_iv(db: AsyncClient, iv: IVRecordCreate):
     )
     return new_iv
 
-async def upload_iv_photo(db: AsyncClient, file: UploadFile, token: str):
+async def upload_iv_photo(db: AsyncClient, file: UploadFile, token: str | None):
     if not token:
         raise HTTPException(status_code=400, detail="Token required")
         
@@ -56,8 +54,7 @@ async def upload_iv_photo(db: AsyncClient, file: UploadFile, token: str):
     if size > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large")
 
-    from datetime import timezone
-    file_ext = file.filename.split(".")[-1]
+    file_ext = (file.filename or "bin").split(".")[-1]
     filename = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{token[:8]}.{file_ext}"
     file_path = f"uploads/{filename}"
     os.makedirs("uploads", exist_ok=True)

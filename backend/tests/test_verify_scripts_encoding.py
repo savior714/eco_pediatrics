@@ -1,6 +1,5 @@
 import subprocess
 from pathlib import Path
-import pytest
 
 def test_batch_file_encoding_integrity():
     """

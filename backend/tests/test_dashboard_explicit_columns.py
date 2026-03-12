@@ -2,7 +2,6 @@
 Regression test: dashboard fetch must use explicit column selection, not select("*").
 Ensures the optimization (index-only scan, payload size) is not reverted.
 """
-import pytest
 from pathlib import Path
 
 

@@ -2,22 +2,45 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
 from typing import List, Annotated
 from supabase import AsyncClient
-import json
 
 from dependencies import get_supabase
-from utils import execute_with_retry_async, create_audit_log, broadcast_to_station_and_patient
+from utils import (
+    execute_with_retry_async,
+    create_audit_log,
+    broadcast_to_station_and_patient,
+)
 from models import ExamSchedule, ExamScheduleCreate
 from websocket_manager import manager
 
 router = APIRouter()
 
-@router.get("/admissions/{admission_id}/exam-schedules", response_model=List[ExamSchedule])
-async def list_exam_schedules(admission_id: str, db: Annotated[AsyncClient, Depends(get_supabase)]):
-    response = await execute_with_retry_async(db.table("exam_schedules").select("*").eq("admission_id", admission_id).order("scheduled_at"))
+
+@router.get(
+    "/admissions/{admission_id}/exam-schedules",
+    response_model=List[ExamSchedule],
+    summary="환자별 검사 일정 목록 조회",
+)
+async def list_exam_schedules(
+    admission_id: str, db: Annotated[AsyncClient, Depends(get_supabase)]
+):
+    response = await execute_with_retry_async(
+        db.table("exam_schedules")
+        .select("*")
+        .eq("admission_id", admission_id)
+        .order("scheduled_at")
+    )
     return response.data or []
 
-@router.post("/exam-schedules", response_model=ExamSchedule)
-async def create_exam_schedule(schedule: ExamScheduleCreate, db: Annotated[AsyncClient, Depends(get_supabase)]):
+
+@router.post(
+    "/exam-schedules",
+    response_model=ExamSchedule,
+    status_code=201,
+    summary="검사 일정 생성",
+)
+async def create_exam_schedule(
+    schedule: ExamScheduleCreate, db: Annotated[AsyncClient, Depends(get_supabase)]
+):
     data = jsonable_encoder(schedule)
     response = await execute_with_retry_async(db.table("exam_schedules").insert(data))
     new_schedule = response.data[0]
@@ -31,34 +54,37 @@ async def create_exam_schedule(schedule: ExamScheduleCreate, db: Annotated[Async
         .single()
     )
     if adm_response.data:
-        token = adm_response.data['access_token']
-        room = adm_response.data['room_number']
-        
-        message = {
-            "type": "NEW_EXAM_SCHEDULE",
-            "data": {
-                **new_schedule,
-                "room": room
-            }
-        }
+        token = adm_response.data["access_token"]
+        room = adm_response.data["room_number"]
+
+        message = {"type": "NEW_EXAM_SCHEDULE", "data": {**new_schedule, "room": room}}
         await broadcast_to_station_and_patient(manager, message, token)
 
     return new_schedule
 
-@router.delete("/exam-schedules/{schedule_id}")
-async def delete_exam_schedule(schedule_id: int, db: Annotated[AsyncClient, Depends(get_supabase)]):
+
+@router.delete(
+    "/exam-schedules/{schedule_id}", response_model=dict, summary="검사 일정 삭제"
+)
+async def delete_exam_schedule(
+    schedule_id: int, db: Annotated[AsyncClient, Depends(get_supabase)]
+):
     # 1. Get schedule info before deleting (to find admission_id for broadcast)
-    res = await execute_with_retry_async(db.table("exam_schedules").select("*").eq("id", schedule_id))
-    
+    res = await execute_with_retry_async(
+        db.table("exam_schedules").select("*").eq("id", schedule_id)
+    )
+
     if not res.data:
         raise HTTPException(status_code=404, detail="Schedule not found")
-    
+
     target = res.data[0]
-    admission_id = target['admission_id']
-    
+    admission_id = target["admission_id"]
+
     # 2. Delete
-    await execute_with_retry_async(db.table("exam_schedules").delete().eq("id", schedule_id))
-    
+    await execute_with_retry_async(
+        db.table("exam_schedules").delete().eq("id", schedule_id)
+    )
+
     # 3. Log
     await create_audit_log(db, "NURSE", "DELETE_EXAM", str(schedule_id))
 
@@ -70,16 +96,12 @@ async def delete_exam_schedule(schedule_id: int, db: Annotated[AsyncClient, Depe
         .single()
     )
     if adm_res.data:
-        token = adm_res.data['access_token']
-        room = adm_res.data['room_number']
+        token = adm_res.data["access_token"]
+        room = adm_res.data["room_number"]
         message = {
             "type": "DELETE_EXAM_SCHEDULE",
-            "data": {
-                "id": schedule_id,
-                "admission_id": admission_id,
-                "room": room
-            }
+            "data": {"id": schedule_id, "admission_id": admission_id, "room": room},
         }
         await broadcast_to_station_and_patient(manager, message, token)
-    
+
     return {"message": "Deleted successfully"}

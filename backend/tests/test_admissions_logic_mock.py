@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from services.admission_service import list_active_admissions_enriched
 

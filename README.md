@@ -78,4 +78,4 @@
 *   **[docs/archive/](./docs/archive/)** — 과거 로그 및 완료된 계획서 보관함
 
 ---
-*Last updated: 2026-03-03 (Skill Consolidation & Optimization Phase)*
+*Last updated: 2026-03-12 (Phase 4-A: Tasks 1~5 전체 완료 — pyproject.toml 그룹 분리, Core-only 기동 검증, 라우터 OpenAPI 메타데이터 전수 명시, Pydantic v2 전환, ruff 0 + mypy 0 달성)*

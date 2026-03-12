@@ -5,7 +5,6 @@ from datetime import datetime, date, timedelta, timezone
 from supabase import AsyncClient
 from websocket_manager import manager
 from utils import execute_with_retry_async, broadcast_to_station_and_patient, normalize_rpc_result, mask_name
-from logger import logger
 
 async def discharge_all(db: AsyncClient):
     """
@@ -19,8 +18,9 @@ async def discharge_all(db: AsyncClient):
     }).execute()
     
     # RPC 결과에서 업데이트된 행 수 추출 (Python SDK execute() 결과 대응)
-    data = res.data
-    updated_count = data.get('count', 0) if data else 0
+    raw_data = res.data
+    data_dict = raw_data if isinstance(raw_data, dict) else None
+    updated_count: int = data_dict.get('count', 0) if data_dict else 0
     
     if updated_count > 0:
         import json
@@ -51,7 +51,8 @@ async def seed_patient_data(db: AsyncClient, admission_id: str):
     vitals = []
     for i in range(19):
         rec_time = start_time + timedelta(hours=i*4)
-        if rec_time > now: continue
+        if rec_time > now:
+            continue
         temp = round(random.uniform(36.4, 38.8), 1)
         vitals.append({
             "admission_id": admission_id,
@@ -60,13 +61,13 @@ async def seed_patient_data(db: AsyncClient, admission_id: str):
             "medication_type": "A" if temp >= 38.0 else None,
             "recorded_at": rec_time.isoformat()
         })
-    await execute_with_retry_async(db.table("vital_signs").insert(vitals))
+    await execute_with_retry_async(db.table("vital_signs").insert(vitals))  # type: ignore[arg-type]
     
     ivs = [
         {"admission_id": admission_id, "infusion_rate": 40, "photo_url": "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=400", "created_at": (start_time + timedelta(hours=1)).isoformat()},
         {"admission_id": admission_id, "infusion_rate": 40, "photo_url": "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=400", "created_at": (now - timedelta(minutes=30)).isoformat()}
     ]
-    await execute_with_retry_async(db.table("iv_records").insert(ivs))
+    await execute_with_retry_async(db.table("iv_records").insert(ivs))  # type: ignore[arg-type]
     
     exams = [
         {"admission_id": admission_id, "scheduled_at": (now + timedelta(hours=2)).isoformat(), "name": "오전 X-ray (Dev)", "note": "가상 데이터"},
@@ -76,7 +77,7 @@ async def seed_patient_data(db: AsyncClient, admission_id: str):
 
     adm_res = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", admission_id).single())
     if adm_res.data:
-        token, room = adm_res.data['access_token'], adm_res.data['room_number']
+        token = adm_res.data['access_token']
         
         # 3일치 랜덤 식단 데이터 생성 (오늘 ~ 내레)
         meal_times = ["BREAKFAST", "LUNCH", "DINNER"]

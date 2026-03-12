@@ -20,7 +20,8 @@ async def get_meal_plans(db: AsyncClient, start_date: date, end_date: date):
     return res.data or []
 
 async def upsert_meal_plans(db: AsyncClient, plans: List[CommonMealPlan]):
-    if not plans: return
+    if not plans:
+        return
     data = [plan.model_dump(mode='json') for plan in plans]
     await execute_with_retry_async(db.table("common_meal_plans").upsert(data))
 

@@ -27,7 +27,7 @@ sys.modules["loguru"].logger = mock_logger
 # Add backend path to sys.path
 sys.path.append(os.path.join(os.getcwd(), 'backend'))
 
-from websocket_manager import manager
+from websocket_manager import manager  # noqa: E402
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("anyio_backend", ["asyncio"])

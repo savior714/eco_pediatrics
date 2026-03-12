@@ -1,38 +1,44 @@
 from fastapi import APIRouter, Depends
 from typing import Annotated
 from supabase import AsyncClient
-import json
 
 from dependencies import get_supabase
-from utils import execute_with_retry_async, create_audit_log, broadcast_to_station_and_patient
+from utils import (
+    execute_with_retry_async,
+    create_audit_log,
+    broadcast_to_station_and_patient,
+)
 from models import VitalSign, VitalSignCreate
 from websocket_manager import manager
 
 router = APIRouter()
 
-@router.post("", response_model=VitalSign)
-async def record_vital(vital: VitalSignCreate, db: Annotated[AsyncClient, Depends(get_supabase)]):
-    data = vital.dict()
+
+@router.post(
+    "", response_model=VitalSign, status_code=201, summary="체온·투약 기록 생성"
+)
+async def record_vital(
+    vital: VitalSignCreate, db: Annotated[AsyncClient, Depends(get_supabase)]
+):
+    data = vital.model_dump()
     response = await execute_with_retry_async(db.table("vital_signs").insert(data))
     new_vital = response.data[0]
 
-    await create_audit_log(db, "NURSE", "CREATE_VITAL", str(new_vital['id']))
+    await create_audit_log(db, "NURSE", "CREATE_VITAL", str(new_vital["id"]))
 
     # Broadcast to dashboard and station
-    adm_response = await execute_with_retry_async(db.table("admissions").select("access_token, room_number").eq("id", vital.admission_id))
+    adm_response = await execute_with_retry_async(
+        db.table("admissions")
+        .select("access_token, room_number")
+        .eq("id", vital.admission_id)
+    )
     if adm_response.data:
         record = adm_response.data[0]
-        token = record['access_token']
-        room_number = record['room_number']
-        
+        token = record["access_token"]
+        room_number = record["room_number"]
+
         # Broadcast with room info included for both (consistent with dev.py)
-        message = {
-            "type": "NEW_VITAL",
-            "data": {
-                "room": room_number,
-                **new_vital
-            }
-        }
+        message = {"type": "NEW_VITAL", "data": {"room": room_number, **new_vital}}
         await broadcast_to_station_and_patient(manager, message, token)
 
     return new_vital

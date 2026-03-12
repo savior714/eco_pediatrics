@@ -10,6 +10,6 @@ DISPLAY_SKIPPED_SYMBOL = 'X'
 
 # Mapping for display names (DB Value -> Display Value)
 # Use this when you want to rename a meal type in the UI without changing the DB value
-MEAL_DISPLAY_MAPPING = {
+MEAL_DISPLAY_MAPPING: dict[str, str] = {
     # Example: '죽1': '소고기죽',
 }

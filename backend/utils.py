@@ -112,7 +112,7 @@ async def execute_with_retry_async(query_builder):
             )
             await asyncio.sleep(wait_time)
 
-async def broadcast_to_station_and_patient(manager, message_dict: dict, token: str = None):
+async def broadcast_to_station_and_patient(manager, message_dict: dict, token: str | None = None):
     """
     Helper to broadcast a message to both the STATION and a specific patient token.
     Ensures consistent string casting for tokens and JSON serialization.

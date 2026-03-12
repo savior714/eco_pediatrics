@@ -97,7 +97,7 @@ def format_meal_notification_data(m: Dict) -> Dict:
     # 2. Time Label
     m_time = m.get('meal_time')
     time_map = {'BREAKFAST': '아침', 'LUNCH': '점심', 'DINNER': '저녁'}
-    time_label = time_map.get(m_time, m_time)
+    time_label = time_map.get(m_time, m_time) if m_time else ""
 
     # 3. Date Label
     m_date = m.get('meal_date')
@@ -106,7 +106,7 @@ def format_meal_notification_data(m: Dict) -> Dict:
         try:
             d_obj = date.fromisoformat(m_date) if isinstance(m_date, str) else m_date
             date_label = d_obj.strftime("%m/%d")
-        except:
+        except Exception:
             date_label = str(m_date)
 
     return {
