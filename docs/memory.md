@@ -2,6 +2,7 @@
 
 ## Executive Summary
 본 문서는 `Antigravity IDE Agent`의 연속성 보존을 위한 실시간 메모리 로그입니다.
+- **300줄 리팩터 완료 (2026-03-13)**: IVLabelPreviewModal(MedSection→IVLabelMedSection), useVitals 대시보드 분리, TemperatureGraph→temperatureChartUtils, useStation→useStationDashboard, MealGrid→mealGridUtils. Task 11 ReadLints 기준 오류 0개.
 - **Phase 4-A 전체 완료 (2026-03-12)**: pyproject.toml 그룹 분리(Core/Dev/Tools), Core-only 기동 검증, 라우터 OpenAPI 메타데이터 전수 명시, Pydantic v2 전환(`.model_dump()`), ruff 0 + mypy 0 달성.
 - **TS 타입 오류 수정 (2026-03-10)**: `DocumentStatus`에 `CANCELED` 추가, `LucideIcon` props 타입 완화, `TemperatureGraph activeDot` 캐스팅.
 - **Tauri IPC 아키텍처 전환 (2026-03-10)**: QR 미리보기 창 Re-instance → IPC emit/listen 패턴. `WindowManager` 유틸(`src/utils/tauriWindowManager.ts`) 분리.
@@ -97,3 +98,18 @@
   - `constants/meal_config.py`: `MEAL_DISPLAY_MAPPING: dict[str, str]` 타입 명시
   - `routers/iv_records.py`: `token: str | None = None`
 [Status] **Phase 4-A 전체 완료**. ruff All checks passed + mypy 오류 0개.
+
+### [2026-03-13] - Refactor 300줄: Task 10 MealGrid 유틸 분리
+[Context] docs/plans/refactor-300-line-targets.md Task 10 — MealGrid.tsx Presenter vs 로직 분리 (1회 한 단위).
+[Action]
+- **mealGridUtils.ts** 신규: `formatDate`, `formatDisplayDate`, `MEAL_TIMES`, `PEDIATRIC_OPTIONS`, `GUARDIAN_OPTIONS`, `getRoomNoteFromMatrix`, `getTargetMealTimeForNote`, `MealMatrix` 타입 추출.
+- **MealGrid.tsx**: 위 유틸/상수 제거 후 `./mealGridUtils`에서 import. 줄 수 감소.
+[Status] 완료. 린트 0건. (useMealMatrix 훅·MealGridCell 추출은 후속 Task에서 진행 가능.)
+
+### [2026-03-13] - Refactor 300줄: Task 11 검증 + DoD 정리
+[Context] 분리 리팩터(Task 6–10) 후 타입/린트 검증 및 플랜 DoD 확정.
+[Action]
+- **Task 11**: 터미널 `tsc --noEmit`은 PowerShell 프로필 오류로 실패 → ReadLints로 `frontend/src` 검증, 오류 0건 확인.
+- **refactor-300-line-targets.md**: 상태 `설계 승인 대기` → `리팩토링 완료`, Definition of Done 1–4 [x] 처리.
+- **memory.md**: Executive Summary에 300줄 리팩터 완료 요약 추가.
+[Status] 완료. 300줄 리팩터 플랜 DoD 전부 달성.

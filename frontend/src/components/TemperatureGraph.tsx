@@ -9,17 +9,20 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    ReferenceDot,
-    ReferenceArea,
     ReferenceLine,
-    Label,
     TooltipProps
 } from 'recharts';
 import { Card } from './Card';
 import { Thermometer } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { calculateHospitalDay, getKSTMidnight, getKSTDate } from '@/utils/dateUtils';
+import { getKSTMidnight } from '@/utils/dateUtils';
+import {
+    processChartData,
+    getTemperatureGradientOffset,
+    formatDayLabel,
+    formatTooltipDate
+} from './temperatureChartUtils';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -54,77 +57,10 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
         return checkInAt ? getKSTMidnight(checkInAt) : 0;
     }, [checkInAt]);
 
-    // 1. Calculate hospital days logic
-    const { chartData, totalWidthPercent, gridTicks, labelTicks, yDomain } = useMemo(() => {
-        if (!checkInAt || data.length === 0 || !startDayMidnight) {
-            return {
-                chartData: data,
-                totalWidthPercent: 100,
-                gridTicks: [],
-                labelTicks: [],
-                yDomain: [35.5, 41]
-            };
-        }
-
-        // [SSOT] Data timestamp handling
-        const processTimestamp = (iso: string) => getKSTDate(iso).getTime();
-
-        const processed = data
-            .map(d => {
-                const ts = processTimestamp(d.recorded_at);
-                return {
-                    ...d,
-                    hospitalDay: calculateHospitalDay(checkInAt, new Date(d.recorded_at)),
-                    timestamp: ts
-                };
-            })
-            .filter(d => d.timestamp >= startDayMidnight) // Strictly filter out pre-admission data
-            .sort((a, b) => a.timestamp - b.timestamp);
-
-        // Calculate Y-axis domain based on data
-        let minTemp = 35.5;
-        let maxTemp = 41;
-        if (data.length > 0) {
-            const temps = data.map(d => d.temperature);
-            const minData = Math.min(...temps);
-            const maxData = Math.max(...temps);
-            if (minData < 35.5) minTemp = Math.floor(minData * 10) / 10 - 0.5;
-            if (maxData > 41) maxTemp = Math.ceil(maxData * 10) / 10 + 0.5;
-        }
-
-        // Determine range for the X-axis (strictly from admission midnight)
-        const lastDataPoint = processed[processed.length - 1];
-        // If no data, default to "Now" in KST
-        const lastTs = lastDataPoint ? lastDataPoint.timestamp : getKSTDate(new Date()).getTime();
-
-        const diffMs = lastTs - startDayMidnight;
-        const daysInRange = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
-        const displayDays = Math.max(5, daysInRange);
-
-        // Generate ticks for each hospital day boundaries (midnight)
-        const gridTicks = [];
-        for (let i = 0; i <= displayDays; i++) {
-            gridTicks.push(startDayMidnight + (i * 24 * 60 * 60 * 1000));
-        }
-
-        // Generate ticks for labels (mid-day, 12:00 PM) for centering
-        const labelTicks = [];
-        for (let i = 0; i < displayDays; i++) {
-            const tickMid = startDayMidnight + (i * 24 * 60 * 60 * 1000) + (12 * 60 * 60 * 1000);
-            labelTicks.push(tickMid);
-        }
-
-        // Horizontal scroll width calculation
-        const widthPercent = Math.max(100, displayDays * 20); // 20% width per day
-
-        return {
-            chartData: processed,
-            totalWidthPercent: widthPercent,
-            gridTicks,
-            labelTicks,
-            yDomain: [minTemp, maxTemp]
-        };
-    }, [data, checkInAt, startDayMidnight]);
+    const { chartData, totalWidthPercent, gridTicks, labelTicks, yDomain } = useMemo(
+        () => processChartData(data, checkInAt, startDayMidnight),
+        [data, checkInAt, startDayMidnight]
+    );
 
     // Generate unique ID for the gradient to prevent conflicts when multiple charts are present
     // Note: useId returns a string containing colons (e.g. ":r1:"), which are invalid in CSS usageUrl without escaping.
@@ -134,28 +70,10 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
 
     const latestTemp = data.length > 0 ? data[0].temperature : null;
 
-    // Calculate gradient offset based on the actual DATA RANGE, because the linearGradient
-    // is applied to the Line path's bounding box, not the YAxis domain.
-    const gradientOffset = useMemo(() => {
-        if (chartData.length === 0) return 0;
-
-        const temps = chartData.map((d) => d.temperature);
-        const dataMax = Math.max(...temps);
-        const dataMin = Math.min(...temps);
-
-        // Case 1: Entire range is below 38 -> All Teal
-        if (dataMax <= 38) return 0;
-
-        // Case 2: Entire range is above 38 -> All Red
-        if (dataMin >= 38) return 1;
-
-        // Case 3: 38 is within range
-        // Recharts gradient: 0% is Top (Max), 100% is Bottom (Min).
-        // (dataMax - 38) gives the distance from top to the threshold
-        // (dataMax - dataMin) gives the total height of the line path
-        return (dataMax - 38) / (dataMax - dataMin);
-        // yDomain is not used in calculation
-    }, [chartData]); // yDomain is not used in calculation
+    const gradientOffset = useMemo(
+        () => getTemperatureGradientOffset(chartData),
+        [chartData]
+    );
 
     return (
         <Card className={cn("w-full relative overflow-hidden border-slate-200/80", className)}>
@@ -201,14 +119,11 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
                                 domain={[gridTicks[0], gridTicks[gridTicks.length - 1]]}
                                 scale="time"
                                 ticks={labelTicks}
-                                tickFormatter={(unixTime) => {
-                                    if (!checkInAt || !startDayMidnight) return '';
-                                    // [SSOT] unixTime is KST-shifted, startDayMidnight is KST-shifted.
-                                    // Use simple math to avoid double-shifting.
-                                    const diffMs = unixTime - startDayMidnight;
-                                    const day = Math.floor(diffMs / (24 * 60 * 60 * 1000)) + 1;
-                                    return `${day}일차`;
-                                }}
+                                tickFormatter={(unixTime) =>
+                                    !checkInAt || !startDayMidnight
+                                        ? ''
+                                        : formatDayLabel(unixTime, startDayMidnight)
+                                }
                                 stroke="#94a3b8"
                                 fontSize={12}
                                 tickLine={false}
@@ -234,7 +149,7 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
                                     return (
                                         <div className="rounded-xl border-none shadow-lg bg-white/95 px-3 py-2">
                                             <p className="text-xs text-slate-500 mb-0.5">
-                                                {label != null && new Date(label).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                {label != null && formatTooltipDate(label)}
                                             </p>
                                             <p className="text-slate-800 font-semibold">체온 {p.temperature?.toFixed(1)}°C</p>
                                         </div>

@@ -1,6 +1,7 @@
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useWebSocket, WsConnectionStatus } from './useWebSocket';
+import { useStationDashboard } from './useStationDashboard';
 import { api } from '@/lib/api';
 import { Bed, Notification, LastUploadedIv, AdmissionSummary, WsMessage, MealRequest } from '@/types/domain';
 import { ROOM_NUMBERS, MEAL_MAP, DOC_MAP } from '@/constants/mappings';
@@ -67,6 +68,16 @@ export const STATION_QUERY_KEY = ['station', 'admissions'] as const;
 
 export function useStation(): UseStationReturn {
     const queryClient = useQueryClient();
+    const {
+        notifications,
+        setNotifications,
+        lastUploadedIv,
+        setLastUploadedIv,
+        lastUpdated,
+        setLastUpdated,
+        fetchPendingRequests,
+        removeNotification
+    } = useStationDashboard();
 
     // [React Query] 입원 목록 서버 상태 캐시
     const { data: queriedBeds, refetch } = useQuery({
@@ -93,28 +104,10 @@ export function useStation(): UseStationReturn {
         [queryClient]
     );
 
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [lastUploadedIv, setLastUploadedIv] = useState<LastUploadedIv | null>(null);
-    const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
-
     /** WebSocket 재연결 후 서버 상태 재동기화 (invalidate → 재fetch) */
-    const fetchAdmissions = useCallback((force = false) => {
+    const fetchAdmissions = useCallback((_force?: boolean) => {
         void refetch();
     }, [refetch]);
-
-    const fetchPendingRequests = useCallback(async () => {
-        try {
-            const pending = await api.get<Notification[]>('/api/v1/station/pending-requests');
-            if (Array.isArray(pending)) {
-                setNotifications(pending.map(n => ({
-                    ...n,
-                    time: new Date(n.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                })));
-            }
-        } catch (e) {
-            console.error('Failed to fetch pending requests', e);
-        }
-    }, []);
 
     const handleMessage = useCallback((event: MessageEvent) => {
         try {
@@ -274,7 +267,7 @@ export function useStation(): UseStationReturn {
         } catch (e) {
             console.error('WS Parse Error', e);
         }
-    }, [queryClient]);
+    }, [queryClient, setNotifications, setLastUploadedIv, setLastUpdated]);
 
     const wsToken = process.env.NEXT_PUBLIC_STATION_WS_TOKEN || 'STATION';
 
@@ -288,31 +281,6 @@ export function useStation(): UseStationReturn {
         },
         onMessage: handleMessage
     });
-
-    // 초기 pending requests 로드
-    const initialFetchDoneRef = useRef(false);
-    useEffect(() => {
-        if (initialFetchDoneRef.current) return;
-        initialFetchDoneRef.current = true;
-        void fetchPendingRequests();
-    }, [fetchPendingRequests]);
-
-    const removeNotification = useCallback(async (id: string, type?: string, _admissionId?: string) => {
-        const match = id.match(/^(meal|doc)_(\d+)$/);
-        if (!match) {
-            setNotifications(prev => prev.filter(n => n.id !== id));
-            return;
-        }
-        const [, parsedType, rawId] = match;
-        const endpoint = (type || parsedType) === 'doc' ? 'documents' : 'meals';
-        try {
-            await api.patch(`/api/v1/${endpoint}/requests/${rawId}?status=COMPLETED`, {});
-            setNotifications(prev => prev.filter(n => n.id !== id));
-        } catch (e) {
-            console.error('Status Update Failed', e);
-            alert('완료 처리에 실패했습니다. 다시 시도해 주세요.');
-        }
-    }, []);
 
     return {
         beds,

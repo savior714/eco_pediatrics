@@ -3,6 +3,14 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import { api } from '@/lib/api';
 import { Bed, MealRequest } from '@/types/domain';
+import {
+    formatDate,
+    formatDisplayDate,
+    getRoomNoteFromMatrix,
+    getTargetMealTimeForNote,
+    PEDIATRIC_OPTIONS,
+    GUARDIAN_OPTIONS,
+} from './mealGridUtils';
 
 interface MealGridProps {
     beds: Bed[];
@@ -18,48 +26,6 @@ function areMealGridPropsEqual(prev: MealGridProps, next: MealGridProps): boolea
         if (prevBed.token !== nextBed.token) return false;
     }
     return true;
-}
-
-const PEDIATRIC_OPTIONS = ['일반식', '죽1', '죽2', '죽3', '선택 안함'];
-const GUARDIAN_OPTIONS = ['일반식', '선택 안함'];
-
-// Helper to format date "YYYY-MM-DD"
-const formatDate = (d: Date) => {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-};
-
-// Helper for display "MM/DD (Mon)"
-const formatDisplayDate = (d: Date) => {
-    const days = ['일', '월', '화', '수', '목', '금', '토'];
-    return `${d.getMonth() + 1}/${d.getDate()} (${days[d.getDay()]})`;
-};
-
-const MEAL_TIMES = ['LUNCH', 'BREAKFAST', 'DINNER'] as const;
-
-/** 비고 읽기: LUNCH 우선, 없으면 BREAKFAST/DINNER에서 첫 번째 존재하는 room_note 사용 */
-function getRoomNoteFromMatrix(
-    matrix: Record<string, Record<string, MealRequest>>,
-    admissionId: string
-): string {
-    for (const time of MEAL_TIMES) {
-        const note = matrix[admissionId]?.[time]?.room_note;
-        if (note !== undefined && note !== '') return note;
-    }
-    return '';
-}
-
-/** 비고 저장 시 사용할 meal_time: 기존 레코드가 있는 시간대 우선, 없으면 LUNCH */
-function getTargetMealTimeForNote(
-    matrix: Record<string, Record<string, MealRequest>>,
-    admissionId: string
-): string {
-    if (matrix[admissionId]?.['LUNCH']) return 'LUNCH';
-    if (matrix[admissionId]?.['BREAKFAST']) return 'BREAKFAST';
-    if (matrix[admissionId]?.['DINNER']) return 'DINNER';
-    return 'LUNCH';
 }
 
 interface RoomNoteInputProps {
