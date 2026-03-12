@@ -465,3 +465,12 @@ REM eco.bat 메뉴 추가안
 | TD-04 | `pyproject.toml` | `pandas`, `numpy`, `openpyxl` 등 데이터 분석 패키지 혼재 | 낮음 |
 | TD-05 | `frontend/next.config.js` | `output: 'export'` (SSG) + `unoptimized images` — CDN 미활용 | 낮음 |
 | TD-06 | `backend/main.py` | WebSocket warm-up 로직 및 Lifespan 검증 필요 | 낮음 |
+
+---
+
+## 참고 — 이관된 문서 반영 (LATEST_SUMMARY_AND_IMPROVEMENTS.md)
+
+2026-03 문서 통합 시 `docs/archive/LATEST_SUMMARY_AND_IMPROVEMENTS.md`로 이관된 내용 중, 로드맵에 없는 **장기 개선 참고안**만 요약한다.  
+- **DB View 성능**: `view_station_dashboard` 등 대용량 시 Full Scan 위험에 대비해, 최신 레코드만 담는 Materialized View / Latest Status Table 또는 모달에서 커서 기반 페이지네이션·무한 스크롤 검토.  
+- **UI 레이아웃 정책 중앙화**: 스크롤·모달 스타일을 개별 컴포넌트가 아닌 `DashboardLayout` 컨텍스트 및 디자인 토큰 SSOT로 제어하는 방안.  
+- **환경 일관성**: Batch/PowerShell 의존 축소를 위해 장기적으로 Docker Compose(백엔드/DB) + Node Task Runner(프론트) 조합 검토.

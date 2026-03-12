@@ -2,6 +2,7 @@
 
 ## Executive Summary
 본 문서는 `Antigravity IDE Agent`의 연속성 보존을 위한 실시간 메모리 로그입니다.
+- **docs 통합 (2026-03-13)**: 완료된 플랜 4건 `docs/archive/plans/` 이관, VERIFICATION_DOCS_AUDIT·ERROR_MONITOR_ARCHITECTURE·LATEST_SUMMARY archive 이동, docs/README.md 갱신, Broken Links 0건.
 - **300줄 리팩터 완료 (2026-03-13)**: IVLabelPreviewModal(MedSection→IVLabelMedSection), useVitals 대시보드 분리, TemperatureGraph→temperatureChartUtils, useStation→useStationDashboard, MealGrid→mealGridUtils. Task 11 ReadLints 기준 오류 0개.
 - **Phase 4-A 전체 완료 (2026-03-12)**: pyproject.toml 그룹 분리(Core/Dev/Tools), Core-only 기동 검증, 라우터 OpenAPI 메타데이터 전수 명시, Pydantic v2 전환(`.model_dump()`), ruff 0 + mypy 0 달성.
 - **TS 타입 오류 수정 (2026-03-10)**: `DocumentStatus`에 `CANCELED` 추가, `LucideIcon` props 타입 완화, `TemperatureGraph activeDot` 캐스팅.

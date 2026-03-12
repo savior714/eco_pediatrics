@@ -18,8 +18,12 @@
 
 ## Help & Troubleshooting
 - **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** — 알려진 문제 및 해결 방법 모음.
-- **[ERROR_MONITOR_ARCHITECTURE.md](./ERROR_MONITOR_ARCHITECTURE.md)** (Deprecated) — 과거 에러 모니터링 시스템 구조.
-- **[archive/](./archive/)** — 완료된 계획서 및 이슈 로그 보관함.
+
+## Archive (참고용·과거 문서)
+- **[archive/](./archive/)** — 완료된 계획서, 이슈 로그 및 이관된 문서 보관함.
+  - **[archive/plans/](./archive/plans/)** — 완료된 플랜(refactor-300-line-targets, phase4a·phase4b 등) 보관.
+  - **[archive/ERROR_MONITOR_ARCHITECTURE.md](./archive/ERROR_MONITOR_ARCHITECTURE.md)** (Deprecated) — 과거 에러 모니터링 시스템 구조.
+  - **[archive/VERIFICATION_DOCS_AUDIT_2026_03_03.md](./archive/VERIFICATION_DOCS_AUDIT_2026_03_03.md)** — 시점별 검증 스냅샷(참고용).
 
 ---
-*Last updated: 2026-03-03 (Skill Consolidation & Optimization)*
+*Last updated: 2026-03-13 (docs 통합 — archive/plans·이관 문서 반영)*
