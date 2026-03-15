@@ -30,7 +30,9 @@ export function QrCodeModal({ isOpen, onClose, patientName, roomNumber, token }:
         if (!dashboardUrl) return;
 
         // Tauri 환경인지 확인
-        const isTauri = typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__ !== undefined;
+        const isTauri =
+            typeof window !== 'undefined' &&
+            (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ !== undefined;
 
         if (isTauri) {
             try {
