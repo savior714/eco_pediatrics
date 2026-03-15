@@ -4,13 +4,26 @@
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $targetDir = Join-Path $projectRoot "backend"
 
-Set-Location -Path $targetDir
-Write-Host "[ECO] Backend running in: $((Get-Location).Path)" -ForegroundColor Green
-
-# wt.exe는 독립 프로세스로 열려 사용자 PATH가 누락됨 - 사용자 PATH 명시 주입
-$userPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
-if ($userPath -and $env:PATH -notlike "*$userPath*") {
-    $env:PATH = $userPath + ";" + $env:PATH
+# C-2b: 백엔드 디렉터리 존재 여부 사전 검증
+if (-not (Test-Path $targetDir)) {
+    Write-Warning "백엔드 디렉터리가 존재하지 않습니다: $targetDir"
+    exit 1
 }
 
-uv run uvicorn main:app --reload --port 8000
+# C-1f: Set-Location + uvicorn 기동 전체를 Try-Catch로 보호
+Try {
+    Set-Location -Path $targetDir
+    Write-Output "[ECO] Backend running in: $((Get-Location).Path)"
+
+    # wt.exe는 독립 프로세스로 열려 사용자 PATH가 누락됨 - 사용자 PATH 명시 주입
+    $userPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
+    if ($userPath -and $env:PATH -notlike "*$userPath*") {
+        $env:PATH = $userPath + ";" + $env:PATH
+    }
+
+    uv run uvicorn main:app --reload --port 8000
+}
+Catch {
+    Write-Warning "백엔드 기동 실패: $_"
+    exit 1
+}

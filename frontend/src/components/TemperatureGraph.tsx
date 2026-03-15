@@ -14,28 +14,17 @@ import {
 } from 'recharts';
 import { Card } from './Card';
 import { Thermometer } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import { getKSTMidnight } from '@/utils/dateUtils';
 import {
     processChartData,
     getTemperatureGradientOffset,
     formatDayLabel,
-    formatTooltipDate
+    formatTooltipDate,
+    arePropsEqual,
+    type VitalData,
+    type TemperatureGraphProps
 } from './temperatureChartUtils';
-
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
-
-interface VitalData {
-    time: string;
-    temperature: number;
-    has_medication: boolean;
-    medication_type?: string;
-    recorded_at: string;
-    isOptimistic?: boolean;
-}
+import { cn } from '@/lib/utils';
 
 interface ChartDotProps {
     cx: number;
@@ -43,12 +32,6 @@ interface ChartDotProps {
     payload: VitalData & { hospitalDay?: number; timestamp?: number };
     index: number;
     yAxis?: { scale?: (val: number) => number };
-}
-
-interface TemperatureGraphProps {
-    data: VitalData[];
-    checkInAt?: string | null;
-    className?: string;
 }
 
 function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphProps) {
@@ -145,7 +128,7 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
                             <Tooltip
                                 content={({ active, payload, label }: TooltipProps<number, string>) => {
                                     if (!active || !payload?.length || !payload[0]?.payload) return null;
-                                    const p = payload[0].payload as any; // Cast payload to any or specific type if accessible
+                                    const p = payload[0].payload as VitalData & { hospitalDay?: number; timestamp?: number };
                                     return (
                                         <div className="rounded-xl border-none shadow-lg bg-white/95 px-3 py-2">
                                             <p className="text-xs text-slate-500 mb-0.5">
@@ -273,32 +256,6 @@ function TemperatureGraphBase({ data, checkInAt, className }: TemperatureGraphPr
             )}
         </Card>
     );
-}
-
-function arePropsEqual(prev: TemperatureGraphProps, next: TemperatureGraphProps): boolean {
-    if (prev.checkInAt !== next.checkInAt) return false;
-    if (prev.className !== next.className) return false;
-    if (prev.data === next.data) return true;
-
-    const prevData = prev.data;
-    const nextData = next.data;
-    if (prevData.length !== nextData.length) return false;
-
-    // 역순 순회: 최신(배열 끝)부터 과거(앞)로 검사. 최신 추가/사후 수정이 빈번하므로 Early Return 유도.
-    for (let i = prevData.length - 1; i >= 0; i--) {
-        const p = prevData[i];
-        const n = nextData[i];
-        if (
-            p.recorded_at !== n.recorded_at ||
-            p.temperature !== n.temperature ||
-            p.has_medication !== n.has_medication ||
-            p.medication_type !== n.medication_type ||
-            p.isOptimistic !== n.isOptimistic
-        ) {
-            return false;
-        }
-    }
-    return true;
 }
 
 export const TemperatureGraph = React.memo(TemperatureGraphBase, arePropsEqual);

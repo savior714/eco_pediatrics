@@ -2,23 +2,31 @@ import React, { useState } from 'react';
 import { Modal } from './ui/Modal';
 import { Check } from 'lucide-react';
 import { toaster } from './ui/Toast';
+import { PEDIATRIC_EDIT_OPTIONS, GUARDIAN_OPTIONS } from './mealGridUtils';
 
+/** 식사 수정 모달 Props */
 interface EditMealModalProps {
     isOpen: boolean;
     onClose: () => void;
+    /** 모달 제목에 사용되는 환자·병실 레이블 */
     label: string;
+    /** 표시용 날짜 문자열 */
     date: string;
+    /** 식사 시간대 표시 문자열 (아침·점심·저녁) */
     mealTime: string;
     mealId: number;
     currentPediatric: string;
     currentGuardian: string;
+    /** Optimistic Update 적용 후 롤백 함수를 반환하는 동기 저장 핸들러 */
     onSave: (mealId: number, pediatric: string, guardian: string) => { rollback: () => void };
+    /** 실제 API 저장 비동기 핸들러 */
     onApiSave: (pediatric: string, guardian: string) => Promise<void>;
 }
 
-const PEDIATRIC_OPTIONS = ['일반식', '죽1', '죽2', '죽3'];
-const GUARDIAN_OPTIONS = ['일반식', '선택 안함'];
-
+/**
+ * 환아·보호자 식사 종류를 변경하는 모달 컴포넌트.
+ * Optimistic Update 패턴으로 즉시 UI를 반영한 뒤 API 실패 시 자동 롤백한다.
+ */
 export function EditMealModal({
     isOpen,
     onClose,
@@ -35,6 +43,7 @@ export function EditMealModal({
     const [guardian, setGuardian] = useState(currentGuardian);
     const [submitting, setSubmitting] = useState(false);
 
+    /** Optimistic Update 적용 → 모달 닫기 → API 저장 순으로 실행하고, 실패 시 롤백한다. */
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitting(true);
@@ -79,7 +88,7 @@ export function EditMealModal({
                         환아 식사
                     </label>
                     <div className="grid grid-cols-2 gap-2">
-                        {PEDIATRIC_OPTIONS.map(opt => (
+                        {PEDIATRIC_EDIT_OPTIONS.map(opt => (
                             <button
                                 key={opt}
                                 type="button"

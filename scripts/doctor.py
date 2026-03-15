@@ -16,11 +16,14 @@ REQUIRED_UV_CMD = "uv"
 
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 
-def print_status(check_name, status, message=""):
+def print_status(check_name: str, status: bool, message: str = "") -> None:
+    """체크 결과를 [OK] / [FAIL] 기호와 함께 표준 출력으로 보고한다."""
     symbol = "[OK]" if status else "[FAIL]"
     print(f"{symbol:<6} {check_name:<30} {message}")
 
-def check_python():
+
+def check_python() -> bool:
+    """현재 Python 인터프리터 버전이 프로젝트 요구 버전과 일치하는지 검증한다."""
     current_ver = sys.version_info[:2]
     is_valid = current_ver == REQUIRED_PYTHON_VERSION
     msg = f"Found {sys.version.split()[0]}"
@@ -29,7 +32,8 @@ def check_python():
     print_status("Python Version", is_valid, msg)
     return is_valid
 
-def check_node():
+def check_node() -> bool:
+    """Node.js 설치 여부 및 프로젝트 요구 Major·Minor 버전을 검증한다."""
     try:
         output = subprocess.check_output(["node", "-v"], text=True).strip()
         match = re.search(r"v(\d+)\.(\d+)", output)
@@ -47,7 +51,8 @@ def check_node():
         print_status("Node.js Version", False, "Node.js not found in PATH")
         return False
 
-def check_git():
+def check_git() -> bool:
+    """Git 실행 파일이 PATH에 존재하는지 확인한다."""
     try:
         output = subprocess.check_output(["git", "--version"], text=True).strip()
         # Loose check for git availability
@@ -78,7 +83,8 @@ def check_uv():
     return False
 
 
-def check_msvc():
+def check_msvc() -> bool:
+    """MSVC 컴파일러(cl.exe) 또는 환경 변수 주입 여부를 확인한다. Tauri 빌드에 필수."""
     cl_path = shutil.which(REQUIRED_MSVC_CHECK_CMD)
     is_env_set = "INCLUDE" in os.environ and "ucrt" in os.environ.get("INCLUDE", "").lower()
     if cl_path or is_env_set:
@@ -93,10 +99,8 @@ def check_msvc():
     return False
 
 
-def check_cargo():
-    """Rust/cargo required for Tauri desktop app (npm run tauri dev)."""
-    # shutil.which uses the inherited PATH; on Windows the user PATH may be missing.
-    # Fall back to the default rustup install location explicitly.
+def check_cargo() -> bool:
+    """Rust cargo 실행 파일을 PATH 및 rustup 기본 경로에서 탐색한다. Tauri 데스크톱 앱 빌드에 필수."""
     cargo_path = shutil.which(REQUIRED_CARGO_CMD)
     if not cargo_path:
         userprofile = Path(os.environ.get("USERPROFILE", ""))
@@ -125,7 +129,8 @@ def check_cargo():
     return False
 
 
-def check_project_structure():
+def check_project_structure() -> bool:
+    """프로젝트 필수 디렉터리·파일(.venv, node_modules, .env 등) 존재 여부를 일괄 검증한다."""
     all_good = True
     
     # Backend
@@ -161,7 +166,8 @@ def check_project_structure():
 
     return all_good
 
-def main():
+def main() -> None:
+    """환경 진단 진입점. 전체 체크 결과를 집계하고 이상 시 수정 안내 메시지를 출력한다."""
     print(f"[START] Running Eco-Pediatrics Environment Doctor...\nTarget: {PROJECT_ROOT}\n")
     
     results = [

@@ -5,36 +5,23 @@
 param([switch]$Fix)
 
 $ErrorActionPreference = "Stop"
-$repoRoot = (Get-Location).Path
-$docsRoot = "docs"
-$archiveDir = "docs/prompts/archive"
 
-# 아카이브로 이동된 파일명 목록 (계획서 §4.2와 동기화)
-$archivedNames = @(
-    "DIAGNOSIS_PATIENT_DETAIL_MODAL_LOGIC.md",
-    "DIAGNOSIS_DASHBOARD_PAGE_LOGIC.md",
-    "DIAGNOSIS_USE_DASHBOARD_STATS_LOGIC.md",
-    "DIAGNOSIS_MEAL_MODULES_LOGIC.md",
-    "DIAGNOSIS_USEVITALS_LOGIC.md",
-    "PROMPT_COMPLETED_DOCS_NOT_SHOWING.md",
-    "PROMPT_STATION_INITIAL_LOAD_EMPTY.md",
-    "PROMPT_OTHER_LLM_STATION_GRID_EMPTY.md",
-    "PROMPT_OTHER_LLM_STATION_GRID_DB_SQL_VERIFICATION.md",
-    "PROMPT_ECO_BAT_1_CLOSES_TERMINAL.md",
-    "PROMPT_WT_LAYOUT_INVESTIGATION.md",
-    "PROMPT_STATION_DEV_BUTTONS_MISSING.md",
-    "PROMPT_MEAL_SYNC_SUBMODAL_STALE.md",
-    "PROMPT_DEPENDENCY_ISSUES.md",
-    "PROMPT_REFACTOR_LOGIC_ONLY_PROTOCOL.md",
-    "PROMPT_REFACTOR_AREAS_AND_CHECKLIST.md",
-    "PROMPT_LOGIC_ONLY_REFACTOR_BATCH.md"
-)
+# C-3 SSOT: 공유 상수 Dot-sourcing (아카이브 파일명 목록)
+. (Join-Path $PSScriptRoot "Shared-DocsConstants.ps1")
+. (Join-Path $PSScriptRoot "..\config\paths.ps1")
+
+$repoRoot = (Get-Location).Path
+$docsRoot = $script:DOCS_ROOT_REL
+$archiveDir = $script:DOCS_ARCHIVE_REL
+
+# C-3: $archivedNames을 공유 상수로 대체
+$archivedNames = $script:ARCHIVED_DOC_NAMES
 
 $linkPattern = '\]\(([^)]+\.md)\)'
 $broken = @()
 $fixes = @()
 
-Write-Host "문서 링크 검증을 시작합니다..." -ForegroundColor Cyan
+Write-Output "문서 링크 검증을 시작합니다..."
 
 Get-ChildItem $docsRoot -Recurse -Filter *.md | ForEach-Object {
     $file = $_
@@ -77,28 +64,39 @@ Get-ChildItem $docsRoot -Recurse -Filter *.md | ForEach-Object {
 
 # 보고
 if ($broken.Count -gt 0) {
-    Write-Host "[X] Broken (대상 없음, archive에도 없음):" -ForegroundColor Red
-    $broken | ForEach-Object { Write-Host "  $($_.File): $($_.Link)" }
+    Write-Warning "[X] Broken (대상 없음, archive에도 없음):"
+    $broken | ForEach-Object { Write-Output "  $($_.File): $($_.Link)" }
 }
 if ($fixes.Count -gt 0) {
-    Write-Host "[!] 수정 가능 (Archive에서 발견):" -ForegroundColor Yellow
-    $fixes | ForEach-Object { Write-Host "  $($_.File): $($_.Link) -> $($_.NewLink)" }
+    Write-Output "[!] 수정 가능 (Archive에서 발견):"
+    $fixes | ForEach-Object { Write-Output "  $($_.File): $($_.Link) -> $($_.NewLink)" }
     if ($Fix) {
         $rootFull = [System.IO.Path]::GetFullPath($repoRoot)
         foreach ($e in $fixes) {
             $f = Join-Path $rootFull $e.File.Replace('/', [IO.Path]::DirectorySeparatorChar)
-            (Get-Content $f -Raw) -replace [regex]::Escape("]($($e.Link))"), "]($($e.NewLink))" | Set-Content $f -NoNewline
-            Write-Host "[수정 완료] $($e.File)" -ForegroundColor Green
+
+            # C-1d: 파일 존재 여부 확인 후 Set-Content를 Try-Catch로 보호
+            if (-not (Test-Path $f)) {
+                Write-Warning "파일을 찾을 수 없어 건너뜁니다: $($e.File)"
+                continue
+            }
+            Try {
+                (Get-Content $f -Raw) -replace [regex]::Escape("]($($e.Link))"), "]($($e.NewLink))" | Set-Content $f -NoNewline
+                Write-Output "[수정 완료] $($e.File)"
+            }
+            Catch {
+                Write-Warning "파일 수정 실패: $($e.File) — $_"
+            }
         }
     } else {
-        Write-Host "링크 자동 수정 적용: ./scripts/Verify-DocsLinks.ps1 -Fix" -ForegroundColor Gray
+        Write-Output "링크 자동 수정 적용: ./scripts/Verify-DocsLinks.ps1 -Fix"
     }
 }
 if ($broken.Count -eq 0 -and $fixes.Count -eq 0) {
-    Write-Host "깨진 링크 없음." -ForegroundColor Green
+    Write-Output "깨진 링크 없음."
 }
 
-Write-Host "검증 작업 종료." -ForegroundColor Cyan
+Write-Output "검증 작업 종료."
 
 $script:BrokenCount = $broken.Count
 $script:FixesCount = $fixes.Count

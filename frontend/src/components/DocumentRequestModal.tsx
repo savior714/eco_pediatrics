@@ -3,26 +3,32 @@
 import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { FileText, CheckCircle, AlertCircle } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import { DOC_MAP } from '@/constants/mappings';
+import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
 
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
-
+/** 서류 신청 모달 Props */
 interface DocumentRequestModalProps {
     isOpen: boolean;
     onClose: () => void;
+    /** 해당 입원 ID (null이면 제출 불가) */
     admissionId: string | null;
+    /** 입원 인증 토큰 (X-Admission-Token 헤더에 사용) */
     token: string;
+    /** 이미 신청 대기 중인 서류 ID 목록 — 선택 불가 처리 */
     pendingItems?: string[];
     onSuccess?: () => void;
 }
 
+/** 신청 가능한 서류 종류 ID 목록 */
 const DOCUMENT_IDS = ['RECEIPT', 'DETAIL', 'CERT', 'DIAGNOSIS', 'INITIAL'] as const;
+/** DOC_MAP을 기반으로 생성된 서류 선택 옵션 목록 */
 const DOCUMENT_OPTIONS = DOCUMENT_IDS.map(id => ({ id, label: DOC_MAP[id] || id }));
 
+/**
+ * 보호자가 필요 서류를 선택하여 신청하는 모달 컴포넌트.
+ * 이미 신청된 항목은 비활성화하며, 성공 시 완료 화면으로 전환한다.
+ */
 export function DocumentRequestModal({ isOpen, onClose, admissionId, token, pendingItems = [], onSuccess }: DocumentRequestModalProps) {
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +41,7 @@ export function DocumentRequestModal({ isOpen, onClose, admissionId, token, pend
         }
     }, [isOpen]);
 
+    /** 서류 항목 선택/해제를 토글한다. */
     const toggleItem = (id: string) => {
         if (selectedItems.includes(id)) {
             setSelectedItems(prev => prev.filter(i => i !== id));
@@ -43,6 +50,7 @@ export function DocumentRequestModal({ isOpen, onClose, admissionId, token, pend
         }
     };
 
+    /** 선택된 서류 항목을 서버에 일괄 신청하고 결과 상태를 갱신한다. */
     const handleSubmit = async () => {
         if (selectedItems.length === 0 || !admissionId) return;
 
@@ -50,23 +58,13 @@ export function DocumentRequestModal({ isOpen, onClose, admissionId, token, pend
         setResult(null);
 
         try {
-            const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${API_BASE}/api/v1/documents/requests`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Admission-Token': token
-                },
-                body: JSON.stringify({
-                    admission_id: admissionId,
-                    request_items: selectedItems
-                })
+            await api.post('/api/v1/documents/requests', {
+                admission_id: admissionId,
+                request_items: selectedItems
+            }, {
+                headers: { 'X-Admission-Token': token }
             });
-
-            if (!res.ok) throw new Error('Failed to request documents');
-
             setResult('SUCCESS');
-            // setResult('SUCCESS'); // Already set above
         } catch (error) {
             console.error(error);
             setResult('ERROR');

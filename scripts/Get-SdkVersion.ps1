@@ -4,7 +4,8 @@
 
 param([string]$OutFile)
 $ErrorActionPreference = "SilentlyContinue"
-$sdkRoot = "${env:ProgramFiles(x86)}\Windows Kits\10\Include"
+. (Join-Path $PSScriptRoot "..\config\paths.ps1")
+$sdkRoot = "${env:ProgramFiles(x86)}\$script:SDK_KITS_SUBPATH\Include"
 if (-not (Test-Path $sdkRoot)) { exit 0 }
 $folder = Get-ChildItem -LiteralPath $sdkRoot -Directory -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -match '^10\.\d' } |

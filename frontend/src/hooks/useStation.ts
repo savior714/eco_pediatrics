@@ -4,7 +4,7 @@ import { useWebSocket, WsConnectionStatus } from './useWebSocket';
 import { useStationDashboard } from './useStationDashboard';
 import { api } from '@/lib/api';
 import { Bed, Notification, LastUploadedIv, AdmissionSummary, WsMessage, MealRequest } from '@/types/domain';
-import { ROOM_NUMBERS, MEAL_MAP, DOC_MAP } from '@/constants/mappings';
+import { ROOM_NUMBERS, MEAL_MAP, DOC_MAP, MEAL_TIME_MAP } from '@/constants/mappings';
 
 interface UseStationReturn {
     beds: Bed[];
@@ -133,8 +133,7 @@ export function useStation(): UseStationReturn {
 
                     const mealDateRaw = message.data.meal_date;
                     const mealTimeRaw = message.data.meal_time;
-                    const mealTimeMap: Record<string, string> = { BREAKFAST: '아침', LUNCH: '점심', DINNER: '저녁' };
-                    const timeLabel = mealTimeMap[mealTimeRaw] || mealTimeRaw;
+                    const timeLabel = MEAL_TIME_MAP[mealTimeRaw] || mealTimeRaw;
 
                     let dateLabel = '';
                     if (mealDateRaw) {

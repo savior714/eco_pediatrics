@@ -14,16 +14,20 @@ import { PatientDetailHeader } from './patient-detail/PatientDetailHeader';
 import { VitalStatusGrid } from './patient-detail/VitalStatusGrid';
 import { PatientDetailSidebar } from './patient-detail/PatientDetailSidebar';
 
+/** 환자 상세 모달 Props */
 interface PatientDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
     bed: Bed;
     notifications: Notification[];
+    /** 서류·간식 요청 완료 처리 핸들러 */
     onCompleteRequest?: (id: string, type?: string, admissionId?: string) => void | Promise<void>;
     lastUploadedIv?: LastUploadedIv | null;
     onIVUploadSuccess?: (rate?: number) => void;
+    /** 바이탈 저장 성공 시 부모 컴포넌트에 체온 값을 전달하는 콜백 */
     onVitalUpdate?: (temp: number) => void;
     lastUpdated?: number;
+    /** 스테이션에서 전달받은 초기 바이탈 데이터 (모달 열기 전 캐시) */
     vitals?: VitalData[];
     checkInAt?: string | null;
     /** 퇴원/전실 성공 시 스테이션 그리드 갱신 (reload 대체) */
@@ -33,6 +37,11 @@ interface PatientDetailModalProps {
 import { Modal } from '@/components/ui/Modal';
 import { toaster } from '@/components/ui/Toast';
 
+/**
+ * 환자 상세 정보 모달 컴포넌트.
+ * 체온 그래프·바이탈·식사·서류·검사 일정·간호 알림을 통합 표시하며,
+ * Optimistic Update 패턴으로 바이탈/검사/식사 변경을 즉시 반영한다.
+ */
 export function PatientDetailModal({
     isOpen, onClose, bed, notifications, onCompleteRequest,
     onIVUploadSuccess, onVitalUpdate, vitals: propVitals,

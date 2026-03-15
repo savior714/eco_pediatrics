@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { api } from '@/lib/api';
 import { Bed, MealRequest } from '@/types/domain';
 import {
@@ -11,7 +11,9 @@ import {
     PEDIATRIC_OPTIONS,
     GUARDIAN_OPTIONS,
 } from './mealGridUtils';
+import { useMealGrid } from '@/hooks/useMealGrid';
 
+/** 식단 그리드 Props */
 interface MealGridProps {
     beds: Bed[];
 }
@@ -28,12 +30,14 @@ function areMealGridPropsEqual(prev: MealGridProps, next: MealGridProps): boolea
     return true;
 }
 
+/** 병실 비고란 인라인 입력 셀 Props */
 interface RoomNoteInputProps {
     bed: Bed;
     matrix: Record<string, Record<string, MealRequest>>;
     onUpdate: (bed: Bed, mealTime: string, field: keyof MealRequest, value: string) => void;
 }
 
+/** 병실 비고(room_note)를 인라인 편집하는 테이블 셀 컴포넌트. blur 이벤트 시에만 API 갱신을 호출한다. */
 function RoomNoteInput({ bed, matrix, onUpdate }: RoomNoteInputProps) {
     const existingNote = getRoomNoteFromMatrix(matrix, bed.id ?? '');
     const [localNote, setLocalNote] = useState(existingNote);
@@ -62,95 +66,27 @@ function RoomNoteInput({ bed, matrix, onUpdate }: RoomNoteInputProps) {
     );
 }
 
+/**
+ * 날짜별 식단 선택 그리드 본체 컴포넌트.
+ * 오늘·내일·모레 탭을 제공하며, 환아/보호자 식종을 셀 단위로 편집한다.
+ */
 function MealGridBase({ beds }: MealGridProps) {
     const [activeDate, setActiveDate] = useState<Date>(new Date());
-    // Map: admissionId -> { BREAKFAST: MealRequest, LUNCH: MealRequest, ... }
-    const [matrix, setMatrix] = useState<Record<string, Record<string, MealRequest>>>({});
-    const [loading, setLoading] = useState(false);
 
-    // Filter occupied beds
     const patients = useMemo(() => beds.filter(b => b.id && b.name), [beds]);
-    // Generate tabs (Today, Tomorrow, D+2)
     const tabs = [0, 1, 2].map(offset => {
         const d = new Date();
         d.setDate(d.getDate() + offset);
         return d;
     });
 
-    const requestRef = useRef(0);
-
-    const fetchMatrix = useCallback(async () => {
-        const currentRequestId = ++requestRef.current;
-        setLoading(true);
-        try {
-            const dateStr = formatDate(activeDate);
-            const res = await api.get(`/api/v1/meals/matrix?target_date=${dateStr}`);
-
-            if (currentRequestId !== requestRef.current) {
-                console.warn(`[fetchMatrix] 오래된 응답 무시됨. reqId: ${currentRequestId}`);
-                return;
-            }
-            if (!Array.isArray(res)) return;
-
-            const map: Record<string, Record<string, MealRequest>> = {};
-            patients.forEach(p => { if (p.id) map[p.id] = {} });
-            res.forEach((req: MealRequest) => {
-                if (req.admission_id && req.meal_time) {
-                    if (!map[req.admission_id]) map[req.admission_id] = {};
-                    map[req.admission_id][req.meal_time] = req;
-                }
-            });
-            setMatrix(map);
-        } catch (e) {
-            console.error("Fetch Matrix Error", e);
-        } finally {
-            setLoading(false);
-        }
-    }, [activeDate, patients]);
+    const { matrix, loading, fetchMatrix, handleUpdate } = useMealGrid({ activeDate, patients });
 
     useEffect(() => {
         fetchMatrix();
-    }, [activeDate, fetchMatrix]); // Added fetchMatrix to dependency array for correctness
+    }, [activeDate, fetchMatrix]);
 
-    const handleUpdate = async (
-        bed: Bed,
-        mealTime: string,
-        field: keyof MealRequest,
-        value: string
-    ) => {
-        if (!bed.id) return;
-
-        // Current state for this specific slot
-        const currentReq = matrix[bed.id]?.[mealTime] || {};
-
-        // Optimistic UI
-        setMatrix(prev => ({
-            ...prev,
-            [bed.id]: {
-                ...prev[bed.id],
-                [mealTime]: { ...currentReq, [field]: value } as MealRequest
-            }
-        }));
-
-        try {
-            const payload = {
-                admission_id: bed.id,
-                request_type: 'STATION_UPDATE',
-                meal_date: formatDate(activeDate),
-                meal_time: mealTime,
-                pediatric_meal_type: field === 'pediatric_meal_type' ? value : (currentReq.pediatric_meal_type || '선택 안함'),
-                guardian_meal_type: field === 'guardian_meal_type' ? value : (currentReq.guardian_meal_type || '선택 안함'),
-                room_note: field === 'room_note' ? value : (currentReq.room_note || '')
-            };
-            await api.post('/api/v1/meals/requests', payload);
-        } catch (e) {
-            console.error("Update Failed", e);
-            alert('저장 실패');
-            fetchMatrix(); // Revert
-        }
-    };
-
-    // Render Cell Helper
+    /** 식사 시간대별 선택 셀을 렌더링한다. 환자 신청이 대기 중일 경우 주황색 뱃지를 표시한다. */
     const renderCell = (bed: Bed, time: string, type: 'child' | 'guardian') => {
         if (!bed.id) return null;
         const req = matrix[bed.id]?.[time];

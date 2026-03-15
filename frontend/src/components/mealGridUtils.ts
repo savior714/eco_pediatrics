@@ -18,8 +18,16 @@ export const formatDisplayDate = (d: Date): string => {
 
 export const MEAL_TIMES = ['LUNCH', 'BREAKFAST', 'DINNER'] as const;
 
+/** MealGrid 셀 전체 선택지 (선택 안함 포함) */
 export const PEDIATRIC_OPTIONS = ['일반식', '죽1', '죽2', '죽3', '선택 안함'];
 export const GUARDIAN_OPTIONS = ['일반식', '선택 안함'];
+
+/** 수정 모달용 환아 선택지 ('선택 안함' 제외) */
+export const PEDIATRIC_EDIT_OPTIONS = ['일반식', '죽1', '죽2', '죽3'] as const;
+
+/** 식사 신청 모달용 { label, value } 선택지 — SSOT */
+export const PEDIATRIC_REQUEST_OPTIONS = PEDIATRIC_EDIT_OPTIONS.map(v => ({ label: v, value: v }));
+export const GUARDIAN_REQUEST_OPTIONS = GUARDIAN_OPTIONS.map(v => ({ label: v, value: v }));
 
 export type MealMatrix = Record<string, Record<string, MealRequest>>;
 

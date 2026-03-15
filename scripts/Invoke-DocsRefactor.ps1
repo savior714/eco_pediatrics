@@ -5,6 +5,10 @@
 
 $ErrorActionPreference = "Stop"
 
+# C-3 SSOT: 공유 상수 Dot-sourcing (아카이브 파일명 목록)
+. (Join-Path $PSScriptRoot "Shared-DocsConstants.ps1")
+. (Join-Path $PSScriptRoot "..\config\paths.ps1")
+
 # 프로젝트 루트 결정 (스크립트 위치 기준, Invoke-Repomix.ps1과 동일)
 $root = if ($PSScriptRoot) {
     $scriptsParent = Split-Path -Parent $PSScriptRoot
@@ -19,54 +23,46 @@ $promptsPath = Join-Path $root "docs" "prompts"
 # 1. 아카이브 디렉터리 생성
 if (!(Test-Path $archivePath)) {
     New-Item -ItemType Directory -Path $archivePath -Force | Out-Null
-    Write-Host "Created: $archivePath" -ForegroundColor Cyan
+    Write-Output "Created: $archivePath"
 }
 
 # 2. 완료된 이슈용 프롬프트 → archive (REFACTOR_DOCS_PLAN §4.2)
-$filesToArchive = @(
-    "DIAGNOSIS_PATIENT_DETAIL_MODAL_LOGIC.md",
-    "DIAGNOSIS_DASHBOARD_PAGE_LOGIC.md",
-    "DIAGNOSIS_USE_DASHBOARD_STATS_LOGIC.md",
-    "DIAGNOSIS_MEAL_MODULES_LOGIC.md",
-    "DIAGNOSIS_USEVITALS_LOGIC.md",
-    "PROMPT_COMPLETED_DOCS_NOT_SHOWING.md",
-    "PROMPT_STATION_INITIAL_LOAD_EMPTY.md",
-    "PROMPT_OTHER_LLM_STATION_GRID_EMPTY.md",
-    "PROMPT_OTHER_LLM_STATION_GRID_DB_SQL_VERIFICATION.md",
-    "PROMPT_ECO_BAT_1_CLOSES_TERMINAL.md",
-    "PROMPT_WT_LAYOUT_INVESTIGATION.md",
-    "PROMPT_STATION_DEV_BUTTONS_MISSING.md",
-    "PROMPT_MEAL_SYNC_SUBMODAL_STALE.md",
-    "PROMPT_DEPENDENCY_ISSUES.md",
-    "PROMPT_REFACTOR_LOGIC_ONLY_PROTOCOL.md",
-    "PROMPT_REFACTOR_AREAS_AND_CHECKLIST.md",
-    "PROMPT_LOGIC_ONLY_REFACTOR_BATCH.md"
-)
-
-foreach ($file in $filesToArchive) {
+foreach ($file in $script:ARCHIVED_DOC_NAMES) {
     $src = Join-Path $promptsPath $file
-    if (Test-Path $src) {
+    if (-not (Test-Path $src)) { continue }
+
+    # C-1c: Move-Item을 Try-Catch로 보호
+    Try {
         Move-Item -Path $src -Destination $archivePath -Force
-        Write-Host "Archived: $file" -ForegroundColor Cyan
+        Write-Output "Archived: $file"
+    }
+    Catch {
+        Write-Warning "아카이브 이동 실패 [$file]: $_"
     }
 }
 
 # 3. 루트 docs 중복 제거 (REFACTOR_DOCS_PLAN §4.1 — prompts/만 유지)
 $duplicates = @(
-    "docs\ERROR_MONITOR_DEBUG_PROMPT.md",
-    "docs\PROMPT_STATION_DEV_BUTTONS_MISSING.md",
-    "docs\PROMPT_WT_LAYOUT_INVESTIGATION.md"
+    "$script:DOCS_ROOT_REL\ERROR_MONITOR_DEBUG_PROMPT.md",
+    "$script:DOCS_ROOT_REL\PROMPT_STATION_DEV_BUTTONS_MISSING.md",
+    "$script:DOCS_ROOT_REL\PROMPT_WT_LAYOUT_INVESTIGATION.md"
 )
 foreach ($rel in $duplicates) {
-    $path = Join-Path $root $rel
-    if (Test-Path $path) {
-        Remove-Item $path -Force
-        Write-Host "Removed duplicate: $rel" -ForegroundColor Yellow
+    $absPath = Join-Path $root $rel
+    if (-not (Test-Path $absPath)) { continue }
+
+    # C-1c: Remove-Item을 Try-Catch로 보호
+    Try {
+        Remove-Item $absPath -Force
+        Write-Output "Removed duplicate: $rel"
+    }
+    Catch {
+        Write-Warning "중복 파일 삭제 실패 [$rel]: $_"
     }
 }
 
-Write-Host ""
-Write-Host "Done. Next: Run link check and fix if needed (REFACTOR_DOCS_PLAN §5.1):" -ForegroundColor Green
-Write-Host "  pwsh -File scripts/Verify-DocsLinks.ps1" -ForegroundColor Gray
-Write-Host "  pwsh -File scripts/Verify-DocsLinks.ps1 -Fix" -ForegroundColor Gray
-Write-Host "Update docs/VERIFICATION_GLOBAL_RULES.md §4 if document list changed." -ForegroundColor Green
+Write-Output ""
+Write-Output "Done. Next: Run link check and fix if needed (REFACTOR_DOCS_PLAN §5.1):"
+Write-Output "  pwsh -File scripts/Verify-DocsLinks.ps1"
+Write-Output "  pwsh -File scripts/Verify-DocsLinks.ps1 -Fix"
+Write-Output "Update docs/VERIFICATION_GLOBAL_RULES.md §4 if document list changed."

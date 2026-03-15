@@ -2,6 +2,7 @@ param([string]$Root)
 
 # [Architect Note] Windows 11 Native & PowerShell 7(pwsh) 표준 준수 리팩토링
 # Windows Terminal(wt.exe)의 복잡한 쿼팅 이슈를 방지하고 환경 일관성을 위해 모든 쉘을 pwsh로 통일함.
+. (Join-Path $PSScriptRoot "..\config\paths.ps1")
 
 # 1. Root 경로 보정 (파라미터가 없으면 스크립트 위치 기준으로 자동 설정)
 if ([string]::IsNullOrWhiteSpace($Root)) {
@@ -28,10 +29,10 @@ $env:ECO_LOG_FILE = $logFile
 $beScript = Join-Path $PSScriptRoot "Start-Backend.ps1"
 $feScript = Join-Path $PSScriptRoot "Start-Frontend.ps1"
 
-# [Architect Fix] 실행 엔진 감지 (pwsh vs powershell)
-$engine = "pwsh.exe"
+# [Architect Fix] 실행 엔진 감지 (pwsh vs powershell) — config/paths.ps1 상수 참조
+$engine = $script:PS_ENGINE_PRIMARY
 if (!(Get-Command $engine -ErrorAction SilentlyContinue)) {
-    $engine = "powershell.exe"
+    $engine = $script:PS_ENGINE_FALLBACK
 }
 
 # 3. Windows Terminal (wt.exe) 실행 인자 문자열 구성

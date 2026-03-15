@@ -1,20 +1,22 @@
 import React from 'react';
 import { Card } from './Card';
 import { Droplet, Camera, CheckCircle2 } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '@/lib/utils';
 
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
-
+/** 수액 안전 모니터링 카드 Props */
 interface IVStatusCardProps {
+    /** 수액 조절기 사진 URL */
     photoUrl?: string;
+    /** 현재 주입 속도 (cc/hr) */
     infusionRate?: number;
+    /** 간호사 마지막 확인 시각 */
     lastChecked?: string;
     className?: string;
 }
 
+/**
+ * 수액 조절기 사진, 주입 속도, 간호사 확인 여부를 표시하는 카드 컴포넌트.
+ */
 export function IVStatusCard({ photoUrl, infusionRate, lastChecked, className }: IVStatusCardProps) {
     return (
         <Card className={cn("flex flex-col gap-4 bg-white border-slate-200/80 shadow-sm", className)}>

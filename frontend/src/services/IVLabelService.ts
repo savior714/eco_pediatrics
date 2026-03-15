@@ -34,27 +34,36 @@ export class IVLabelService {
     }
 
     /**
+     * Tauri invoke 공통 파라미터를 빌드합니다.
+     * generatePreview, printLabel 양쪽에서 동일한 페이로드를 사용하므로 단일 출처로 관리합니다.
+     */
+    private static buildInvokeParams(data: IVLabelData): Record<string, unknown> {
+        return {
+            name: data.name,
+            room: data.room,
+            rate: `${data.infusionRate} cc/hr`,
+            ageGender: data.ageGender,
+            date: getKSTNowString(),
+            patientId: data.patientId,
+            manualName: data.manualName,
+            fluidType: data.fluidType,
+            mixMeds: data.mixMeds,
+            astCheck: data.astCheck,
+            astResult: data.astResult,
+            labResults: data.labResults,
+        };
+    }
+
+    /**
      * b-PAC SDK를 통해 라벨 미리보기 이미지를 생성합니다.
-     * @returns 생성된 미리보기 이미지의 Base64 또는 로컬 경로
+     * @returns 생성된 미리보기 이미지의 Base64 데이터 URI
      */
     static async generatePreview(data: IVLabelData): Promise<string> {
-        const info = `${data.infusionRate} cc/hr`;
-
         try {
-            const previewBase64 = await invoke<string>('generate_iv_label_preview', {
-                name: data.name,
-                room: data.room,
-                rate: info,
-                ageGender: data.ageGender,
-                date: getKSTNowString(),
-                patientId: data.patientId,
-                manualName: data.manualName,
-                fluidType: data.fluidType,
-                mixMeds: data.mixMeds,
-                astCheck: data.astCheck,
-                astResult: data.astResult,
-                labResults: data.labResults
-            });
+            const previewBase64 = await invoke<string>(
+                'generate_iv_label_preview',
+                IVLabelService.buildInvokeParams(data)
+            );
             return `data:image/png;base64,${previewBase64}`;
         } catch (error) {
             console.error('라벨 미리보기 생성 실패:', error);
@@ -66,23 +75,8 @@ export class IVLabelService {
      * 실제로 라벨을 인쇄합니다.
      */
     static async printLabel(data: IVLabelData): Promise<void> {
-        const info = `${data.infusionRate} cc/hr`;
-
         try {
-            await invoke('print_iv_label', {
-                name: data.name,
-                room: data.room,
-                rate: info,
-                ageGender: data.ageGender,
-                date: getKSTNowString(),
-                patientId: data.patientId,
-                manualName: data.manualName,
-                fluidType: data.fluidType,
-                mixMeds: data.mixMeds,
-                astCheck: data.astCheck,
-                astResult: data.astResult,
-                labResults: data.labResults
-            });
+            await invoke('print_iv_label', IVLabelService.buildInvokeParams(data));
         } catch (error) {
             console.error('라벨 인쇄 실패:', error);
             throw error;

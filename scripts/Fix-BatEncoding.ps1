@@ -4,24 +4,33 @@
 # Usage: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Fix-BatEncoding.ps1
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "..\config\paths.ps1")
 $root = Split-Path $PSScriptRoot -Parent
 if (-not (Test-Path (Join-Path $root "eco.bat"))) { $root = (Get-Location).Path }
-$batFiles = @("eco.bat", "start_backend_pc.bat")
+$batFiles = $script:ECO_BAT_FILES
 $cp949 = [System.Text.Encoding]::GetEncoding(949)
 
 foreach ($name in $batFiles) {
     $path = Join-Path $root $name
     if (-not (Test-Path $path)) { continue }
-    $bytes = [System.IO.File]::ReadAllBytes($path)
-    $enc = [System.Text.Encoding]::UTF8
-    if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+
+    # C-1b: 파일별 I/O를 Try-Catch로 보호 — 실패 시 다음 파일 계속 처리
+    Try {
+        $bytes = [System.IO.File]::ReadAllBytes($path)
         $enc = [System.Text.Encoding]::UTF8
-    } elseif ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) {
-        $enc = [System.Text.Encoding]::Unicode
+        if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+            $enc = [System.Text.Encoding]::UTF8
+        } elseif ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) {
+            $enc = [System.Text.Encoding]::Unicode
+        }
+        $content = $enc.GetString($bytes)
+        [System.IO.File]::WriteAllText($path, $content, $cp949)
+        Write-Output "[OK] $name -> CP949"
     }
-    $content = $enc.GetString($bytes)
-    [System.IO.File]::WriteAllText($path, $content, $cp949)
-    Write-Host "[OK] $name -> CP949"
+    Catch {
+        Write-Warning "[$name] CP949 변환 실패: $_"
+        continue
+    }
 }
 
-Write-Host "Done. Run eco.bat again (double-click or from terminal)."
+Write-Output "Done. Run eco.bat again (double-click or from terminal)."

@@ -10,14 +10,22 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 import { QRCodeCanvas } from 'qrcode.react';
 
+/** 수액 기록 업로드 폼 Props */
 interface IVUploadFormProps {
     admissionId: string;
     patientName: string;
+    /** 모바일 QR 업로드 URL 생성용 인증 토큰 */
     token?: string;
+    /** 기록 저장 성공 시 주입 속도 값을 부모에 전달하는 콜백 */
     onUploadSuccess: (rate?: number) => void;
+    /** WebSocket을 통해 수신된 최신 수액 사진 정보 */
     lastUploadedIv?: { admissionId: string; url: string } | null;
 }
 
+/**
+ * 수액 주입 속도 입력 및 수액 조절기 사진 등록 폼 컴포넌트.
+ * 모바일 QR 스캔을 통한 사진 업로드와 WebSocket 자동 반영을 지원한다.
+ */
 export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess, lastUploadedIv }: IVUploadFormProps) {
     const [rate, setRate] = useState<number | ''>('');
     const [photoUrl, setPhotoUrl] = useState<string>('');
@@ -33,13 +41,14 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
         };
     }, []);
 
-    // Auto-fill from WebSocket event
+    // WebSocket 이벤트로 수신된 사진 URL 자동 반영
     React.useEffect(() => {
         if (lastUploadedIv && lastUploadedIv.admissionId === admissionId) {
             setPhotoUrl(lastUploadedIv.url);
         }
     }, [lastUploadedIv, admissionId]);
 
+    /** 수액 기록(속도 + 사진 URL)을 서버에 저장하고, 성공 시 부모에 결과를 전달한다. */
     const handleUpload = async () => {
         if (!admissionId || admissionId.trim() === '') {
             alert('이 병상은 현재 입원 정보가 연동되어 있지 않아 기록을 저장할 수 없습니다.');
@@ -63,7 +72,7 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
             if (res.ok) {
                 setSuccess(true);
                 onUploadSuccess(rate === '' ? undefined : Number(rate));
-                setPhotoUrl(''); // Clear after success
+                setPhotoUrl(''); // 저장 성공 후 사진 URL 초기화
                 toaster.create({
                     title: '성공',
                     description: '기록이 저장되었습니다.',
@@ -97,9 +106,9 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
     return (
         <>
             <div className={`relative ${photoUrl ? 'ring-2 ring-orange-400 rounded-xl p-1 -m-1 bg-orange-50/50' : ''}`}>
-                {/* Top Center Save Button (Now in flex) */}
+                {/* 속도 입력 + 저장 버튼 + QR/사진 영역 수평 배치 */}
                 <div className="flex items-stretch gap-2 h-10">
-                    {/* 1. Rate Input Group */}
+                    {/* 주입 속도 입력 */}
                     <div className="flex-1 min-w-0 relative">
                         <input
                             type="number"
@@ -111,7 +120,7 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">cc/hr</span>
                     </div>
 
-                    {/* 2. Save Button (Center) */}
+                    {/* 저장 버튼 */}
                     <button
                         onClick={handleUpload}
                         disabled={isUploading || success}
@@ -130,9 +139,9 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
                         <span>{isUploading ? '저장...' : success ? '완료' : photoUrl ? '승인' : '기록'}</span>
                     </button>
 
-                    {/* 3. QR Icon Button / Photo Preview (Right) */}
+                    {/* QR 아이콘 버튼 / 사진 미리보기 (우측) */}
                     <div className="flex-none h-full aspect-square relative">
-                        {/* If photo uploaded, show small preview or X to clear */}
+                        {/* 사진이 있으면 미리보기, 없으면 QR 스캔 버튼 */}
                         {photoUrl ? (
                             <div className="w-full h-full relative bg-slate-100 rounded-lg overflow-hidden border border-slate-200 group cursor-pointer" onClick={() => setShowZoom(true)}>
                                 <Image
@@ -141,7 +150,7 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
                                     fill
                                     className="object-cover"
                                 />
-                                {/* Delete button (top right small) */}
+                                {/* 사진 삭제 버튼 (우상단) */}
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setPhotoUrl(''); }}
                                     className="absolute top-0.5 right-0.5 bg-black/50 rounded-full p-0.5"
@@ -178,7 +187,7 @@ export function IVUploadForm({ admissionId, patientName, token, onUploadSuccess,
                 )}
             </div>
 
-            {/* Zoom Modal - Full Screen */}
+            {/* 사진 확대 모달 (전체 화면) */}
             {showZoom && fullPhotoUrl && (
                 <div
                     className="fixed inset-0 z-modal-content bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"

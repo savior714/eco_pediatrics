@@ -1,13 +1,8 @@
 import React from 'react';
 import { Check } from 'lucide-react';
+import type { MixedMed } from '@/types/domain';
 
-export interface MixedMedForPreview {
-    id: string;
-    name: string;
-    amount: number;
-    unit?: string;
-    frequency?: 'QD' | 'BID' | 'TID';
-}
+export type { MixedMed as MixedMedForPreview };
 
 export interface LabResultsForPreview {
     [key: string]: { checked: boolean; value: string };
@@ -21,15 +16,15 @@ export interface IVLabelPreviewSectionProps {
     printDate: string;
     rapidRate: number;
     rapidBaseFluid: string;
-    rapidMeds: MixedMedForPreview[];
+    rapidMeds: MixedMed[];
     maintRate: number;
     maintBaseFluid: string;
-    maintMeds: MixedMedForPreview[];
-    antibioticMeds: MixedMedForPreview[];
-    otherMeds: MixedMedForPreview[];
+    maintMeds: MixedMed[];
+    antibioticMeds: MixedMed[];
+    otherMeds: MixedMed[];
     astResult: 'NONE' | 'NEG' | 'POS';
     labResults: LabResultsForPreview;
-    formatMeds: (meds: MixedMedForPreview[]) => string;
+    formatMeds: (meds: MixedMed[]) => string;
 }
 
 const LAB_ITEMS = [

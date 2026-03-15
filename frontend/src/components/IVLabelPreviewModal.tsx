@@ -8,7 +8,9 @@ import { IVLabelPreviewSection } from './IVLabelPreviewSection';
 import { MedSection, MixedMed } from './IVLabelMedSection';
 import { toaster } from './ui/Toast';
 import { Field } from './ui/Field';
+import { IVLabelLabSection, AstResult, LabResultMap } from './IVLabelLabSection';
 
+/** 수액 라벨 미리보기 모달 Props */
 interface IVLabelPreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -16,31 +18,40 @@ interface IVLabelPreviewModalProps {
     currentRate?: number;
 }
 
+/**
+ * 혼합 약물 목록을 라벨 표시용 문자열로 포맷팅한다.
+ * @param meds 혼합 약물 배열
+ * @returns "이름 용량단위 (투여빈도)" 형태로 쉼표 구분된 문자열
+ */
 const formatMeds = (meds: MixedMed[]) => meds.map(m => `${m.name} ${m.amount}${m.unit}${m.frequency ? ` (${m.frequency})` : ''}`).join(', ');
 
+/**
+ * 수액 라벨 처방 설정 모달 컴포넌트.
+ * 급속·유지·항생제·기타 약물 구성, AST 결과, 검사 항목을 입력하여 라벨을 인쇄한다.
+ */
 export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLabelPreviewModalProps) {
     const [patientId, setPatientId] = useState<string>('');
     const [manualName, setManualName] = useState<string>(bed.name || '');
-    const [astResult, setAstResult] = useState<'NONE' | 'NEG' | 'POS'>('NONE');
+    const [astResult, setAstResult] = useState<AstResult>('NONE');
     const [isPrinting, setIsPrinting] = useState(false);
 
-    // [Category 1] 급속수액요법 (Rapid)
+    // 급속수액요법 상태
     const [rapidBaseFluid, setRapidBaseFluid] = useState<string>('');
     const [rapidRate, setRapidRate] = useState<number>(0);
     const [rapidMeds, setRapidMeds] = useState<MixedMed[]>([]);
 
-    // [Category 2] 유지수액요법 (Maintenance)
+    // 유지수액요법 상태
     const [maintBaseFluid, setMaintBaseFluid] = useState<string>('');
     const [maintRate, setMaintRate] = useState<number>(currentRate || 0);
     const [maintMeds, setMaintMeds] = useState<MixedMed[]>([]);
 
-    // [Category 3] 항생제 (Antibiotics)
+    // 항생제 상태
     const [antibioticMeds, setAntibioticMeds] = useState<MixedMed[]>([]);
 
-    // [Category 4] 기타 약물 (IVS, IVM, IM)
+    // 기타 약물(IVS, IVM, IM) 상태
     const [otherMeds, setOtherMeds] = useState<MixedMed[]>([]);
 
-    const [labResults, setLabResults] = useState<Record<string, { checked: boolean, value: string }>>({
+    const [labResults, setLabResults] = useState<LabResultMap>({
         cbc: { checked: false, value: '' },
         lft: { checked: false, value: '' },
         electrolyte: { checked: false, value: '' },
@@ -55,6 +66,7 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
     const ageGender = formatPatientDemographics(bed.dob, bed.gender);
     const printDate = getKSTNowString().split(' ')[0];
 
+    /** 검사 항목 체크박스 또는 값을 업데이트한다. */
     const handleLabChange = (id: string, field: 'checked' | 'value', val: boolean | string) => {
         setLabResults(prev => ({
             ...prev,
@@ -62,6 +74,7 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
         }));
     };
 
+    /** 전체 약물 데이터를 취합하여 라벨 인쇄 IPC를 호출한다. 급속 속도가 유지 속도보다 우선 적용된다. */
     const handlePrint = async () => {
         setIsPrinting(true);
         try {
@@ -203,62 +216,12 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
                         />
 
                         {/* 6. AST & Lab Results */}
-                        <section className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 space-y-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-1.5 h-4 bg-teal-600 rounded-full" />
-                                <h3 className="text-sm font-bold text-slate-800">AST 및 주요 검사 결과</h3>
-                            </div>
-
-                            <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                <span className="text-xs font-bold text-slate-500 min-w-[100px]">AST 결과:</span>
-                                <div className="flex gap-2">
-                                    {[
-                                        { id: 'NONE', label: '미시행', color: 'bg-slate-200' },
-                                        { id: 'NEG', label: 'Negative', color: 'bg-green-500' },
-                                        { id: 'POS', label: 'Positive', color: 'bg-red-500' }
-                                    ].map(opt => (
-                                        <button
-                                            key={opt.id}
-                                            onClick={() => setAstResult(opt.id as any)}
-                                            className={`px-4 py-2 rounded-lg text-[11px] font-black transition-all ${astResult === opt.id ? `${opt.color} text-white shadow-lg shadow-${opt.color}/20` : 'bg-white text-slate-400 border border-slate-100'}`}
-                                        >
-                                            {opt.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                {[
-                                    { id: 'cbc', label: 'CBC' },
-                                    { id: 'lft', label: 'LFT' },
-                                    { id: 'electrolyte', label: 'Electrolyte' },
-                                    { id: 'ua', label: 'UA & U/Cx.' },
-                                    { id: 'bcx', label: 'B/Cx.' },
-                                    { id: 'stool', label: 'Stool PCR/Cx.' },
-                                    { id: 'resp', label: 'Resp. PCR (V/B)' }
-                                ].map(lab => (
-                                    <div key={lab.id} className="flex flex-col gap-1.5 p-3 bg-slate-50/50 rounded-xl border border-slate-100">
-                                        <div className="flex items-center justify-between">
-                                            <label className="text-[11px] font-black text-slate-700">{lab.label}</label>
-                                            <input
-                                                type="checkbox"
-                                                checked={labResults[lab.id]?.checked}
-                                                onChange={(e) => handleLabChange(lab.id, 'checked', e.target.checked)}
-                                                className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-                                            />
-                                        </div>
-                                        <input
-                                            value={labResults[lab.id]?.value}
-                                            onChange={(e) => handleLabChange(lab.id, 'value', e.target.value)}
-                                            disabled={!labResults[lab.id]?.checked}
-                                            className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500/20 disabled:opacity-50 transition-all"
-                                            placeholder="결과값 입력"
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
+                        <IVLabelLabSection
+                            astResult={astResult}
+                            onAstChange={setAstResult}
+                            labResults={labResults}
+                            onLabChange={handleLabChange}
+                        />
 
                         <div className="h-10" />
                     </div>
@@ -285,7 +248,7 @@ export function IVLabelPreviewModal({ isOpen, onClose, bed, currentRate }: IVLab
                             formatMeds={formatMeds}
                         />
 
-                        {/* Action Buttons (Fixed at Bottom) */}
+                        {/* 하단 고정 버튼 영역 */}
                         <div className="flex gap-3">
                             <button onClick={onClose} className="flex-1 h-12 bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 font-bold rounded-xl transition-all text-sm">
                                 취소

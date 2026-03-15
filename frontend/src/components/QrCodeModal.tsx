@@ -5,17 +5,22 @@ import { Modal } from '@/components/ui/Modal';
 import { QRCodeSVG } from 'qrcode.react';
 import { Smartphone } from 'lucide-react';
 
+/** 보호자 대시보드 QR 코드 모달 Props */
 interface QrCodeModalProps {
     isOpen: boolean;
     onClose: () => void;
     patientName: string;
     roomNumber: string;
+    /** 보호자 대시보드 접근 인증 토큰 */
     token: string;
 }
 
+/**
+ * 보호자 대시보드 URL을 QR 코드로 표시하는 모달 컴포넌트.
+ * Tauri 환경에서는 스마트폰 미리보기 창을 IPC 기반으로 관리한다.
+ */
 export function QrCodeModal({ isOpen, onClose, patientName, roomNumber, token }: QrCodeModalProps) {
-    // Generate the URL for the guardian dashboard
-    // Use window.location.origin if available, otherwise fallback (though this runs on client)
+    // 보호자 대시보드 URL 생성 (클라이언트 사이드에서만 window.location.origin 접근 가능)
     const [origin, setOrigin] = React.useState('');
 
     React.useEffect(() => {
@@ -26,6 +31,11 @@ export function QrCodeModal({ isOpen, onClose, patientName, roomNumber, token }:
 
     const dashboardUrl = `${origin}/dashboard?token=${token}`;
 
+    /**
+     * 스마트폰 미리보기 창을 열거나 포커스한다.
+     * Tauri 환경: 기존 창에 IPC 이벤트로 토큰을 갱신하거나 신규 WebviewWindow를 생성한다.
+     * 브라우저 환경: window.open()으로 팝업을 연다.
+     */
     const handleOpenSmartphoneWindow = async () => {
         if (!dashboardUrl) return;
 

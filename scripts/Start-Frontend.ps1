@@ -1,6 +1,7 @@
 # [Architect Note] 프런트엔드 기동 유틸리티 (PSScriptRoot Self-Location 패턴)
 # wt.exe는 새 창을 독립 프로세스로 열기 때문에 부모의 환경 변수가 상속되지 않음.
 # $PSScriptRoot (항상 스크립트 자신의 위치)를 기준으로 경로를 자체 계산하여 이 문제를 근본 해결.
+. (Join-Path $PSScriptRoot "..\config\paths.ps1")
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $targetDir = Join-Path $projectRoot "frontend"
 $logsDir = Join-Path $projectRoot "logs"
@@ -8,19 +9,31 @@ $logsDir = Join-Path $projectRoot "logs"
 if (!(Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir -Force | Out-Null }
 $logPath = Join-Path $logsDir "frontend.log"
 
-Set-Location -Path $targetDir
-Write-Host "[ECO] Frontend running in: $((Get-Location).Path)" -ForegroundColor Green
-Write-Host "[ECO] Logging to: $logPath" -ForegroundColor Gray
+# C-1e: Set-Location + npm run tauri dev 전체를 Try-Catch로 보호
+Try {
+    Set-Location -Path $targetDir
+    Write-Output "[ECO] Frontend running in: $((Get-Location).Path)"
+    Write-Output "[ECO] Logging to: $logPath"
 
-# wt.exe는 독립 프로세스로 열려 사용자 PATH가 누락됨 - cargo/rustup 경로 명시 주입
-$userPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
-if ($userPath -and $env:PATH -notlike "*$userPath*") {
-    $env:PATH = $userPath + ";" + $env:PATH
-}
-# rustup 기본 경로 폴백
-$cargoBin = "$env:USERPROFILE\.cargo\bin"
-if ((Test-Path $cargoBin) -and $env:PATH -notlike "*\.cargo\bin*") {
-    $env:PATH = $cargoBin + ";" + $env:PATH
-}
+    # wt.exe는 독립 프로세스로 열려 사용자 PATH가 누락됨 - cargo/rustup 경로 명시 주입
+    $userPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
+    if ($userPath -and $env:PATH -notlike "*$userPath*") {
+        $env:PATH = $userPath + ";" + $env:PATH
+    }
+    # rustup 기본 경로 폴백
+    $cargoBin = "$env:USERPROFILE\$script:CARGO_BIN_SUBPATH"
+    if ((Test-Path $cargoBin) -and $env:PATH -notlike "*\$script:CARGO_BIN_SUBPATH*") {
+        $env:PATH = $cargoBin + ";" + $env:PATH
+    }
 
-npm run tauri dev 2>&1 | Tee-Object -FilePath $logPath
+    # PS7.3+에서 네이티브 프로세스(node.exe/cargo)의 stderr가 ErrorRecord로 변환되는 것을 방지
+    # Tauri CLI는 정보성 메시지를 stderr로 출력하므로, 오탐 억제가 필요함
+    if ($PSVersionTable.PSVersion.Major -ge 7) {
+        $PSNativeCommandUseErrorActionPreference = $false
+    }
+    npm run tauri dev 2>&1 | Tee-Object -FilePath $logPath
+}
+Catch {
+    Write-Warning "프론트엔드 기동 실패: $_"
+    exit 1
+}

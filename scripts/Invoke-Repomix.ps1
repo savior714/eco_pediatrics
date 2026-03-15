@@ -7,7 +7,8 @@
 # 툴 기본 동작 변경·다른 호출 경로 대비해 이중으로 차단한다.
 
 $ErrorActionPreference = "Stop"
-$root = if ($PSScriptRoot) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Get-Location).Path }
+. (Join-Path $PSScriptRoot "..\config\paths.ps1")
+$root = if ($PSScriptRoot) { Split-Path -Parent $PSScriptRoot } else { (Get-Location).Path }
 if (-not (Test-Path (Join-Path $root "frontend")) -and -not (Test-Path (Join-Path $root "backend"))) {
     $root = (Get-Location).Path
 }
@@ -17,13 +18,10 @@ if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir -Forc
 
 $fullOut = Join-Path $outDir "repomix-output.md"
 
-$fullInclude = "backend/main.py,backend/routers/**,backend/services/**,backend/models.py,backend/constants/**,backend/utils.py,backend/schemas.py,backend/database.py,backend/dependencies.py,backend/logger.py,backend/websocket_manager.py,backend/scripts/**,backend/requirements*.txt,supabase/migrations/**,supabase/schema.sql,supabase/config.toml,docs/**,frontend/src/**,frontend/package.json,frontend/next.config.*,frontend/tsconfig.json"
-# 출력물 재귀 차단 + 아카이브·민감정보 제외
-$fullIgnore = "docs/repomix*.md,docs/tree.txt,docs/prompts/archive/**,**/.env,**/.env.*,**/.env.local,**/*.pem,**/service-account*.json,**/*.key"
-
 Push-Location $root
 try {
-    npx repomix@latest --style markdown --include $fullInclude -i $fullIgnore -o $fullOut --quiet 2>&1
+    # 출력물 재귀 차단 + 아카이브·민감정보 제외 ($script:REPOMIX_INCLUDE / $script:REPOMIX_IGNORE — config/paths.ps1)
+    npx repomix@latest --style markdown --include $script:REPOMIX_INCLUDE -i $script:REPOMIX_IGNORE -o $fullOut --quiet 2>&1
     if (Test-Path $fullOut) { Write-Host "Created: $fullOut" }
 }
 finally {

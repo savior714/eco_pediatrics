@@ -55,7 +55,7 @@ export function useDashboardData(
     const queryClient = useQueryClient();
     const tokenInvalidatedRef = useRef(false);
 
-    const { data, isFetching, refetch } = useQuery({
+    const { data, isFetching, refetch, error: queryError } = useQuery({
         queryKey: token ? dashboardQueryKey(token) : ['dashboard', '__disabled__'],
         enabled: !!token && enabled && !tokenInvalidatedRef.current,
         staleTime: 30_000,
@@ -76,11 +76,6 @@ export function useDashboardData(
             }
             return failureCount < 1;
         },
-    });
-
-    const { error: queryError } = useQuery({
-        queryKey: token ? dashboardQueryKey(token) : ['dashboard', '__disabled__'],
-        enabled: false,
     });
 
     useEffect(() => {

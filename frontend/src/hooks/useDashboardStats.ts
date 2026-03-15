@@ -19,7 +19,8 @@ export function useDashboardStats() {
     const token = ipcToken ?? urlToken;
 
     useEffect(() => {
-        const isTauri = typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__ !== undefined;
+        const isTauri = typeof window !== 'undefined' &&
+            '__TAURI_INTERNALS__' in (window as unknown as Record<string, unknown>);
         if (!isTauri) return;
 
         let unlisten: (() => void) | null = null;
@@ -67,18 +68,13 @@ export function useDashboardStats() {
             : (MEAL_LABEL_MAP[currentMeal.request_type] ?? currentMeal.request_type))
         : null;
 
-    // Aggregated list of all doc items currently in system
-    const allDocItems = vitalsData.documentRequests
+    const nonCanceledDocItems = vitalsData.documentRequests
         .filter(req => req.status !== 'CANCELED')
         .flatMap(req => req.request_items);
 
-    // List of ALL non-canceled requested items to disable them in the modal
-    const requestedDocItems = vitalsData.documentRequests
-        .filter(req => req.status !== 'CANCELED')
-        .flatMap(req => req.request_items);
+    const requestedDocItems = nonCanceledDocItems;
 
-    // Remove duplicates and map to labels (한글, DOC_MAP 단일 소스)
-    const currentDocLabels = Array.from(new Set(allDocItems))
+    const currentDocLabels = Array.from(new Set(nonCanceledDocItems))
         .map((id: string) => DOC_MAP[id] || id);
 
     return {

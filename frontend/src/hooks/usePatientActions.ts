@@ -66,18 +66,28 @@ export function usePatientActions({ bed, onClose, fetchDashboardData, meals, onS
         const [y, m, d] = examData.date.split('-').map(Number);
         const hour = examData.timeOfDay === 'am' ? 9 : 14;
         const scheduledAt = new Date(y, m - 1, d, hour, 0).toISOString();
-        await api.post('/api/v1/exam-schedules', {
-            admission_id: bed.id,
-            scheduled_at: scheduledAt,
-            name: examData.name.trim(),
-            note: ''
-        });
+        try {
+            await api.post('/api/v1/exam-schedules', {
+                admission_id: bed.id,
+                scheduled_at: scheduledAt,
+                name: examData.name.trim(),
+                note: ''
+            });
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : '알 수 없는 오류';
+            alert(`검사 일정 추가 실패: ${msg}`);
+            throw e;
+        }
     };
 
     const apiDeleteExam = async (scheduleId: number) => {
         setDeletingExamId(scheduleId);
         try {
             await api.delete(`/api/v1/exam-schedules/${scheduleId}`);
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : '알 수 없는 오류';
+            alert(`검사 일정 삭제 실패: ${msg}`);
+            throw e;
         } finally {
             setDeletingExamId(null);
         }
@@ -85,15 +95,21 @@ export function usePatientActions({ bed, onClose, fetchDashboardData, meals, onS
 
     const apiMealUpdate = async (pediatric: string, guardian: string) => {
         if (!bed?.id || !editMealConfig) return;
-        await api.post('/api/v1/meals/requests', {
-            admission_id: bed.id,
-            request_type: 'STATION_UPDATE',
-            meal_date: editMealConfig.date,
-            meal_time: editMealConfig.meal_time,
-            pediatric_meal_type: pediatric,
-            guardian_meal_type: guardian,
-            room_note: meals.find(m => m.meal_date === editMealConfig.date && m.meal_time === editMealConfig.meal_time)?.room_note || ''
-        });
+        try {
+            await api.post('/api/v1/meals/requests', {
+                admission_id: bed.id,
+                request_type: 'STATION_UPDATE',
+                meal_date: editMealConfig.date,
+                meal_time: editMealConfig.meal_time,
+                pediatric_meal_type: pediatric,
+                guardian_meal_type: guardian,
+                room_note: meals.find(m => m.meal_date === editMealConfig.date && m.meal_time === editMealConfig.meal_time)?.room_note || ''
+            });
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : '알 수 없는 오류';
+            alert(`식단 수정 실패: ${msg}`);
+            throw e;
+        }
     };
 
     return {

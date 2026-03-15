@@ -1,9 +1,9 @@
+/** 식사 유형 코드 → 한글 라벨 (스테이션 알림·사이드바·대시보드 공통) */
 export const MEAL_MAP: Record<string, string> = {
     GENERAL: '일반식',
     SOFT: '죽',
     NPO: '금식'
 };
-// No changes here yet, I'll fix the logic in useStation.ts instead.
 
 /** 서류 신청 항목 코드 → 한글 라벨 (스테이션 알림·사이드바·대시보드 공통) */
 export const DOC_MAP: Record<string, string> = {
@@ -26,6 +26,14 @@ export const EXAM_TYPE_OPTIONS = [
     '대변검사',
 ] as const;
 
+/** 식사 시간대 코드 → 한글 라벨 (스테이션·알림 공통) */
+export const MEAL_TIME_MAP: Record<string, string> = {
+    BREAKFAST: '아침',
+    LUNCH: '점심',
+    DINNER: '저녁'
+};
+
+/** 병동 내 유효한 병실 번호 목록 (드롭다운·검증 공통 참조) */
 export const ROOM_NUMBERS = [
     '301', '302', '303', '304', '305', '306', '307', '308', '309',
     '310-1', '310-2',

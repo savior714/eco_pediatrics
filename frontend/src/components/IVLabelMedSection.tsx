@@ -1,14 +1,9 @@
 import React from 'react';
 import { Plus, Trash2, ChevronDown, Beaker, Check } from 'lucide-react';
 import { Select } from './ui/Select';
+import type { MixedMed } from '@/types/domain';
 
-export interface MixedMed {
-    id: string;
-    name: string;
-    amount: number;
-    unit?: string;
-    frequency?: 'QD' | 'BID' | 'TID';
-}
+export type { MixedMed };
 
 const addMed = (setter: React.Dispatch<React.SetStateAction<MixedMed[]>>, name: string = '', unit: string = 'amp') => {
     setter(prev => [...prev, { id: crypto.randomUUID(), name, amount: 1, unit }]);
@@ -21,6 +16,92 @@ const updateMed = (setter: React.Dispatch<React.SetStateAction<MixedMed[]>>, id:
 const removeMed = (setter: React.Dispatch<React.SetStateAction<MixedMed[]>>, id: string) => {
     setter(prev => prev.filter(m => m.id !== id));
 };
+
+interface MedItemRowProps {
+    med: MixedMed;
+    setter: React.Dispatch<React.SetStateAction<MixedMed[]>>;
+    unit: string;
+    mixedMedPresets: string[];
+    showFrequency?: boolean;
+}
+
+function MedItemRow({ med, setter, unit, mixedMedPresets, showFrequency = false }: MedItemRowProps) {
+    const showSelect = mixedMedPresets.length > 0 && (
+        mixedMedPresets.includes(med.name) || !med.name || med.name === 'SELECT_MODE' || med.name === ''
+    );
+
+    return (
+        <div className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-xl border border-slate-100 transition-all">
+            <div className="flex items-center gap-2">
+                {showSelect ? (
+                    <div className="flex-1 min-w-0">
+                        <Select
+                            options={[
+                                ...mixedMedPresets.map(p => ({ label: p, value: p })),
+                                { label: '직접 입력...', value: 'CUSTOM' }
+                            ]}
+                            value={med.name && med.name !== 'SELECT_MODE' ? [med.name] : []}
+                            onValueChange={(val) => {
+                                if (val[0] === 'CUSTOM') {
+                                    updateMed(setter, med.id, 'name', 'CUSTOM_MODE');
+                                } else {
+                                    updateMed(setter, med.id, 'name', val[0]);
+                                }
+                            }}
+                            placeholder="약물 선택"
+                        />
+                    </div>
+                ) : (
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                        <div className="relative flex-1 group">
+                            <input
+                                value={med.name === 'CUSTOM_MODE' ? '' : med.name}
+                                onChange={(e) => updateMed(setter, med.id, 'name', e.target.value)}
+                                autoFocus
+                                className="w-full h-11 pl-4 pr-10 bg-white border-2 border-teal-500/30 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-teal-500 shadow-sm"
+                                placeholder="약물명 직접 입력"
+                            />
+                            {mixedMedPresets.length > 0 && (
+                                <button
+                                    onClick={() => updateMed(setter, med.id, 'name', 'SELECT_MODE')}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-300 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
+                                    title="목록에서 선택"
+                                >
+                                    <ChevronDown size={14} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+                <div className="flex-shrink-0 flex items-center gap-2 bg-white px-2 py-1 h-11 rounded-xl border-2 border-slate-100">
+                    <input
+                        type="number"
+                        value={med.amount}
+                        onChange={(e) => updateMed(setter, med.id, 'amount', Number(e.target.value))}
+                        className="w-10 bg-transparent border-none outline-none text-xs font-black text-slate-700 text-center"
+                    />
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">{unit}</span>
+                </div>
+                <button onClick={() => removeMed(setter, med.id)} className="flex-shrink-0 p-1 text-slate-300 hover:text-red-500 transition-colors">
+                    <Trash2 size={16} />
+                </button>
+            </div>
+            {showFrequency && (
+                <div className="flex gap-1.5 pt-2 border-t border-slate-200/50">
+                    {(['QD', 'BID', 'TID'] as const).map(f => (
+                        <button
+                            key={f}
+                            onClick={() => updateMed(setter, med.id, 'frequency', f)}
+                            className={`px-3 py-1 rounded-lg text-[9px] font-black transition-all ${med.frequency === f ? 'bg-purple-500 text-white shadow-lg shadow-purple-200' : 'bg-white text-slate-400 border border-slate-100'}`}
+                        >
+                            {f}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export interface MedSectionProps {
     title: string;
@@ -114,68 +195,15 @@ export function MedSection({
                                     <p className="text-[10px] font-bold text-slate-400 italic">No meds mixed yet</p>
                                 </div>
                             ) : (
-                                meds.map((med) => {
-                                    const showSelect = mixedMedPresets.length > 0 && (mixedMedPresets.includes(med.name) || !med.name || med.name === 'SELECT_MODE' || med.name === '');
-
-                                    return (
-                                        <div key={med.id} className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-xl border border-slate-100 transition-all">
-                                            <div className="flex items-center gap-2">
-                                                {showSelect ? (
-                                                    <div className="flex-1 min-w-0">
-                                                        <Select
-                                                            options={[
-                                                                ...mixedMedPresets.map(p => ({ label: p, value: p })),
-                                                                { label: '직접 입력...', value: 'CUSTOM' }
-                                                            ]}
-                                                            value={med.name && med.name !== 'SELECT_MODE' ? [med.name] : []}
-                                                            onValueChange={(val) => {
-                                                                if (val[0] === 'CUSTOM') {
-                                                                    updateMed(setter, med.id, 'name', 'CUSTOM_MODE');
-                                                                } else {
-                                                                    updateMed(setter, med.id, 'name', val[0]);
-                                                                }
-                                                            }}
-                                                            placeholder="약물 선택"
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex-1 min-w-0 flex items-center gap-2">
-                                                        <div className="relative flex-1 group">
-                                                            <input
-                                                                value={med.name === 'CUSTOM_MODE' ? '' : med.name}
-                                                                onChange={(e) => updateMed(setter, med.id, 'name', e.target.value)}
-                                                                autoFocus
-                                                                className="w-full h-11 pl-4 pr-10 bg-white border-2 border-teal-500/30 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-teal-500 shadow-sm"
-                                                                placeholder="약물명 직접 입력"
-                                                            />
-                                                            {mixedMedPresets.length > 0 && (
-                                                                <button
-                                                                    onClick={() => updateMed(setter, med.id, 'name', 'SELECT_MODE')}
-                                                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-300 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
-                                                                    title="목록에서 선택"
-                                                                >
-                                                                    <ChevronDown size={14} />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                <div className="flex-shrink-0 flex items-center gap-2 bg-white px-2 py-1 h-11 rounded-xl border-2 border-slate-100">
-                                                    <input
-                                                        type="number"
-                                                        value={med.amount}
-                                                        onChange={(e) => updateMed(setter, med.id, 'amount', Number(e.target.value))}
-                                                        className="w-10 bg-transparent border-none outline-none text-xs font-black text-slate-700 text-center"
-                                                    />
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase">{unit}</span>
-                                                </div>
-                                                <button onClick={() => removeMed(setter, med.id)} className="flex-shrink-0 p-1 text-slate-300 hover:text-red-500 transition-colors">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })
+                                meds.map((med) => (
+                                    <MedItemRow
+                                        key={med.id}
+                                        med={med}
+                                        setter={setter}
+                                        unit={unit}
+                                        mixedMedPresets={mixedMedPresets}
+                                    />
+                                ))
                             )}
                         </div>
                     </div>
@@ -195,79 +223,16 @@ export function MedSection({
                     </div>
 
                     <div className="space-y-2">
-                        {meds.map((med) => {
-                            return (
-                                <div key={med.id} className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-xl border border-slate-100 transition-all">
-                                    <div className="flex items-center gap-2">
-                                        {(mixedMedPresets.length > 0 && (mixedMedPresets.includes(med.name) || !med.name || med.name === 'SELECT_MODE' || med.name === '')) ? (
-                                            <div className="flex-1 min-w-0">
-                                                <Select
-                                                    options={[
-                                                        ...mixedMedPresets.map(p => ({ label: p, value: p })),
-                                                        { label: '직접 입력...', value: 'CUSTOM' }
-                                                    ]}
-                                                    value={med.name && med.name !== 'SELECT_MODE' ? [med.name] : []}
-                                                    onValueChange={(val) => {
-                                                        if (val[0] === 'CUSTOM') {
-                                                            updateMed(setter, med.id, 'name', 'CUSTOM_MODE');
-                                                        } else {
-                                                            updateMed(setter, med.id, 'name', val[0]);
-                                                        }
-                                                    }}
-                                                    placeholder="약물 선택"
-                                                />
-                                            </div>
-                                        ) : (
-                                            <div className="flex-1 min-w-0 flex items-center gap-2">
-                                                <div className="relative flex-1 group">
-                                                    <input
-                                                        value={med.name === 'CUSTOM_MODE' ? '' : med.name}
-                                                        onChange={(e) => updateMed(setter, med.id, 'name', e.target.value)}
-                                                        autoFocus
-                                                        className="w-full h-11 pl-4 pr-10 bg-white border-2 border-teal-500/30 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-teal-500 shadow-sm"
-                                                        placeholder="약물명 직접 입력"
-                                                    />
-                                                    {mixedMedPresets.length > 0 && (
-                                                        <button
-                                                            onClick={() => updateMed(setter, med.id, 'name', 'SELECT_MODE')}
-                                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-300 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
-                                                            title="목록에서 선택"
-                                                        >
-                                                            <ChevronDown size={14} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-                                        <div className="flex-shrink-0 flex items-center gap-2 bg-white px-2 py-1 h-11 rounded-xl border-2 border-slate-100">
-                                            <input
-                                                type="number"
-                                                value={med.amount}
-                                                onChange={(e) => updateMed(setter, med.id, 'amount', Number(e.target.value))}
-                                                className="w-12 bg-transparent border-none outline-none text-xs font-black text-slate-700 text-center"
-                                            />
-                                            <span className="text-[9px] font-bold text-slate-400 uppercase">{unit}</span>
-                                        </div>
-                                        <button onClick={() => removeMed(setter, med.id)} className="flex-shrink-0 p-1 text-slate-300 hover:text-red-500">
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                    {showFrequency && (
-                                        <div className="flex gap-1.5 pt-2 border-t border-slate-200/50">
-                                            {(['QD', 'BID', 'TID'] as const).map(f => (
-                                                <button
-                                                    key={f}
-                                                    onClick={() => updateMed(setter, med.id, 'frequency', f)}
-                                                    className={`px-3 py-1 rounded-lg text-[9px] font-black transition-all ${med.frequency === f ? 'bg-purple-500 text-white shadow-lg shadow-purple-200' : 'bg-white text-slate-400 border border-slate-100'}`}
-                                                >
-                                                    {f}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                        {meds.map((med) => (
+                            <MedItemRow
+                                key={med.id}
+                                med={med}
+                                setter={setter}
+                                unit={unit}
+                                mixedMedPresets={mixedMedPresets}
+                                showFrequency={showFrequency}
+                            />
+                        ))}
                     </div>
                 </>
             )}

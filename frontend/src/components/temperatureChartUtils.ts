@@ -3,6 +3,52 @@
  */
 import { getKSTDate, calculateHospitalDay } from '@/utils/dateUtils';
 
+/** 체온 측정 바이탈 데이터 단위 */
+export interface VitalData {
+    time: string;
+    temperature: number;
+    has_medication: boolean;
+    medication_type?: string;
+    recorded_at: string;
+    isOptimistic?: boolean;
+}
+
+/** TemperatureGraph 컴포넌트 Props */
+export interface TemperatureGraphProps {
+    data: VitalData[];
+    checkInAt?: string | null;
+    className?: string;
+}
+
+/**
+ * React.memo comparator — 역순 순회(최신 데이터 우선)로 Early Return 유도.
+ * 최신 추가·수정이 빈번한 바이탈 배열에 최적화된 얕은 비교.
+ */
+export function arePropsEqual(prev: TemperatureGraphProps, next: TemperatureGraphProps): boolean {
+    if (prev.checkInAt !== next.checkInAt) return false;
+    if (prev.className !== next.className) return false;
+    if (prev.data === next.data) return true;
+
+    const prevData = prev.data;
+    const nextData = next.data;
+    if (prevData.length !== nextData.length) return false;
+
+    for (let i = prevData.length - 1; i >= 0; i--) {
+        const p = prevData[i];
+        const n = nextData[i];
+        if (
+            p.recorded_at !== n.recorded_at ||
+            p.temperature !== n.temperature ||
+            p.has_medication !== n.has_medication ||
+            p.medication_type !== n.medication_type ||
+            p.isOptimistic !== n.isOptimistic
+        ) {
+            return false;
+        }
+    }
+    return true;
+}
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export interface ProcessedChartResult<T extends { recorded_at: string; temperature: number }> {

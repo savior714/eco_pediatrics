@@ -1,5 +1,6 @@
 # [Architect Note] eco.bat을 CP949 인코딩으로 재생성하여 한글 깨짐 및 CMD 구문 오류 방지.
-import os
+import sys
+from pathlib import Path
 
 content = r"""@echo off
 REM If window closes at once: save as ANSI(CP949). See docs\TROUBLESHOOTING.md section 8.
@@ -123,7 +124,12 @@ pause
 endlocal
 """
 
-with open(r"c:\develop\eco_pediatrics\eco.bat", "w", encoding="cp949", newline="\r\n") as f:
-    f.write(content)
+output_path = Path(__file__).parent.parent / "eco.bat"
 
-print("eco.bat (CP949) saved successfully.")
+try:
+    with open(output_path, "w", encoding="cp949", newline="\r\n") as f:
+        f.write(content)
+    print(f"eco.bat (CP949) saved: {output_path}")
+except OSError as e:
+    print(f"파일 저장 실패: {e}")
+    raise SystemExit(1) from e

@@ -3,12 +3,9 @@ import { Modal } from '@/components/ui/Modal';
 import { MealRequest } from '@/types/domain';
 import { Utensils, CheckCircle, AlertCircle, Check } from 'lucide-react';
 import { getNextThreeMealSlots } from '@/utils/dateUtils';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
+import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
+import { PEDIATRIC_REQUEST_OPTIONS, GUARDIAN_REQUEST_OPTIONS } from './mealGridUtils';
 
 interface MealRequestModalProps {
     isOpen: boolean;
@@ -17,18 +14,6 @@ interface MealRequestModalProps {
     currentMeals?: MealRequest[];
     onSuccess?: () => void;
 }
-
-const PEDIATRIC_OPTIONS = [
-    { label: '일반식', value: '일반식' },
-    { label: '죽1', value: '죽1' },
-    { label: '죽2', value: '죽2' },
-    { label: '죽3', value: '죽3' },
-];
-
-const GUARDIAN_OPTIONS = [
-    { label: '일반식', value: '일반식' },
-    { label: '선택 안함', value: '선택 안함' }
-];
 
 interface SlotState {
     pediatric: string;
@@ -106,30 +91,21 @@ export function MealRequestModal({ isOpen, onClose, admissionId, currentMeals = 
         setResult(null);
 
         try {
-            const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-            // Submit only changed slots
             const promises = changedIdxs.map((idx) => {
                 const slot = slots[idx];
                 const sel = selections[idx];
-                return fetch(`${API_BASE}/api/v1/meals/requests`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        admission_id: admissionId,
-                        request_type: sel.pediatric === '일반식' ? 'GENERAL' : 'SOFT',
-                        meal_date: slot.date,
-                        meal_time: slot.meal_time,
-                        pediatric_meal_type: sel.pediatric,
-                        guardian_meal_type: sel.guardian,
-                        room_note: ''
-                    })
+                return api.post('/api/v1/meals/requests', {
+                    admission_id: admissionId,
+                    request_type: sel.pediatric === '일반식' ? 'GENERAL' : 'SOFT',
+                    meal_date: slot.date,
+                    meal_time: slot.meal_time,
+                    pediatric_meal_type: sel.pediatric,
+                    guardian_meal_type: sel.guardian,
+                    room_note: ''
                 });
             });
 
-            const responses = await Promise.all(promises);
-            if (responses.some(r => !r.ok)) throw new Error('Some meal requests failed');
-
+            await Promise.all(promises);
             setResult('SUCCESS');
         } catch (error) {
             console.error(error);
@@ -168,7 +144,7 @@ export function MealRequestModal({ isOpen, onClose, admissionId, currentMeals = 
                         <div className="space-y-2.5">
                             <label className="text-sm font-bold text-slate-600 ml-1">환아 식사</label>
                             <div className="grid grid-cols-2 gap-2">
-                                {PEDIATRIC_OPTIONS.map((opt) => {
+                                {PEDIATRIC_REQUEST_OPTIONS.map((opt) => {
                                     const isSelected = currentSelection.pediatric === opt.value;
                                     return (
                                         <button
@@ -193,7 +169,7 @@ export function MealRequestModal({ isOpen, onClose, admissionId, currentMeals = 
                         <div className="space-y-2.5">
                             <label className="text-sm font-bold text-slate-600 ml-1">보호자 식사</label>
                             <div className="grid grid-cols-2 gap-2">
-                                {GUARDIAN_OPTIONS.map((opt) => {
+                                {GUARDIAN_REQUEST_OPTIONS.map((opt) => {
                                     const isSelected = currentSelection.guardian === opt.value;
                                     return (
                                         <button

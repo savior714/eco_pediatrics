@@ -5,6 +5,7 @@
 
 param([string]$ProjectRoot)
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "..\config\paths.ps1")
 if (-not $ProjectRoot) { $ProjectRoot = (Resolve-Path "$PSScriptRoot\..").Path }
 $ProjectRoot = $ProjectRoot.TrimEnd('\', '/', '"')
 $LogDir = "$ProjectRoot\logs"
@@ -78,9 +79,10 @@ if (Test-Path $sdkVerPath) {
     $SdkVer = ([System.IO.File]::ReadAllText($sdkVerPath, [System.Text.Encoding]::UTF8)).Trim()
     if ($SdkVer) {
         $PF86 = ${env:ProgramFiles(x86)}
-        $env:INCLUDE = "$PF86\Windows Kits\10\Include\$SdkVer\ucrt;$PF86\Windows Kits\10\Include\$SdkVer\shared;$PF86\Windows Kits\10\Include\$SdkVer\um;$PF86\Windows Kits\10\Include\$SdkVer\winrt;$env:INCLUDE"
-        $env:LIB = "$PF86\Windows Kits\10\Lib\$SdkVer\ucrt\x64;$PF86\Windows Kits\10\Lib\$SdkVer\um\x64;$env:LIB"
-        $env:PATH = "$PF86\Windows Kits\10\bin\$SdkVer\x64;$env:PATH"
+        $sdkBase = "$PF86\$script:SDK_KITS_SUBPATH"
+        $env:INCLUDE = "$sdkBase\Include\$SdkVer\ucrt;$sdkBase\Include\$SdkVer\shared;$sdkBase\Include\$SdkVer\um;$sdkBase\Include\$SdkVer\winrt;$env:INCLUDE"
+        $env:LIB = "$sdkBase\Lib\$SdkVer\ucrt\x64;$sdkBase\Lib\$SdkVer\um\x64;$env:LIB"
+        $env:PATH = "$sdkBase\bin\$SdkVer\x64;$env:PATH"
     }
 } else {
     Write-Host "   - Windows SDK not found. Build effort may fail for native deps (pyiceberg)."

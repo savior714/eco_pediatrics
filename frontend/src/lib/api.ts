@@ -1,14 +1,24 @@
 /// <reference path="../types/tauri-plugins.d.ts" />
-// Export constant for use elsewhere if needed, but prefer using api instance
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
-// Detect Tauri environment (Tauri v2 compatible)
+/** Tauri 환경 여부 (v2 호환) */
 const isTauri = typeof window !== 'undefined' &&
     ((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__);
 
-// Caching Tauri functions to avoid redundant dynamic imports
-let cachedTauriFetch: any = null;
-let cachedTauriLog: any = null;
+/** @tauri-apps/plugin-http 의 fetch 함수 시그니처 */
+type TauriFetchFn = typeof window.fetch;
+
+/** @tauri-apps/plugin-log 의 레벨별 로그 함수 집합 */
+interface TauriLogFns {
+    info: (msg: string) => Promise<void>;
+    warn: (msg: string) => Promise<void>;
+    error: (msg: string) => Promise<void>;
+    debug: (msg: string) => Promise<void>;
+}
+
+/** 동적 import 비용 최소화를 위한 Tauri 플러그인 캐시 */
+let cachedTauriFetch: TauriFetchFn | null = null;
+let cachedTauriLog: TauriLogFns | null = null;
 
 // GET 중복 요청 시 진행 중인 Promise 공유 (가짜 {} 반환 제거, Strict Mode 이중 호출 시 시퀀스 가드 교란 방지)
 const pendingGetPromises = new Map<string, Promise<unknown>>();
@@ -144,7 +154,7 @@ class ApiClient {
         const execute = async (): Promise<T> => {
             try {
                 return await run();
-            } catch (err: any) {
+            } catch (err: unknown) {
                 const detail = err instanceof Error ? err.message : JSON.stringify(err);
                 const isConnectionError = /sending request|ECONNREFUSED|Failed to fetch|NetworkError|fetch|abort/i.test(detail);
 
