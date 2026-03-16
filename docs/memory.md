@@ -4,6 +4,11 @@
 
 ## Executive Summary
 
+- **CRITICAL_LOGIC.md 강화 (2026-03-16)**: `AI_GUIDELINES.md` 기반 §2.7.4~2.7.6 (PowerShell 세션 초기화·체이닝 금지·Terminal Noise SOP), §2.9 신규 (TS6133 Catch Hygiene·Import 보존·Self-Audit·Rollback-First), §5.2 신규 (Pre-flight Validation·Error Recovery 4단계) 삽입. 목차 갱신. 284→284줄 (300 이내 유지).
+- **Phase 5 전체 완료 (2026-03-16)**: Task 1~6 전수 완료. 백엔드 31/31 (기존 6개 실패 수정 포함), 프론트엔드 Vitest 19/19 전통과. `eco test`·`eco lint` DX 단일 진입점 구축. `Run-Tests.ps1` AST 검증·인코딩 설정·전제 조건 검사 전수 구현. ReadLints 0건. Phase 5 DoD 6/6 달성.
+- **Phase 5 Task 3 완료 (2026-03-16)**: `test_vitals/meals/iv_records_integration.py` 3파일 12개 테스트 작성 (Happy Path + 422 검증). `execute_with_retry_async` 모듈 레벨 패치, `app.state.supabase` 사전 주입 전략으로 외부 DB 의존성 완전 제거. 12/12 통과, 전체 31개 수집.
+- **Phase 5 Task 2 완료 (2026-03-16)**: `backend/tests/conftest.py` 생성. `sys.path` 주입(backend 루트), `client`(ASGITransport+init_supabase mock), `mock_supabase`, `sample_admission/vital/meal_request` 픽스처 구성. collect 15→19개, 기존 import 오류 3건 해소.
+- **Phase 5 Task 1 완료 (2026-03-16)**: `backend/pyproject.toml`에 `pytest-asyncio>=0.25` dev 그룹 추가, `[tool.pytest.ini_options]`(asyncio_mode=auto, testpaths, addopts) + `[tool.coverage.run]` 섹션 구성 완료.
 - **A 경미 JSDoc 일괄 완료 (2026-03-16)**: `pending-fixes.md` 2순위 — 9개 파일 한국어 JSDoc 추가 + 영어 주석 전수 교체. `IVLabelPreviewModal`·`IVStatusCard`·`MealGrid`·`EditMealModal`·`DocumentRequestModal`·`QrCodeModal`·`PatientDetailModal`·`IVUploadForm`·`useStationActions` 전수 처리. ReadLints 0건.
 - **remaining-fixes-plan Phase D 완료 (2026-03-16)**: `code-quality-audit.md` 감사 테이블 전수 최신화 (Phase 1~5 ✅ 반영). `remaining-fixes-plan.md` DoD 달성.
 - **Code Quality Audit Phase 1~6 전체 완료 (2026-03-16)**: PS Critical 3종·TS any 제거·Hooks 7 FIX·UI 8 FIX·Python A·B·C·D Phase 전수 수행. `lib/utils.ts` 신규(cn SSOT), `hooks/useMealGrid.ts` 신규, `useVitals.ts` 384→133라인 분리. ReadLints 0건.
