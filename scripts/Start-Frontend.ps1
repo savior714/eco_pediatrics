@@ -26,12 +26,17 @@ Try {
         $env:PATH = $cargoBin + ";" + $env:PATH
     }
 
-    # PS7.3+에서 네이티브 프로세스(node.exe/cargo)의 stderr가 ErrorRecord로 변환되는 것을 방지
-    # Tauri CLI는 정보성 메시지를 stderr로 출력하므로, 오탐 억제가 필요함
+    # [Fix] PowerShell이 stderr 출력을 치명적 에러로 오인하는 NativeCommandError 방지
+    $oldEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+
     if ($PSVersionTable.PSVersion.Major -ge 7) {
         $PSNativeCommandUseErrorActionPreference = $false
     }
+    
     npm run tauri dev 2>&1 | Tee-Object -FilePath $logPath
+    
+    $ErrorActionPreference = $oldEAP
 }
 Catch {
     Write-Warning "프론트엔드 기동 실패: $_"
