@@ -49,7 +49,7 @@ export function Select({ label, options, value, onValueChange, placeholder, clas
             )}
             <ArkSelect.Control>
                 <ArkSelect.Trigger
-                    className="w-full h-11 px-4 flex items-center justify-between rounded-xl border-2 border-slate-100 bg-white text-xs font-bold text-slate-700 transition-all hover:border-slate-200 focus:border-teal-500 outline-none active:scale-[0.99]"
+                    className="w-full h-8 px-4 flex items-center justify-between rounded-xl border-2 border-slate-100 bg-white text-xs font-bold text-slate-700 transition-all hover:border-slate-200 focus:border-teal-500 outline-none active:scale-[0.99]"
                 >
                     <ArkSelect.ValueText placeholder={placeholder} />
                     <ArkSelect.Indicator className="text-slate-400">
@@ -65,7 +65,7 @@ export function Select({ label, options, value, onValueChange, placeholder, clas
                                 <ArkSelect.Item
                                     key={item.value}
                                     item={item}
-                                    className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold text-slate-600 cursor-pointer transition-colors hover:bg-slate-50 data-[highlighted]:bg-slate-50 data-[state=selected]:text-teal-600 data-[state=selected]:bg-teal-50"
+                                    className="flex items-center justify-between px-3 py-1 rounded-lg text-xs font-bold text-slate-600 cursor-pointer transition-colors hover:bg-slate-50 data-[highlighted]:bg-slate-50 data-[state=selected]:text-teal-600 data-[state=selected]:bg-teal-50"
                                 >
                                     <ArkSelect.ItemText>{item.label}</ArkSelect.ItemText>
                                     <ArkSelect.ItemIndicator>

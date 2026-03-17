@@ -26,6 +26,62 @@
 
 ## Logs
 
+### [2026-03-18] - IV 라벨 모달 UI 컴팩트화 완료
+
+[Context] 수액 라벨 처방 설정 모달의 전체 세로 높이가 과도하게 길어 UX 개선 필요.
+
+[Action]
+- **Field.tsx**: `className`이 root wrapper와 input 양쪽에 동시 적용되는 버그 수정 → `rootClassName`/`inputClassName` prop 분리. 높이 불일치 해소.
+- **Select.tsx**: 트리거 `h-11`→`h-8`, 드롭다운 아이템 `py-2`→`py-1` 축소.
+- **IVLabelPatientSection.tsx**: 라벨 스타일 Field 기준 통일, BED/S/A 표시박스 `h-12`→`py-3` 자연 높이 적용.
+- **IVLabelMedSection.tsx**: 섹션 패딩 `p-4`→`p-3`, Base Fluid/Rate 행을 라벨+컨트롤 **인라인 1줄** 구조로 전환(`h-12`→`h-7`), grid 레이아웃 제거, MedItemRow `p-3 h-11`→`p-2 h-8`.
+- **IVLabelLabSection.tsx**: 섹션 패딩 `p-5`→`p-3`, 검사 항목을 체크박스+라벨+인풋 **인라인 1줄**(`h-10`→`h-6`)로 전환, AST 버튼 `py-2`→`py-1`.
+
+[Status] 완료. TypeScript 타입 오류 0건 확인.
+
+### [2026-03-18] - 대용량 파일 리팩토링 Task 2 완료 (IVLabelPreviewModal.tsx)
+
+[Context] `IVLabelPreviewModal.tsx`가 269라인에 도달하여 유지보수성 향상을 위한 모듈화 필요.
+
+[Action]
+- **useIVLabel.ts 신규 생성**: 모달의 모든 상태 관리 및 `handlePrint` 비즈니스 로직을 커스텀 훅으로 격리.
+- **IVLabelPatientSection.tsx 신규 생성**: 환자 인적 사항 입력 UI 섹션을 독립 컴포넌트로 분리.
+- **IVLabelPreviewModal.tsx 리팩토링**: Pure Presenter 패턴을 적용하여 269 → 142라인으로 경량화 성공.
+
+[Status] Task 2 완료. 다음 단계: Task 3 (`backend/routers/station.py`).
+
+### [2026-03-18] - 대용량 파일 리팩토링 Task 3 완료 (station.py)
+
+[Context] `backend/routers/station.py`가 266라인에 도달하고 비즈니스 로직이 라우터에 비대하게 집중되어 있어 서비스 레이어로의 이관 필요.
+
+[Action]
+- **station_service.py 확장**: `create_document_request`, `update_document_request_status`, `update_meal_request_status` 함수를 추가하여 중복 체크, 데이터 확정, WebSocket 브로드캐스트 로직을 서비스 레이어로 집약.
+- **station.py 리팩토링**: 비즈니스 로직을 모두 제거하고 서비스 함수를 호출하는 Thin Controller 구조로 전환 (266 -> 104라인).
+
+[Status] Task 3 완료. 다음 단계: Task 4 (통합 환경 검증 및 린트 체크).
+
+### [2026-03-18] - 식단 수정 시 UI 플리커링(회색 노출) 해결 [완료]
+
+[Context] 식단 수정 시 Optimistic Update 과정에서 텍스트가 일시적으로 회색(`opacity-50`)으로 보였다가 검은색으로 리렌더링되는 시각적 불안정함 발생.
+
+[Action]
+- **VitalStatusGrid.tsx 수정**: 
+    - 식단 정보 영역의 `isOptimistic` 조건부 클래스 `opacity-50` 제거하여 시각적 연속성 확보.
+    - 보호자 식사 대기 상태 표시 로직 내 비교 대상 오타(`pediatric_meal_type` → `guardian_meal_type`) 수정.
+
+[Status] `fix-diet-flicker.md` 모든 DoD 달성 및 최종 검증 완료.
+
+### [2026-03-18] - 환자 상세 모달 식단 수정 버튼 로직 개선 (Task 1, 2 완료)
+
+[Context] 식단이 '미신청' 상태인 경우 낙관적 업데이트가 시각적으로 표시되지 않는 문제 해결 필요.
+
+[Action]
+- **VitalStatusGrid.tsx 수정**: `onClick` 핸들러에서 `meal?.id` 체크 조건을 제거하고, `mealId`가 없는 경우 `0`을 기본값으로 전달하도록 변경 (Task 1).
+- **useVitalsOptimistic.ts 수정**: `mealId`가 0인 경우 신규 식단 객체를 배열에 추가하는 로직 구현. `meal_date`와 `meal_time`을 추가 인자로 받아 신규 항목 식별 및 낙관적 UI 표시 지원 (Task 2).
+- **Hook & Modal 연동**: `useVitals.ts` 인터페이스 갱신 및 `PatientDetailModal.tsx`에서 신규 인자 전달 코드 적용.
+
+[Status] Task 1~4 전체 완료. `fix_meal_edit_button.md` 모든 DoD 달성. 최종 검증 완료.
+
 ### [2026-03-17] - 프론트엔드 기동 NativeCommandError 분석 및 해결 계획 수립
 
 [Context] `eco.bat` 실행 후 프론트엔드 창에서 PowerShell `NativeCommandError`가 발생하는 현상 보고됨. Tauri CLI가 `stderr`로 출력하는 정보성 메시지를 PowerShell이 치명적 에러로 오해하여 발생함.

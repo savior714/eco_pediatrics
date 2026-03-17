@@ -31,7 +31,7 @@ function MedItemRow({ med, setter, unit, mixedMedPresets, showFrequency = false 
     );
 
     return (
-        <div className="flex flex-col gap-2 p-3 bg-slate-50/50 rounded-xl border border-slate-100 transition-all">
+        <div className="flex flex-col gap-1.5 p-2 bg-slate-50/50 rounded-xl border border-slate-100 transition-all">
             <div className="flex items-center gap-2">
                 {showSelect ? (
                     <div className="flex-1 min-w-0">
@@ -58,7 +58,7 @@ function MedItemRow({ med, setter, unit, mixedMedPresets, showFrequency = false 
                                 value={med.name === 'CUSTOM_MODE' ? '' : med.name}
                                 onChange={(e) => updateMed(setter, med.id, 'name', e.target.value)}
                                 autoFocus
-                                className="w-full h-11 pl-4 pr-10 bg-white border-2 border-teal-500/30 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-teal-500 shadow-sm"
+                                className="w-full h-8 pl-4 pr-10 bg-white border-2 border-teal-500/30 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-teal-500 shadow-sm"
                                 placeholder="약물명 직접 입력"
                             />
                             {mixedMedPresets.length > 0 && (
@@ -73,7 +73,7 @@ function MedItemRow({ med, setter, unit, mixedMedPresets, showFrequency = false 
                         </div>
                     </div>
                 )}
-                <div className="flex-shrink-0 flex items-center gap-2 bg-white px-2 py-1 h-11 rounded-xl border-2 border-slate-100">
+                <div className="flex-shrink-0 flex items-center gap-2 bg-white px-2 py-1 h-8 rounded-xl border-2 border-slate-100">
                     <input
                         type="number"
                         value={med.amount}
@@ -129,7 +129,7 @@ export function MedSection({
     mixedMedPresets = []
 }: MedSectionProps) {
     return (
-        <section className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/60 space-y-3">
+        <section className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/60 space-y-2">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <div className={`w-1.5 h-4 ${color} rounded-full`} />
@@ -145,53 +145,54 @@ export function MedSection({
             </div>
 
             {showRate ? (
-                <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 lg:col-span-5 flex flex-col gap-4">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-500 ml-1 uppercase">Base Fluid</label>
-                            <div className="flex flex-wrap gap-2">
-                                {presets.map((name: string) => {
-                                    const isSelected = baseFluid === name;
-                                    return (
-                                        <button
-                                            key={name}
-                                            onClick={() => setBaseFluid?.(isSelected ? '' : name)}
-                                            className={`flex-1 px-3 py-1 h-12 border rounded-xl text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 ${isSelected
-                                                ? 'bg-teal-600 border-teal-600 text-white shadow-sm shadow-teal-200'
-                                                : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-teal-50'}`}
-                                        >
-                                            {isSelected && <Check size={12} />}
-                                            {name}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-500 ml-1 uppercase tracking-tighter">{rateLabel}</label>
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    value={rateVal || ''}
-                                    onChange={(e) => setRateVal?.(Number(e.target.value))}
-                                    className="w-full h-12 px-4 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none text-xs focus:ring-4 focus:ring-teal-500/10 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    placeholder="0"
-                                />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] text-slate-400 font-black">{rateUnit}</span>
-                            </div>
+                <div className="flex flex-col gap-1.5">
+                    {/* Base Fluid: 라벨 + 버튼들 한 줄 */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wide w-20 shrink-0">Base Fluid</label>
+                        <div className="flex flex-1 gap-1.5">
+                            {presets.map((name: string) => {
+                                const isSelected = baseFluid === name;
+                                return (
+                                    <button
+                                        key={name}
+                                        onClick={() => setBaseFluid?.(isSelected ? '' : name)}
+                                        className={`flex-1 px-2 h-7 border rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1 ${isSelected
+                                            ? 'bg-teal-600 border-teal-600 text-white shadow-sm shadow-teal-200'
+                                            : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-teal-50'}`}
+                                    >
+                                        {isSelected && <Check size={10} />}
+                                        {name}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
-                    <div className="col-span-12 lg:col-span-7 flex flex-col gap-3 min-h-[120px]">
+                    {/* Rate: 라벨 + 인풋 한 줄 */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wide w-20 shrink-0">{rateLabel}</label>
+                        <div className="relative flex-1">
+                            <input
+                                type="number"
+                                value={rateVal || ''}
+                                onChange={(e) => setRateVal?.(Number(e.target.value))}
+                                className="w-full h-7 px-3 bg-slate-50 border-2 border-slate-100 rounded-lg font-bold text-slate-700 outline-none text-xs focus:ring-4 focus:ring-teal-500/10 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                placeholder="0"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-slate-400 font-black">{rateUnit}</span>
+                        </div>
+                    </div>
+
+                    {/* Mixed Medications */}
+                    <div className="flex flex-col gap-1.5 mt-1">
                         <div className="flex items-center justify-between px-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Mixed Medications</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wide">Mixed Medications</label>
                             <span className="text-[10px] font-bold text-slate-300">{meds.length} meds</span>
                         </div>
-                        <div className="flex-1 space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar pr-1">
+                        <div className="space-y-1.5 max-h-[180px] overflow-y-auto custom-scrollbar pr-1">
                             {meds.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-slate-100 rounded-2xl py-8 grayscale opacity-50">
-                                    <Beaker size={24} className="text-slate-300 mb-2" />
+                                <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-100 rounded-xl py-3 grayscale opacity-50">
+                                    <Beaker size={20} className="text-slate-300 mb-1" />
                                     <p className="text-[10px] font-bold text-slate-400 italic">No meds mixed yet</p>
                                 </div>
                             ) : (

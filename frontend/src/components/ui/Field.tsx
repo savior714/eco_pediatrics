@@ -14,6 +14,10 @@ interface FieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
     helperText?: string;
     errorText?: string;
     invalid?: boolean;
+    /** 루트 wrapper에 적용할 클래스 (width, margin 등 레이아웃 제어) */
+    rootClassName?: string;
+    /** input 엘리먼트에 직접 적용할 클래스 (height, color 등) */
+    inputClassName?: string;
 }
 
 /**
@@ -21,9 +25,9 @@ interface FieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
  * - Label, Input, HelperText, ErrorText를 포함하는 논리적 단위
  * - WAI-ARIA 상태 관리 자동화
  */
-export function Field({ label, helperText, errorText, invalid, className, id, ...props }: FieldProps) {
+export function Field({ label, helperText, errorText, invalid, className, rootClassName, inputClassName, id, ...props }: FieldProps) {
     return (
-        <ArkField.Root id={id} invalid={invalid} className={cn("w-full space-y-1.5", className)}>
+        <ArkField.Root id={id} invalid={invalid} className={cn("w-full space-y-1.5", rootClassName, className)}>
             {label && (
                 <ArkField.Label className="block text-xs font-bold text-slate-500 ml-1">
                     {label}
@@ -36,7 +40,7 @@ export function Field({ label, helperText, errorText, invalid, className, id, ..
                         "w-full p-3 border-2 border-slate-100 rounded-xl bg-white text-xs font-bold text-slate-700 transition-all outline-none",
                         "hover:border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10",
                         "data-[invalid]:border-red-500 data-[invalid]:focus:ring-red-500/10",
-                        className
+                        inputClassName
                     )}
                 />
             </ArkField.Input>

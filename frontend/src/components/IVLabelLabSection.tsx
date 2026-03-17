@@ -31,21 +31,21 @@ interface IVLabelLabSectionProps {
 /** IV 라벨 — AST 및 주요 검사 결과 입력 섹션 컴포넌트 */
 export function IVLabelLabSection({ astResult, onAstChange, labResults, onLabChange }: IVLabelLabSectionProps) {
     return (
-        <section className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 space-y-4">
-            <div className="flex items-center gap-2 mb-2">
+        <section className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/60 space-y-2">
+            <div className="flex items-center gap-2">
                 <div className="w-1.5 h-4 bg-teal-600 rounded-full" />
                 <h3 className="text-sm font-bold text-slate-800">AST 및 주요 검사 결과</h3>
             </div>
 
             {/* AST 피부반응 결과 선택 */}
-            <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                <span className="text-xs font-bold text-slate-500 min-w-[100px]">AST 결과:</span>
-                <div className="flex gap-2">
+            <div className="flex items-center gap-3 px-2 py-1.5 bg-slate-50 rounded-xl border border-slate-100">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide shrink-0">AST 결과</span>
+                <div className="flex gap-1.5">
                     {AST_OPTIONS.map(opt => (
                         <button
                             key={opt.id}
                             onClick={() => onAstChange(opt.id)}
-                            className={`px-4 py-2 rounded-lg text-[11px] font-black transition-all ${astResult === opt.id ? `${opt.color} text-white shadow-lg shadow-${opt.color}/20` : 'bg-white text-slate-400 border border-slate-100'}`}
+                            className={`px-3 py-1 rounded-lg text-[10px] font-black transition-all ${astResult === opt.id ? `${opt.color} text-white shadow-sm` : 'bg-white text-slate-400 border border-slate-100'}`}
                         >
                             {opt.label}
                         </button>
@@ -53,25 +53,23 @@ export function IVLabelLabSection({ astResult, onAstChange, labResults, onLabCha
                 </div>
             </div>
 
-            {/* 검사 항목별 체크 및 결과값 입력 */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* 검사 항목별 체크 + 결과값 한 줄 배치 */}
+            <div className="grid grid-cols-2 gap-1.5">
                 {LAB_ITEMS.map(lab => (
-                    <div key={lab.id} className="flex flex-col gap-1.5 p-3 bg-slate-50/50 rounded-xl border border-slate-100">
-                        <div className="flex items-center justify-between">
-                            <label className="text-[11px] font-black text-slate-700">{lab.label}</label>
-                            <input
-                                type="checkbox"
-                                checked={labResults[lab.id]?.checked}
-                                onChange={(e) => onLabChange(lab.id, 'checked', e.target.checked)}
-                                className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-                            />
-                        </div>
+                    <div key={lab.id} className="flex items-center gap-2 px-2 py-1.5 bg-slate-50/50 rounded-lg border border-slate-100">
+                        <input
+                            type="checkbox"
+                            checked={labResults[lab.id]?.checked}
+                            onChange={(e) => onLabChange(lab.id, 'checked', e.target.checked)}
+                            className="w-3.5 h-3.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 shrink-0"
+                        />
+                        <label className="text-[10px] font-black text-slate-600 w-20 shrink-0">{lab.label}</label>
                         <input
                             value={labResults[lab.id]?.value}
                             onChange={(e) => onLabChange(lab.id, 'value', e.target.value)}
                             disabled={!labResults[lab.id]?.checked}
-                            className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500/20 disabled:opacity-50 transition-all"
-                            placeholder="결과값 입력"
+                            className="flex-1 h-6 px-2 bg-white border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 outline-none focus:ring-2 focus:ring-teal-500/20 disabled:opacity-40 transition-all"
+                            placeholder="결과값"
                         />
                     </div>
                 ))}
