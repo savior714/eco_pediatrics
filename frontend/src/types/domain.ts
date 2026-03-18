@@ -132,6 +132,10 @@ export interface MixedMed {
     frequency?: 'QD' | 'BID' | 'TID';
 }
 
+export type AstResult = 'NONE' | 'NEG' | 'POS';
+
+export type LabResultMap = Record<string, { checked: boolean; value: string }>;
+
 export type MealRequestType = 'STATION_UPDATE' | 'GENERAL' | 'SOFT';
 export type MealStatus = 'PENDING' | 'FULFILLED';
 export type DocumentStatus = 'PENDING' | 'FULFILLED' | 'CANCELED';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Trash2, ChevronDown, Beaker, Check } from 'lucide-react';
 import { Select } from './ui/Select';
-import type { MixedMed } from '@/types/domain';
+import type { AstResult, MixedMed } from '@/types/domain';
 
 export type { MixedMed };
 
@@ -113,8 +113,6 @@ function MedItemRow({ med, setter, unit, mixedMedPresets, showFrequency = false,
         </div>
     );
 }
-
-export type AstResult = 'NONE' | 'NEG' | 'POS';
 
 const AST_OPTIONS = [
     { id: 'NONE', label: '미시행', color: 'bg-slate-200' },

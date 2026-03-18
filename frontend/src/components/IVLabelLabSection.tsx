@@ -1,5 +1,7 @@
 /** AST 피부반응 검사 및 주요 검사 결과 입력 섹션 */
 
+import type { LabResultMap } from '@/types/domain';
+
 /** 검사 항목 정의 */
 const LAB_ITEMS = [
     { id: 'cbc', label: 'CBC' },
@@ -10,9 +12,6 @@ const LAB_ITEMS = [
     { id: 'stool', label: 'Stool PCR/Cx.' },
     { id: 'resp', label: 'Resp. PCR (V/B)' }
 ] as const;
-
-
-export type LabResultMap = Record<string, { checked: boolean; value: string }>;
 
 interface IVLabelLabSectionProps {
     labResults: LabResultMap;

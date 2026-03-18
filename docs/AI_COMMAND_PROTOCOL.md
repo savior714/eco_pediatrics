@@ -152,6 +152,16 @@ npx -p typescript tsc --noEmit --project frontend/tsconfig.json
 PowerShell `$PROFILE`에 `Add-Content`, `Set-Content`, `Out-File`에 대한 **보안 훅(Hook)**이 설정되어 있습니다.
 이 cmdlet들은 호출 즉시 `RuntimeException`을 throw하고 작업이 중단됩니다.
 
+### 5.1 [추가] 프로필 훅이 “모든 커맨드”를 깨뜨리는 경우
+
+일부 환경에서는 `$PROFILE`의 보안 훅이 **직접 `Add-Content`를 호출하지 않아도**, 터미널 래퍼/로깅/자동화 루틴에서 내부적으로 해당 cmdlet을 호출하면서 **모든 명령 실행 자체가 실패**할 수 있습니다.
+
+#### 대응 원칙
+
+- **가장 안전**: 검증/빌드 커맨드는 가능한 한 **프로필을 로드하지 않는 실행 방식**을 사용한다.
+  - 예: `powershell -NoProfile -Command "npx tsc --noEmit"`
+- 프로필 정책을 변경할 수 없는 환경이라면, 파일 쓰기/로그 출력 관련 동작을 회피하거나(도구 기반 파일 수정), `AppendAllText/WriteAllText` 같은 .NET API 기반 우회만 사용한다.
+
 ### 올바른 명령
 
 ```powershell

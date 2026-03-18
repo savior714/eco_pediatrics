@@ -61,6 +61,11 @@
 - **자가 검증**: `npx tsc --noEmit` 통과 및 Blueprint 모든 Task 완료 확인. ✅
 - **Status**: 완료. 관련 설계 문서 `docs/plans/iv_label_print_modal_behavior.md` 업데이트 완료.
 
+### [2026-03-18] - IV 라벨 타입 역방향 의존성 제거 (domain SSOT) [완료]
+- **문제**: `useIVLabel.ts`가 컴포넌트(`IVLabelMedSection.tsx`, `IVLabelLabSection.tsx`)에서 타입을 import하는 역방향 의존성 발생.
+- **해결**: `AstResult`, `LabResultMap`을 `frontend/src/types/domain.ts`로 이동(SSOT)하고, 훅·컴포넌트 모두 `@/types/domain`에서 import하도록 정리.
+- **검증**: `src/hooks/` 기준 `from '@/components/IVLabel'` import 0건 확인. (환경 프로필 훅으로 `tsc --noEmit` 셸 검증은 본 세션에서 실패)
+
 ### [2026-03-18] - Tool-First Policy 강화 및 Navigation 금지 [진행 중]
 - **원인 분석**: `next lint` 과정에서 발생한 `frontend\lint` 경로는 쉘 명령어(`cd`, `Set-Location`)와 `npm run`의 혼용으로 인한 인자 오해석이 근본 원인임이 판명됨.
 - **SSOT 수정**:
