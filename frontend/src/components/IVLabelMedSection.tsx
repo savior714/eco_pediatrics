@@ -78,7 +78,7 @@ function MedItemRow({ med, setter, unit, mixedMedPresets, showFrequency = false 
                         type="number"
                         value={med.amount}
                         onChange={(e) => updateMed(setter, med.id, 'amount', Number(e.target.value))}
-                        className="w-10 bg-transparent border-none outline-none text-xs font-black text-slate-700 text-center"
+                        className="w-10 bg-transparent border-none outline-none text-xs font-black text-slate-700 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                     <span className="text-[9px] font-bold text-slate-400 uppercase">{unit}</span>
                 </div>
@@ -103,6 +103,14 @@ function MedItemRow({ med, setter, unit, mixedMedPresets, showFrequency = false 
     );
 }
 
+export type AstResult = 'NONE' | 'NEG' | 'POS';
+
+const AST_OPTIONS = [
+    { id: 'NONE', label: '미시행', color: 'bg-slate-200' },
+    { id: 'NEG',  label: '-', color: 'bg-green-100 text-green-700 border-green-200' },
+    { id: 'POS',  label: '+', color: 'bg-red-100 text-red-700 border-red-200' }
+] as const;
+
 export interface MedSectionProps {
     title: string;
     icon: React.ComponentType<{ size?: number | string; className?: string }>;
@@ -120,25 +128,45 @@ export interface MedSectionProps {
     rateLabel?: string;
     rateUnit?: string;
     mixedMedPresets?: string[];
+    astResult?: AstResult;
+    onAstChange?: (res: AstResult) => void;
 }
 
 export function MedSection({
     title, icon: Icon, meds, setter, color, showRate = false, rateVal, setRateVal,
     presets = [], unit = 'amp', showFrequency = false, baseFluid, setBaseFluid,
     rateLabel = 'Infusion Rate', rateUnit = 'CC/HR',
-    mixedMedPresets = []
+    mixedMedPresets = [], astResult, onAstChange
 }: MedSectionProps) {
     return (
         <section className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/60 space-y-2">
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className={`w-1.5 h-4 ${color} rounded-full`} />
-                    <Icon size={16} className="text-slate-400" />
-                    <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+                    <Icon size={16} className="text-slate-400 shrink-0" />
+                    <h3 className="text-sm font-bold text-slate-800 truncate">{title}</h3>
+                    
+                    {/* AST 피부반응 결과 선택 (헤더 통합 버전) */}
+                    {astResult !== undefined && onAstChange && (
+                        <div className="ml-auto mr-2 flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">AST</span>
+                            <div className="flex gap-1 p-0.5 bg-slate-50/80 rounded-lg border border-slate-100">
+                                {AST_OPTIONS.map(opt => (
+                                    <button
+                                        key={opt.id}
+                                        onClick={() => onAstChange(opt.id)}
+                                        className={`px-1.5 h-6 min-w-[1.5rem] rounded-md text-[9px] font-black transition-all border ${astResult === opt.id ? `${opt.color} shadow-sm ring-1 ring-inset ring-black/5` : 'bg-white text-slate-400 border-slate-100 opacity-60'}`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
                 <button
                     onClick={() => addMed(setter, '', unit)}
-                    className="px-2.5 py-1 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-1.5 text-[11px] font-bold border border-teal-100"
+                    className="flex-shrink-0 px-2.5 py-1 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-1.5 text-[11px] font-bold border border-teal-100"
                 >
                     <Plus size={14} /> 약물 추가
                 </button>
