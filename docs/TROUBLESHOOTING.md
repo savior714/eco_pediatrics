@@ -96,7 +96,7 @@
 - 설치 후 **터미널을 새로 열어** `PATH`에 `cargo`가 반영되었는지 확인. `cargo --version` 실행.
 - `eco check` 실행 시 **Rust (cargo)** 항목이 [OK]면 Tauri 빌드 가능.
 
-자세한 설치 및 표준 버전은 `docs/DEV_ENVIRONMENT.md` §1 표·§4.1 참고.
+표준 버전은 `eco check` 실행 시 표시되는 항목을 참고한다.
 
 ---
 
@@ -330,4 +330,4 @@ npm run dev
 - Backend: `cmd /k` + `call .venv\Scripts\activate.bat`.
 - Frontend: `pwsh.exe -NoExit -EncodedCommand ...` (npm run tauri dev).
 
-상세 메뉴·CLI·설정은 `docs/DEV_ENVIRONMENT.md` §3 참고.
+상세 메뉴·CLI는 `eco.bat` 및 `scripts/launch_wt_dev.ps1` 참고.

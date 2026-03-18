@@ -12,6 +12,11 @@
 - **Phase 5 테스트/린트 (2026-03-16) [완료]**: 백엔드 31/31 통과 및 프론트엔드 Vitest 19/19 무결함 상태 유지.
 
 ## 🎯 현재 진행 상황
+- [ ] SDD 규격(specs/) 구조 정리 (`docs/plans/sdd_specs_structure.md`) [진행 중]
+    - [x] Task 1: `docs/specs/` 디렉터리 및 README 생성 완료
+    - [x] Task 2: `docs/specs/00-architecture.md` 작성을 통한 아키텍처 스펙 수립 완료
+    - [x] Task 3: `docs/specs/01-domain-invariants.md` 작성을 통한 도메인 불변 스펙 수립 완료
+    - [ ] Task 4~9: 02~07 스펙 파일 순차 생성 대기
 - [ ] API 404 에러 해결 (`docs/plans/fix_api_404_errors.md`) [포트 충돌 해결 대기]
     - [x] Task 1~3: 백엔드/프론트 라우팅 수정 완료
     - [x] `api.ts` 에러 로그에 URL 포함 (디버깅용)
@@ -61,6 +66,12 @@
 
 ## Logs
 > **이전 로그 보관**: [Memory Archive Index](./archive/)
+### [2026-03-19] - SDD 문서 정비: 스펙↔운영 문서 링크 정리 [완료]
+- **07-safety-guardrails.md**: 배포 전 보안 점검 문단 추가 — `SECURITY_REVIEW.md` 체크리스트 참조 링크.
+- **TROUBLESHOOTING.md**: 삭제된 `docs/DEV_ENVIRONMENT.md` 참조 2곳 수정 — §5는 `eco check` 기준, WT 레이아웃 하단은 `eco.bat`·`scripts/launch_wt_dev.ps1` 참고로 대체.
+- **Status**: 완료. 스펙과 운영 문서(보안 점검·트러블슈팅) 연결 강화. ✅
+
+---
 > - [2026/03/17 이전](./archive/memory_log_20260317_before.md)
 > - [2026/03/18 (v1)](./archive/memory_log_20260318_v1.md)
 ### [2026-03-18] - 수액 라벨 인쇄 모달 동작 개선 [완료]
