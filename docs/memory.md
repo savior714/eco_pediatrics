@@ -26,6 +26,42 @@
 
 ## Logs
 
+### [2026-03-18] - IV 라벨 타입 에러 수정 및 린트 안정화 [완료]
+
+[Context] `IVLabelLabSection.tsx`에서 `AstResult` 타입 중복 선언 및 익스포트 누락으로 인해 `useIVLabel.ts`에서 컴파일 에러가 발생함.
+
+[Action]
+- **IVLabelLabSection.tsx 수정**: 사용되지 않는 `AstResult` 임포트 구문을 제거하여 이름 충돌 해결.
+- **SSOT 준수**: `AstResult` 타입의 정의처를 `IVLabelMedSection.tsx`로 단일화하여 유지보수성 확보.
+- **최종 검증**: `npx tsc --noEmit` 실행 결과, Exit code 0 (에러 없음) 확인.
+
+[Status] `fix_iv_label_type_error.md` 모든 DoD 달성 및 린트 Zero 상태 확인.
+
+### [2026-03-18] - 수액 라벨 미리보기 화면 크기 조정 플랜 수행 [완료]
+
+[Context] 수액 라벨지 설정 화면에서 우측 미리보기 영역이 작아 시인성이 떨어진다는 사용자 피드백 반영.
+
+[Action]
+- **resize_fluid_label_preview.md 생성**: 레이아웃 비율 조정(7:5 -> 6:6) 및 카드 너비 확장(380px -> 480px)을 포함한 단계별 실행 계획 수립 및 수행.
+- **IVLabelPreviewModal.tsx 수정**: Grid 레이아웃을 7:5 → 6:6으로 조정하여 미리보기 영역 확보.
+- **IVLabelPreviewSection.tsx 수정**: 미리보기 카드 고정 너비를 380px → 480px로 확장 및 텍스트 시인성 개선.
+- **최종 검증**: `npx tsc --noEmit`을 통한 타입 안정성 및 레이아웃 무결성 확인 (오류 0건).
+
+[Status] `resize_fluid_label_preview.md` 모든 DoD 달성 및 최종 검증 완료.
+
+### [2026-03-18] - 수액 라벨 UI 최적화 및 레이아웃 수정 완료
+
+[Context] 수액 라벨 처방 모달의 검사 결과 입력 필드 깨짐 현상 해결 및 AST 결과 영역 이동을 통한 UI 컴팩트화 요청.
+
+[Action]
+- **IVLabelMedSection.tsx**: 메인 약물 섹션에 AST 결과 선택 Row(컴팩트 버전) 추가 및 `AstResult` 타입 정의.
+- **IVLabelLabSection.tsx**: AST 영역 제거 및 검사 항목 레이아웃 비율 조정(`w-20`→`w-16`, `truncate`, `min-w-0`)으로 입력 필드 깨짐 방지.
+- **IVLabelPreviewModal.tsx**: AST 상태를 항생제 섹션으로 이관 연동 및 섹션 간 수직 간격(`2.5`) 축소로 높이 최적화.
+- **IVLabelPreviewSection.tsx**: 미리보기 카드 내 AST 위치를 항생제 하단으로 이동하여 직관성 및 공간 효율 확보.
+- **useIVLabel.ts**: `AstResult` 타입 임포트 경로 갱신. `npx tsc --noEmit` 검증 (0건).
+
+[Status] `optimize_iv_label_ui.md` 모든 DoD 달성 및 최종 레이아웃 검증 완료.
+
 ### [2026-03-18] - IV 라벨 모달 UI 컴팩트화 완료
 
 [Context] 수액 라벨 처방 설정 모달의 전체 세로 높이가 과도하게 길어 UX 개선 필요.
