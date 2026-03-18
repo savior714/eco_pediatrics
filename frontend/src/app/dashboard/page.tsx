@@ -78,6 +78,7 @@ function DashboardContent() {
                                     alt="Eco Pediatrics"
                                     fill
                                     className="object-contain object-right"
+                                    loading="eager"
                                 />
                             </a>
                         </div>

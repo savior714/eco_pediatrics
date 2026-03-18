@@ -15,24 +15,30 @@ import { NotificationItem } from '@/components/NotificationItem';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { WsStatusIndicator } from '@/components/ui/WsStatusIndicator';
 import { StationProvider } from '@/contexts/StationContext';
-import { useStation } from '@/hooks/useStation';
+import { StationDataProvider, useStationData } from '@/contexts/StationDataContext';
 
 const PHYSICIAN_INITIALS = ['조', '김', '원', '이'] as const;
 
 /**
- * Station 진입점: beds를 가져와 StationProvider에 전달.
- * useStation()은 React Query 캐시를 공유하므로 StationInner 내부의
- * useStationActions() → useStation() 호출과 네트워크 요청이 중복되지 않음.
+ * Station 진입점. useStation()은 StationDataProvider 내부에서 단 1회만 호출되며,
+ * 하위에서는 useStationData()로 동일 데이터를 구독하여 WebSocket 이중 연결을 방지한다.
  */
 export default function Station() {
-    const { beds, connectionStatus } = useStation();
-
     return (
         <ErrorBoundary context="Station">
-            <StationProvider beds={beds}>
-                <StationInner connectionStatus={connectionStatus} />
-            </StationProvider>
+            <StationDataProvider>
+                <StationWithBedsAndStatus />
+            </StationDataProvider>
         </ErrorBoundary>
+    );
+}
+
+function StationWithBedsAndStatus() {
+    const { beds, connectionStatus } = useStationData();
+    return (
+        <StationProvider beds={beds}>
+            <StationInner connectionStatus={connectionStatus} />
+        </StationProvider>
     );
 }
 
@@ -67,6 +73,7 @@ function StationInner({ connectionStatus }: StationInnerProps) {
                                 alt="Eco Pediatrics"
                                 fill
                                 className="object-contain object-left"
+                                loading="eager"
                             />
                         </div>
                         <div className="flex gap-2">

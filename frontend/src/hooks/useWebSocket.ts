@@ -32,6 +32,7 @@ export function useWebSocket({ url, enabled = true, onMessage, onOpen, onClose }
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
     const attemptRef = useRef(0);
+    const closedByUsRef = useRef(false); // cleanup에서 의도적으로 닫은 경우 재연결·로그 완화
     const [connectionStatus, setConnectionStatus] = useState<WsConnectionStatus>('CLOSED');
 
     // Stable refs: 콜백 참조가 변경되어도 WS 재연결이 발생하지 않도록 ref로 감쌈
@@ -45,6 +46,8 @@ export function useWebSocket({ url, enabled = true, onMessage, onOpen, onClose }
 
     const connect = useCallback(() => {
         if (!enabled || !url) return;
+
+        closedByUsRef.current = false;
 
         // 기존 연결 정리
         if (wsRef.current) {
@@ -60,24 +63,29 @@ export function useWebSocket({ url, enabled = true, onMessage, onOpen, onClose }
         wsRef.current = ws;
 
         ws.onopen = () => {
+            if (closedByUsRef.current) return; // 이미 cleanup으로 닫힌 뒤면 무시
             log(`Connected to WS: ${url}`);
             setConnectionStatus('OPEN');
-            attemptRef.current = 0; // 성공 시 재시도 카운터 리셋
+            attemptRef.current = 0;
             onOpenRef.current?.();
         };
 
         ws.onclose = (event: CloseEvent) => {
-            log(`Disconnected from WS: ${url} (Code: ${event.code})`);
+            wsRef.current = null;
             setConnectionStatus('CLOSED');
             onCloseRef.current?.();
 
-            // 정상 종료 코드 → 재연결 하지 않음
+            if (closedByUsRef.current) {
+                // cleanup에서 닫은 경우. 브라우저 "closed before connection is established" 는 정상 동작.
+                return;
+            }
+            log(`Disconnected from WS: ${url} (Code: ${event.code})`);
+
             if (event.code === 4003 || event.code === 1000) {
                 logWarn('WebSocket connection terminated by policy. Stopping reconnection.');
                 return;
             }
 
-            // Exponential Backoff 재연결
             const delay = BACKOFF_DELAYS[Math.min(attemptRef.current, BACKOFF_DELAYS.length - 1)];
             attemptRef.current++;
             log(`Reconnecting in ${delay}ms (attempt #${attemptRef.current})...`);
@@ -88,7 +96,7 @@ export function useWebSocket({ url, enabled = true, onMessage, onOpen, onClose }
 
         ws.onmessage = (event) => onMessageRef.current(event);
         ws.onerror = () => {
-            // onerror는 항상 onclose 직전에 발생하므로 여기서 별도 처리 불필요
+            if (closedByUsRef.current) return;
             log(`WS error on: ${url}`);
         };
     }, [url, enabled]);
@@ -97,8 +105,10 @@ export function useWebSocket({ url, enabled = true, onMessage, onOpen, onClose }
         connect();
 
         return () => {
+            closedByUsRef.current = true;
             if (reconnectTimeoutRef.current) {
                 clearTimeout(reconnectTimeoutRef.current);
+                reconnectTimeoutRef.current = undefined;
             }
             if (wsRef.current) {
                 wsRef.current.onopen = null;

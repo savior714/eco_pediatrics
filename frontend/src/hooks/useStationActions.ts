@@ -2,15 +2,16 @@ import React, { useState, useCallback } from 'react';
 import { Bed, Notification } from '@/types/domain';
 import { api } from '@/lib/api';
 import { toaster } from '@/components/ui/Toast';
-import { useStation } from './useStation';
+import { useStationData } from '@/contexts/StationDataContext';
 import { useStationContext } from '@/contexts/StationContext';
 
 /**
  * 스테이션 화면의 모든 사용자 인터랙션 액션을 관리하는 커스텀 훅.
  * 입원 수속·알림 클릭·전체 퇴원(Dev)·더미 생성(Dev)·카드 클릭·QR 클릭 핸들러를 제공한다.
+ * StationDataProvider 하위에서만 사용하며, useStation()은 상위에서 1회만 호출된다.
  */
 export function useStationActions() {
-    const stationData = useStation();
+    const stationData = useStationData();
     const { beds, setBeds, notifications, removeNotification, fetchAdmissions } = stationData;
 
     // selectedRoom / qrBed / admitRoom → StationContext에서 관리
@@ -22,8 +23,8 @@ export function useStationActions() {
      * 신규 환자 입원 수속을 처리한다.
      * 생년월일 형식 정규화, 미래 날짜·성인(만 19세 이상) 유효성 검증 후 API 호출한다.
      */
-    const handleAdmit = useCallback(async (name: string, birthday: string, gender: string, attendingPhysician: string) => {
-        if (!admitRoom) return;
+    const handleAdmit = useCallback(async (name: string, birthday: string, gender: string, attendingPhysician: string): Promise<boolean> => {
+        if (!admitRoom) return false;
 
         let formattedBirthday = birthday.trim();
         if (/^\d{8}$/.test(formattedBirthday)) {
@@ -36,7 +37,7 @@ export function useStationActions() {
 
             if (birthDate > today) {
                 toaster.create({ type: 'error', title: '입력 오류', description: '생년월일은 오늘 이후 날짜일 수 없습니다.' });
-                return;
+                return false;
             }
             let age = today.getFullYear() - birthDate.getFullYear();
             const m = today.getMonth() - birthDate.getMonth();
@@ -46,7 +47,7 @@ export function useStationActions() {
 
             if (age >= 19) {
                 toaster.create({ type: 'error', title: '입력 오류', description: '만 19세 이상 성인은 입원이 불가능합니다.' });
-                return;
+                return false;
             }
 
             await api.post('/api/v1/admissions', {
@@ -57,13 +58,19 @@ export function useStationActions() {
                 attending_physician: attendingPhysician
             });
 
-            toaster.create({ type: 'success', title: '입원 완료', description: '입원 수속이 완료되었습니다.' });
+            toaster.create({
+                type: 'success',
+                title: '입원 완료',
+                description: `${admitRoom}호 ${name} 환자의 입원 수속이 완료되었습니다.`
+            });
             setAdmitRoom(null);
             fetchAdmissions();
+            return true;
         } catch (e: unknown) {
             console.error(e);
             const msg = e instanceof Error ? e.message : '알 수 없는 오류';
             toaster.create({ type: 'error', title: '입원 처리 실패', description: msg });
+            return false;
         }
     }, [admitRoom, fetchAdmissions, setAdmitRoom]);
 

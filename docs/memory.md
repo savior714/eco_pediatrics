@@ -3,6 +3,7 @@
 본 문서는 `Antigravity IDE Agent`의 연속성 보존을 위한 실시간 메모리 로그입니다.
 
 ## Executive Summary
+- **스테이션 WebSocket 단일화 (2026-03-19) [완료]**: useStation() 이중 호출 제거 — StationDataContext 도입, 페이지·useStationActions에서 useStationData()만 사용. LCP 로고 loading="eager" 적용, useWebSocket cleanup 시 재연결/로그 완화(closedByUsRef).
 - **UI/UX 안정화 (2026-03-18) [완료]**: 식단 플리커링, 고열 환자 테마, Z-index, 수액 속도 공란 기록 방지.
 - **대규모 리팩토링 (2026-03-18) [완료]**: `IVLabelPreviewModal.tsx`, `station.py` 등 모든 파일 300라인 제한 준수.
 - **프론트엔드 기동 안정성 (2026-03-17) [완료]**: PS 에러 오독 현상 및 `tauri.conf.json` 최적화 완료.
@@ -50,6 +51,13 @@
 - [2026-03-18] AST 라벨 추가 및 누락 시 빈 박스 처리 완료
 - [2026-03-18] IV 라벨 모달 닫힘 방지 및 출력 확인 기능 추가
 - [2026-03-18] 메모리 로그 아카이브 및 관리 규칙 적용
+
+### [2026-03-19] - 스테이션 useStation 단일 호출 및 WS/UX 보강 [완료]
+- **StationDataContext**: `useStation()`을 트리 내 1회만 호출하는 `StationDataProvider`와 `useStationData()` 훅 추가. `station/page.tsx`는 Provider 하위에서만 데이터 구독하여 WebSocket 이중 연결 제거.
+- **LCP**: 스테이션·대시보드 헤더 `eco_logo.png`에 `loading="eager"` 적용 (Next.js LCP 권고).
+- **useWebSocket**: cleanup에서 의도적 `close()` 시 재연결·Disconnected 로그를 하지 않도록 `closedByUsRef` 도입. "closed before connection is established" 브라우저 메시지는 정상 동작.
+- **Blueprint**: `docs/plans/fix_station_whitescreen_and_duplicate_useStation.md` Task 1~3 완료 반영.
+- **Status**: 완료. ✅
 
 ## Logs
 > **이전 로그 보관**: [Memory Archive Index](./archive/)
